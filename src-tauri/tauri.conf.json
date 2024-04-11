@@ -13,7 +13,8 @@
       {
         "title": "trade_tip",
         "width": 800,
-        "height": 600
+        "height": 600,
+        "additionalBrowserArgs": "--disable-web-security"
       }
     ],
     "security": {
