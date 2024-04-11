@@ -79,6 +79,7 @@ onMounted(async ()=>{
         style:{
           fill:'red',
         },
+        // smooth: true,
         onclick(e:MouseEvent) {
             console.log(e)
           zr.remove(lline)
