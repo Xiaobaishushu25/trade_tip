@@ -19,11 +19,17 @@ const tipConfig = ref({
   x:0,
   y:0
 })
+const state = ref({
+  isfirst:true,
+  x:0,
+  y:0
+})
 // const upColor = '#ec0000';
 const upColor = 'rgba(255,255,255,0.6)';
 const bColor = '#ec0000';
 const downColor = 'rgb(55,150,55)';
 var zr: ZRenderType
+var lline: echarts.graphic.Line
 onMounted(async ()=>{
   var chartDom = document.getElementById('main');
   var myChart: EChartsType = echarts.init(chartDom);
@@ -34,33 +40,83 @@ onMounted(async ()=>{
   init(data.data,myChart,option)
   // const zr: ZRenderType = myChart.getZr()
   zr = myChart.getZr()
+  myChart.getZr().on('mousemove', params => {
+    if (state.value.isfirst){
+    }else{
+      zr.remove(lline)
+      lline = new echarts.graphic.Line({
+        shape:{
+          x1: state.value.x,
+          y1: state.value.y,
+          x2: params.offsetX,
+          y2: params.offsetY,
+          percent: 100
+        },
+        style:{
+          fill:'red',
+        },
+      })
+      lline.draggable = true
+      zr.add(lline)
+    }
+  })
   myChart.getZr().on('click', params => {
     let pointInPixel = [params.offsetX, params.offsetY]
-    tipConfig.value = {
-      isVisible : true,
-      x:params.offsetX,
-      y:params.offsetY
+    if (state.value.isfirst){
+      state.value.isfirst = false
+      state.value.x = params.offsetX
+      state.value.y = params.offsetY
+    }else{
+      state.value.isfirst = true
+      lline = new echarts.graphic.Line({
+        shape:{
+          x1: state.value.x,
+          y1: state.value.y,
+          x2: params.offsetX,
+          y2: params.offsetY,
+          percent: 100
+        },
+        style:{
+          fill:'red',
+        },
+        onclick(e:MouseEvent) {
+            console.log(e)
+          zr.remove(lline)
+          // e.cancelBubble = true
+          e.stopPropagation()
+        },
+      })
+      lline.draggable = true
+      zr.add(lline)
     }
+
+    // tipConfig.value = {
+    //   isVisible : true,
+    //   x:params.offsetX,
+    //   y:params.offsetY
+    // }
     // tipConfig.value.isVisible = true
     // tipConfig.value.x = params.offsetX
     // tipConfig.value.y = params.offsetY
-    var line = new echarts.graphic.Line({
-      shape:{
-        x1: 10,
-        y1: params.offsetY,
-        x2: 5000,
-        y2: params.offsetY,
-        percent: 100
-      },
-      style:{
-        fill:'red',
-      },
-      onclick(e) {
-          console.log(e)
-        zr
-      },
-    })
-    line.draggable = true
+    // var line = new echarts.graphic.Line({
+    //   shape:{
+    //     x1: 10,
+    //     y1: params.offsetY,
+    //     x2: 5000,
+    //     y2: params.offsetY,
+    //     percent: 100
+    //   },
+    //   style:{
+    //     fill:'red',
+    //   },
+    //   onclick(e:MouseEvent) {
+    //       console.log(e)
+    //     zr.remove(line)
+    //     // e.cancelBubble = true
+    //     e.stopPropagation()
+    //   },
+    // })
+    // line.draggable = true
     // let text = new echarts.graphic.Text({
     //   style:{
     //     text:"上轨",
@@ -70,8 +126,8 @@ onMounted(async ()=>{
     // });
     // text.draggable = true
     // line.setTextContent(text)
-    zr.add(line)
-    tip!.value.focus()
+    // zr.add(line)
+    // tip?.value?.focus()
     // if (myChart.containPixel('grid', pointInPixel)) {
     //   let xIndex = myChart.convertFromPixel({ seriesIndex: 0 }, [params.offsetX, params.offsetY])[0]
     //   console.log(xIndex)
@@ -128,8 +184,7 @@ function init(rawData:number[][],myChart:EChartsType,option) {
           textStyle: {
             color: '#000'
           },
-          formatter: function (params) { // params 是 formatter 需要的数据集
-            console.log(params)
+          formatter: function (params: any) { // params 是 formatter 需要的数据集
             var htmlContent
             if (params.seriesType=="candlestick"){
               htmlContent = `<div class="column tip">
@@ -456,7 +511,7 @@ function calculateChangeRate(openPrice, closePrice) {
   <div class="container">
     <button @click="down()">下载</button>
     <!-- 为 ECharts 准备一个定义了宽高的 DOM -->
-    <div id="main"  ref="chart" style="width: 1000px;height:800px;"></div>
+    <div id="main"  ref="chart" style="width: 1500px;height:1000px;"></div>
 <!--    <input ref="tip" style="width: 60px;font-size: 12px;visibility: hidden">-->
     <input v-if="tipConfig.isVisible" ref="tip" :style="{
       width: `60px`,
