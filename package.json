@@ -15,7 +15,9 @@
     "@tauri-apps/plugin-shell": ">=2.0.0-beta.0",
     "echarts": "^5.5.0",
     "vue": "^3.3.4",
-    "axios": "^1.6.0"
+    "axios": "^1.6.0",
+    "element-plus": "^2.4.1",
+    "vue-router": "^4.2.5"
   },
   "devDependencies": {
     "@tauri-apps/cli": ">=2.0.0-beta.0",

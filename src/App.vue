@@ -7,6 +7,7 @@ import * as echarts from 'echarts/core';
 import axios from "axios";
 import {EChartsType, zrender} from "echarts";
 import {ZRenderType} from "echarts/types/dist/shared";
+import Tool from "./components/Tool.vue";
 var ROOT_PATH = 'https://echarts.apache.org/examples';
 
 // var chartDom = document.getElementById('main');
@@ -540,6 +541,7 @@ function calculateChangeRate(openPrice, closePrice) {
       <label>涨幅：0.391</label>
       <label>成交量：0.391</label>
     </div>
+    <Tool></Tool>
   </div>
 </template>
 
