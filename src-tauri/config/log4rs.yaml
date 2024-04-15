@@ -1,0 +1,33 @@
+refresh_rate: 60 seconds
+appenders:
+  stdout:
+    kind: console
+    encoder:
+      #     https://docs.rs/log4rs/0.8.3/log4rs/encode/pattern/index.html
+      # {d(%Y-%m-%d %H:%M:%S)}是格式化时间为：2024-02-12 16:48:58
+      # {l}是级别，h是高亮（比如红色绿色）
+      # {f}是The source file that the log message came from, or ??? if not provided.
+      # {L}是日志产生的行数
+      # {m}{n} 是日志信息和换行
+      pattern: "{d(%Y-%m-%d %H:%M:%S)} {h({l})} {f} line:{L} - {m}{n}"
+  server:
+    kind: file
+    path: "log/server.log"
+    filters:
+      - kind: threshold
+        level: error
+    encoder:
+      pattern: "{d(%Y-%m-%d %H:%M:%S)} {h({l})} {f} line:{L} - {m}{n}"
+root:
+  level: info
+  appenders:
+    - stdout
+    - server
+#loggers:
+#  app::backend::db:
+#    level: info
+#  app::requests:
+#    level: info
+#    appenders:
+#      - requests
+#    additive: false
