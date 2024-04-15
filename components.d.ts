@@ -9,7 +9,6 @@ declare module 'vue' {
   export interface GlobalComponents {
     CandleChart: typeof import('./src/components/CandleChart.vue')['default']
     ElAutocomplete: typeof import('element-plus/es')['ElAutocomplete']
-    ElIcon: typeof import('element-plus/es')['ElIcon']
     Greet: typeof import('./src/components/Greet.vue')['default']
     Header: typeof import('./src/components/Header.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
