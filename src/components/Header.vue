@@ -3,6 +3,7 @@ import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {watch, ref} from "vue";
 import {invoke} from "@tauri-apps/api/core";
 // import axios from "axios";
+import {store} from "../store.ts"
 const max_state_name = ref('window-maximize')
 const max_state= ref(false)
 watch(max_state, async (newValue) => {
@@ -47,6 +48,22 @@ function querySearchAsync(key: string, cb: any){
 const handleSelect = (item: any) => {
   console.log(item)
 }
+function judgeHaveStock(code: string){
+  //遍历stockinfo数组，如果code相等，则返回false ,不渲染
+  for(let i = 0; i < store.stockInfo.length; i++){
+    if(store.stockInfo[i].code === code){
+      return false
+    }
+  }
+  return true
+}
+function addStock(code: string, name: string){
+  invoke("add_stock_info",{code:code,name:name}).then((res)=>{
+    console.log(res)
+  }).catch((err)=>{
+    console.log(err)
+  })
+}
 </script>
 
 <template>
@@ -67,7 +84,8 @@ const handleSelect = (item: any) => {
         <div class="row">
           <div class="tag">{{ item.securityTypeName }}</div>
           <label class="link">{{ `${item.shortName}(${item.code})` }}</label>
-        </div>
+          <unicon v-if="judgeHaveStock(item.code)" class="icon add" viewBox="0 0 1024 1024" name="add" @click.left="addStock(item.code,item.shortName)" />
+          </div>
       </template>
     </el-autocomplete>
     <div id="stage-button">
@@ -80,6 +98,10 @@ const handleSelect = (item: any) => {
 </template>
 
 <style>
+.icon{
+  height: 32px;
+  width: 32px;
+}
 .titlebar{
   align-items: center; /* 垂直居中 */
   display: flex;
@@ -106,6 +128,16 @@ const handleSelect = (item: any) => {
 .search{
   height: 25px;
 }
+.unicon{ /*为了让最小化、最大化、关闭按钮充满header，不然会小一点*/
+  height: 30px;
+ }
+.add{
+  height: 25px;
+  width: 25px;
+  fill: orange;
+  cursor: pointer;
+  align-self: center;
+}
 .el-input__suffix-inner{
   align-items: center; /* 垂直居中 */
 }
@@ -117,10 +149,14 @@ const handleSelect = (item: any) => {
   width: 35px;
   text-align: center; /* 水平居中（如果需要）*/
   line-height: 20px;
+  cursor: default;
 }
 .row{
+  display: flex; /* 确保这是flex容器 */
   align-items: center; /* 垂直居中 */
   justify-content: center;
+  text-align: center;
+  cursor: default;
 }
 #stage-button{
   display: flex;

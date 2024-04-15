@@ -1,5 +1,5 @@
 use log::info;
-use sea_orm::{ActiveModelTrait, ColumnTrait, DeleteResult, EntityOrSelect, EntityTrait, ModelTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityOrSelect, EntityTrait, ModelTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect};
 use sea_orm::ActiveValue::Set;
 use crate::app_errors::AppResult;
 use crate::entities::{init_db_coon, stock_info};
@@ -9,27 +9,18 @@ use crate::entities::stock_info::{Column, Entity};
 
 pub struct StockInfoCurd;
 impl StockInfoCurd {
+    ///按照给定的stock_info插入数据
+    /// 注意，除了index字段（index字段会查询当前index列最大值并+1插入），其他字段原样插入
     pub async fn insert(mut stock_info: StockInfo) -> AppResult<StockInfo> {
         let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
         //考虑到有删除的情况，所以需要重新计算index
-        let num = StockInfos::find().count(db).await?;
+        // let num = StockInfos::find().count(db).await?;
         //查询index列的最大值
         // let max_index = StockInfos::find().order_by_desc(Column::Index).limit(1).one(db).await?.unwrap().index;
         // let max_index = StockInfos::find().select_only().column(Column::Index).filter(Column::Index.max()).one(db).await?.unwrap().index;
-        let max_index = StockInfos::find().select_only().column(Column::Index).order_by_asc(Column::Index).one(db).await?.unwrap();
-        // stock_info.index = max_index + 1;
-        //https://www.sea-ql.org/SeaORM/docs/advanced-query/custom-select/#:~:text=By%20default%2C%20SeaORM%20will%20select%20all%20columns%20defined,all%20columns%20assert_eq%21%28cake%3A%3AEntity%3A%3Afind%28%29.build%28DbBackend%3A%3APostgres%29.to_string%28%29%2C%20r%23%22SELECT%20%22cake%22.%22id%22%2C%20%22cake%22.%22name%22%20FROM%20%22cake%22%22%23
-        println!("max_index:{:?}",max_index);
-        stock_info.index = 1;
-        //查询一共有多少条记录
-        
-        // let model: ActiveStockInfo = StockInfo {
-        //     code: stock_info.code,
-        //     index: stock_info.index,
-        //     name: stock_info.name,
-        //     r#box: None,
-        //     hold: stock_info.hold,
-        // }.into();
+        let max_index = StockInfos::find().select_only().expr(Column::Index.max()).into_tuple::<i32>().one(db).await?.unwrap_or(1);
+        // let max_index = StockInfos::find().select_only().column(Column::Index).order_by_asc(Column::Index).one(db).await?.unwrap();
+        stock_info.index = max_index+1;
         let model: ActiveStockInfo = stock_info.into();
         let result = model.insert(db).await?;
         info!("{:?}",result);
@@ -63,6 +54,7 @@ impl StockInfoCurd {
         let new_model = active_model.update(db).await?;
         Ok(new_model)
     }
+    ///查询所有
     pub async fn find_all() -> AppResult<Vec<StockInfo>> {
         let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
         let result = StockInfos::find().order_by_asc(stock_info::Column::Index).all(db).await?;

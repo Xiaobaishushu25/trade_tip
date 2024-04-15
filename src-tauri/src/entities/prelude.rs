@@ -3,3 +3,4 @@
 pub use super::stock_info::Entity as StockInfos; //表
 pub use super::stock_info::Model as StockInfo;  //表中的每一行记录结构
 pub use super::stock_info::ActiveModel as ActiveStockInfo;
+pub use super::stock_data::Model as StockData;

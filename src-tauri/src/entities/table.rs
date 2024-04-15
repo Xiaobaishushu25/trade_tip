@@ -1,8 +1,18 @@
+use crate::app_errors::AppResult;
+use crate::entities::stock_data::{Column, Entity, TableName};
+use crate::entities::{init_db_coon, DB};
+use log::info;
+use sea_orm::sea_query::{ColumnDef, TableCreateStatement};
+use sea_orm::{
+    sea_query, ConnectionTrait, DatabaseConnection, DbErr, EntityName, EntityTrait, ExecResult,
+    Statement,
+};
+
 // use std::env;
 // use sea_query::{ColumnDef, Iden, SqliteQueryBuilder, Table, Value};
 // #[cfg(feature = "derive")]
 // use sea_query::Iden;
-// 
+//
 // enum StockData {
 //     TableName(String),
 //     Id,
@@ -33,7 +43,7 @@
 //     Box,
 //     Hold
 // }
-// 
+//
 // async fn create_table(){
 //     let mut url = "sqlite:".to_string();
 //     url.push_str(&*env::current_dir().unwrap().to_string_lossy());
@@ -67,3 +77,105 @@
 // async fn test_create_table() {
 //     create_table().await;
 // }
+async fn create_table(
+    db: &DatabaseConnection,
+    stmt: &TableCreateStatement,
+) -> AppResult<ExecResult> {
+    let builder = db.get_database_backend();
+    Ok(db.execute(builder.build(stmt)).await?)
+}
+pub async fn create_table_with_dyn_name(name: &str) -> AppResult<()> {
+    let db = DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
+    let entity: Entity = Entity {
+        table_name: TableName::from_str_truncate(name),
+    };
+    let create_table_stmt = sea_query::Table::create()
+        .table(entity.table_ref())
+        .col(ColumnDef::new(Column::Name).string().not_null())
+        .col(
+            ColumnDef::new(Column::Date)
+                .string()
+                .not_null()
+                .primary_key(),
+        )
+        .col(ColumnDef::new(Column::Open).double().not_null())
+        .col(ColumnDef::new(Column::Close).double().not_null())
+        .col(ColumnDef::new(Column::High).double().not_null())
+        .col(ColumnDef::new(Column::Low).double().not_null())
+        .col(ColumnDef::new(Column::Vol).double().not_null())
+        .col(ColumnDef::new(Column::Ma5).double())
+        .col(ColumnDef::new(Column::Ma10).double().not_null())
+        .col(ColumnDef::new(Column::Ma20).double().not_null())
+        .col(ColumnDef::new(Column::Ma30).double().not_null())
+        .col(ColumnDef::new(Column::Ma60).double().not_null())
+        .to_owned();
+    create_table(&db, &create_table_stmt).await?;
+    Ok(())
+}
+pub async fn drop_table_with_dyn_name(table_name: &str) -> AppResult<()> {
+    let db = DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
+    let entity: Entity = Entity {
+        table_name: TableName::from_str_truncate(table_name),
+    };
+    drop_table(db, entity).await;
+    Ok(())
+}
+// use sea_orm::{Schema, ConnectionTrait, EntityTrait};
+
+// pub async fn create_table<E>(db_connection: &sea_orm::DatabaseConnection, entity: E)
+//     where E: EntityTrait{
+//     let backend = db_connection.get_database_backend();
+//     let schema = Schema::new(backend);
+//     let execution = db_connection.execute(backend.build(&schema.create_table_from_entity(entity)));
+//     match execution.await {
+//         Ok(_) => println!("Created {}", entity.table_name()),
+//         Err(e) => println!("Error: {}", e),
+//     }
+// }
+///https://github.com/SeaQL/sea-orm/issues/1399
+///注意，表不存在时Drop也会返回Ok
+pub async fn drop_table<E>(db_connection: &sea_orm::DatabaseConnection, entity: E) -> AppResult<()>
+where
+    E: EntityTrait,
+{
+    // println!(
+    //     "{:?}",
+    //     Statement::from_sql_and_values(
+    //         db_connection.get_database_backend(),
+    //         &format!(r#"DROP TABLE "{}""#, entity.table_name()),
+    //         vec![],
+    //     )
+    // );
+    info!(
+        "{:?}",
+        Statement::from_sql_and_values(
+            db_connection.get_database_backend(),
+            &format!(r#"DROP TABLE "{}""#, entity.table_name()),
+            vec![],
+        )
+    );
+    let _ = db_connection
+        .execute(Statement::from_sql_and_values(
+            db_connection.get_database_backend(),
+            &format!(r#"DROP TABLE {}"#, entity.table_name()),
+            vec![],
+        ))
+        .await?;
+    Ok(())
+    // match execution.await {
+    //     Ok(_) => println!("Deleted {}", entity.table_name()),
+    //     Err(e) => println!("Error: {}", e),
+    // }
+}
+#[tokio::test]
+async fn test_create_table_with_dyn_name() {
+    init_db_coon().await;
+    let result = create_table_with_dyn_name("sz_123456").await;
+    println!("{result:?}")
+}
+#[tokio::test]
+async fn test_drop_table_with_dyn_name() {
+    init_db_coon().await;
+    let result = drop_table_with_dyn_name("sz_123456").await;
+    println!("{result:?}")
+}

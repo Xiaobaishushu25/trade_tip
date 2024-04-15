@@ -2,10 +2,21 @@
 // This starter template is using Vue 3 <script setup> SFCs
 // Check out https://vuejs.org/api/sfc-script-setup.html#script-setup
 import {onMounted, ref} from "vue";
-import axios from "axios";
+// import axios from "axios";
 import Header from "./components/Header.vue";
+import {StockInfo} from "./type.ts";
+import {invoke} from "@tauri-apps/api/core";
+import {store} from "./store.ts"
+// const stockInfo = ref<StockInfo[]>([]);
 onMounted(()=>{
   window.addEventListener("contextmenu",  (e) => {e.preventDefault()},false)
+  invoke<StockInfo[]>("query_stock_info", {}).then(res => {
+    console.log(res);
+    store.stockInfo = res;
+    // stockInfo.value = res;
+  }).catch(err => {
+    console.log(err);
+  })
 })
 const keyWord = ref("")
 function querySearchAsync(key: string, cb: any){
@@ -66,15 +77,6 @@ const handleSelect = (item: any) => {
 </template>
 
 <style scoped>
-.tag{
-  font-size: 11px;
-  color: white;
-  background-color: dodgerblue;
-  height: 20px;
-  width: 35px;
-  text-align: center; /* 水平居中（如果需要）*/
-  line-height: 20px;
-}
 .row{
   align-items: center; /* 垂直居中 */
   justify-content: center;

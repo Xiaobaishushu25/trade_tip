@@ -6,6 +6,7 @@ use tokio::sync::OnceCell;
 pub mod table;
 pub mod stock_info;
 pub(crate) mod prelude;
+pub mod stock_data;
 
 // pub static DB:OnceLock<DatabaseConnection> = OnceLock::new();
 pub static DB:OnceCell<DatabaseConnection> = OnceCell::const_new();
