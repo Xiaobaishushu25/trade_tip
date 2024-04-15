@@ -4,7 +4,7 @@
 
 
 <template>
-<div class="main" id="draggable-main">
+<div class="main" data-tauri-drag-region id="draggable-main">
   <div class="two-column">
     <img src="../assets/hline.svg" class="icon" alt="水平直线" />
     <img src="../assets/line.svg" class="icon" alt="水平直线" />

@@ -11,10 +11,24 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "trade_tip",
         "width": 800,
         "height": 600,
-        "additionalBrowserArgs": "--disable-web-security"
+        "decorations": false,
+        "resizable": true
+      },
+      {
+        "label": "tool",
+        "title": "tool",
+        "width": 80,
+        "height": 200,
+        "resizable": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "decorations": false,
+        "visible": false,
+        "url": "http://localhost:1420/#/tool"
       }
     ],
     "security": {
