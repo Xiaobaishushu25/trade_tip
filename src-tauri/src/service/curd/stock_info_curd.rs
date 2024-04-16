@@ -23,7 +23,7 @@ impl StockInfoCurd {
         stock_info.index = max_index+1;
         let model: ActiveStockInfo = stock_info.into();
         let result = model.insert(db).await?;
-        info!("{:?}",result);
+        // info!("{:?}",result);
         // let result = ActiveModel::insert(model).exec(&db).await?;
         // let result = StockInfo::insert(model).exec(&db).await?;//InsertResult { last_insert_id: "512764" }
         Ok(result)

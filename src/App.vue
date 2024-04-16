@@ -13,6 +13,8 @@ onMounted(()=>{
   invoke<StockInfo[]>("query_stock_info", {}).then(res => {
     console.log(res);
     store.stockInfo = res;
+    store.stockInfo[0].price= 1.56
+    console.log(store.stockInfo[0].price)
     // stockInfo.value = res;
   }).catch(err => {
     console.log(err);
