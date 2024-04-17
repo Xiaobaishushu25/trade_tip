@@ -8,3 +8,7 @@ pub use super::stock_data::Model as StockData;
 pub use super::stock_group::Entity as StockGroups;
 pub use super::stock_group::Model as StockGroup;
 pub use super::stock_group::ActiveModel as ActiveStockGroup;
+pub use super::group_stock_relation::Entity as StockGroups;
+pub use super::group_stock_relation::Model as StockGroups;
+pub use super::stock_group::Model as StockGroup;
+pub use super::stock_group::ActiveModel as ActiveStockGroup;
