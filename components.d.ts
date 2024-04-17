@@ -9,11 +9,15 @@ declare module 'vue' {
   export interface GlobalComponents {
     CandleChart: typeof import('./src/components/CandleChart.vue')['default']
     ElAutocomplete: typeof import('element-plus/es')['ElAutocomplete']
+    ElButton: typeof import('element-plus/es')['ElButton']
+    ElDialog: typeof import('element-plus/es')['ElDialog']
     Greet: typeof import('./src/components/Greet.vue')['default']
     Header: typeof import('./src/components/Header.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    Search: typeof import('./src/components/Search.vue')['default']
     StockTable: typeof import('./src/components/StockTable.vue')['default']
+    SvgIcon: typeof import('./src/components/SvgIcon.vue')['default']
     Tool: typeof import('./src/components/Tool.vue')['default']
   }
 }

@@ -1,5 +1,5 @@
 use log::info;
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityOrSelect, EntityTrait, ModelTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryOrder, QuerySelect};
 use sea_orm::ActiveValue::Set;
 use crate::app_errors::AppResult;
 use crate::entities::{init_db_coon, stock_info};

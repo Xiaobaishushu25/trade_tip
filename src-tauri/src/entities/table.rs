@@ -1,12 +1,9 @@
 use crate::app_errors::AppResult;
 use crate::entities::stock_data::{Column, Entity, TableName};
-use crate::entities::{init_db_coon, DB};
+use crate::entities::{init_db_coon, DB, stock_group};
 use log::info;
 use sea_orm::sea_query::{ColumnDef, TableCreateStatement};
-use sea_orm::{
-    sea_query, ConnectionTrait, DatabaseConnection, DbErr, EntityName, EntityTrait, ExecResult,
-    Statement,
-};
+use sea_orm::{sea_query, ConnectionTrait, DatabaseConnection, DbErr, EntityName, EntityTrait, ExecResult, Statement, Schema};
 
 // use std::env;
 // use sea_query::{ColumnDef, Iden, SqliteQueryBuilder, Table, Value};
@@ -77,7 +74,8 @@ use sea_orm::{
 // async fn test_create_table() {
 //     create_table().await;
 // }
-async fn create_table(
+///需要使用TableCreateStatement建表，一般用在动态名称建表中。
+async fn create_dyn_table(
     db: &DatabaseConnection,
     stmt: &TableCreateStatement,
 ) -> AppResult<ExecResult> {
@@ -109,7 +107,7 @@ pub async fn create_table_with_dyn_name(name: &str) -> AppResult<()> {
         .col(ColumnDef::new(Column::Ma30).double().not_null())
         .col(ColumnDef::new(Column::Ma60).double().not_null())
         .to_owned();
-    create_table(&db, &create_table_stmt).await?;
+    create_dyn_table(&db, &create_table_stmt).await?;
     Ok(())
 }
 pub async fn drop_table_with_dyn_name(table_name: &str) -> AppResult<()> {
@@ -117,21 +115,21 @@ pub async fn drop_table_with_dyn_name(table_name: &str) -> AppResult<()> {
     let entity: Entity = Entity {
         table_name: TableName::from_str_truncate(table_name),
     };
-    drop_table(db, entity).await;
+    let _ = drop_table(db, entity).await;
     Ok(())
 }
 // use sea_orm::{Schema, ConnectionTrait, EntityTrait};
 
-// pub async fn create_table<E>(db_connection: &sea_orm::DatabaseConnection, entity: E)
-//     where E: EntityTrait{
-//     let backend = db_connection.get_database_backend();
-//     let schema = Schema::new(backend);
-//     let execution = db_connection.execute(backend.build(&schema.create_table_from_entity(entity)));
-//     match execution.await {
-//         Ok(_) => println!("Created {}", entity.table_name()),
-//         Err(e) => println!("Error: {}", e),
-//     }
-// }
+pub async fn create_table<E>(db_connection: &sea_orm::DatabaseConnection, entity: E)
+    where E: EntityTrait{
+    let backend = db_connection.get_database_backend();
+    let schema = Schema::new(backend);
+    let execution = db_connection.execute(backend.build(&schema.create_table_from_entity(entity)));
+    match execution.await {
+        Ok(_) => println!("Created {}", entity.table_name()),
+        Err(e) => println!("Error: {}", e),
+    }
+}
 ///https://github.com/SeaQL/sea-orm/issues/1399
 ///注意，表不存在时Drop也会返回Ok
 pub async fn drop_table<E>(db_connection: &sea_orm::DatabaseConnection, entity: E) -> AppResult<()>
@@ -177,5 +175,11 @@ async fn test_create_table_with_dyn_name() {
 async fn test_drop_table_with_dyn_name() {
     init_db_coon().await;
     let result = drop_table_with_dyn_name("sz_123456").await;
+    println!("{result:?}")
+}
+#[tokio::test]
+async fn test_create_table() {
+    init_db_coon().await;
+    let result = create_table(&DB.get().unwrap(), stock_group::Entity).await;
     println!("{result:?}")
 }

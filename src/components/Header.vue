@@ -4,14 +4,17 @@ import {watch, ref} from "vue";
 import {invoke} from "@tauri-apps/api/core";
 // import axios from "axios";
 import {store} from "../store.ts"
-const max_state_name = ref('window-maximize')
+import SvgIcon from "./SvgIcon.vue";
+import Search from "./Search.vue";
+// const max_state_name = ref('window-maximize')
+const max_state_name = ref('maximize')
 const max_state= ref(false)
 watch(max_state, async (newValue) => {
   if(newValue){ //当前状态是最大化
-    max_state_name.value = 'window-restore'
+    max_state_name.value = 'restore'
     await WebviewWindow.getCurrent().maximize()
   }else{
-    max_state_name.value = 'window-maximize'
+    max_state_name.value = 'maximize'
     await WebviewWindow.getCurrent().unmaximize()
   }
 })
@@ -68,40 +71,25 @@ function addStock(code: string, name: string){
 
 <template>
   <div  data-tauri-drag-region class="titlebar"  >
-    <el-autocomplete class="search-input"
-        v-model="keyWord"
-        :clearable = "true"
-        :fetch-suggestions="querySearchAsync"
-        :trigger-on-focus="false"
-        placeholder="输入股票代码、名称、简拼或关键字"
-        @select="handleSelect"
-        value-key="shortName"
-    >
-      <template #suffix>
-        <unicon class ="search" viewBox="0 0 1024 1024" name="search" />
-      </template>
-      <template #default="{ item }">
-        <div class="row">
-          <div class="tag">{{ item.securityTypeName }}</div>
-          <label class="link">{{ `${item.shortName}(${item.code})` }}</label>
-          <unicon v-if="judgeHaveStock(item.code)" class="icon add" viewBox="0 0 1024 1024" name="add" @click.left="addStock(item.code,item.shortName)" />
-          </div>
-      </template>
-    </el-autocomplete>
+    <Search></Search>
     <div id="stage-button">
+      {{max_state_name}}
+      <inline-svg src="./src/assets/svg/minimize.svg" class="window-button min" @click.left="window_minimize"></inline-svg>
+      <inline-svg :src="`./src/assets/svg/${max_state_name}.svg`" :class="`window-button ${max_state_name}`" @click.left="window_maximize" ></inline-svg>
+<!--      <inline-svg src="./src/assets/svg/max.svg" class="window-button max"></inline-svg>-->
+      <!--      <inline-svg src="./src/assets/svg/restore.svg" class="window-button restore"></inline-svg>-->
+      <inline-svg src="./src/assets/svg/close.svg" class="window-button close"  @click.left="window_close"></inline-svg>
+
       <!--      <unicon class ="top" viewBox="0 0 1024 1024" name="window-on-top" />-->
-      <unicon class ="min" viewBox="0 0 1024 1024" name="window-minimize" @click.left="window_minimize" />
-      <unicon class ="max" viewBox="0 0 1024 1024" @click.left="window_maximize" :name=max_state_name />
-      <unicon class ="close" name="multiply" @click.left="window_close" icon-style="monochrome" />
+<!--      <unicon class ="min" viewBox="0 0 1024 1024" name="window-minimize" @click.left="window_minimize" />-->
+<!--      <unicon class ="min" viewBox="0 0 1024 1024" name="window-minimize" @click.left="window_minimize" />-->
+<!--      <unicon class ="max" viewBox="0 0 1024 1024" @click.left="window_maximize" :name=max_state_name />-->
+<!--      <unicon class ="close" name="multiply" @click.left="window_close" icon-style="monochrome" />-->
     </div>
   </div>
 </template>
 
 <style>
-.icon{
-  height: 32px;
-  width: 32px;
-}
 .titlebar{
   align-items: center; /* 垂直居中 */
   display: flex;
@@ -113,51 +101,8 @@ function addStock(code: string, name: string){
   left: 0;
   right: 0;*/
 }
-.search-input{
-  width: 40%;
-  align-items: center; /* 垂直居中 */
-}
 
-.search-input .el-input__inner{
-  height: 23px;
-  /*border-radius: 0;*/
-}
-.search-input .el-input__wrapper{
-  height: 25px;
-}
-.search{
-  height: 25px;
-}
-.unicon{ /*为了让最小化、最大化、关闭按钮充满header，不然会小一点*/
-  height: 30px;
- }
-.add{
-  height: 25px;
-  width: 25px;
-  fill: orange;
-  cursor: pointer;
-  align-self: center;
-}
-.el-input__suffix-inner{
-  align-items: center; /* 垂直居中 */
-}
-.tag{
-  font-size: 11px;
-  color: white;
-  background-color: dodgerblue;
-  height: 20px;
-  width: 35px;
-  text-align: center; /* 水平居中（如果需要）*/
-  line-height: 20px;
-  cursor: default;
-}
-.row{
-  display: flex; /* 确保这是flex容器 */
-  align-items: center; /* 垂直居中 */
-  justify-content: center;
-  text-align: center;
-  cursor: default;
-}
+
 #stage-button{
   display: flex;
   flex-direction:row;
@@ -165,47 +110,46 @@ function addStock(code: string, name: string){
   /*在 Flexbox 中，margin-left: auto; 会将元素推到其容器的末尾，而 margin-right: 0; 在 Flexbox 中不会产生相同的效果。*/
   margin-left: auto;
 }
-.top{
-  width:30px;
+.window-button{
   height: 30px;
-}
-.top path{
-  stroke:red;
-  stroke-width:30;
-}
-.top:hover{
-  cursor: pointer;
-}
-.top:hover path{
-  stroke: #37ff00;
-  stroke-width:30;
-}
-.min, .max, .close{
-  /*font-size: 30px;用这个无法设置大小*/
   width: 40px;
-  height: 30px;
 }
-
+/*.min path{
+  stroke: red;
+  stroke-width: 0.5;
+}*/
 .min path{
-  stroke: black;
-  width: 24px;
-  stroke-width: 1;
+  transform: scale(0.6);
+  transform-origin: center;
 }
-.max path{
+.maximize path{
   transform: scale(0.7);
   transform-origin: center;
-  stroke: black;
-  stroke-width:20;
 }
-.min:hover,.max:hover{
+.restore path{
+  transform: scale(0.8);
+  transform-origin: center;
+  stroke-width: 20;
+  stroke: #0f0f0f;
+}
+
+
+.min:hover,.maximize:hover,.restore:hover{
   background-color: #33303020;
   border-radius: 5px;
 }
-
+.close path{
+  transform: scale(0.8);
+  transform-origin: center;
+  stroke-width: 20;
+  stroke: #0f0f0f;
+}
 .close:hover{
-  fill: white;
   background-color: red;
   border-radius: 5px;
 }
-
+.close:hover path{
+  fill: white;
+  stroke: white;
+}
 </style>

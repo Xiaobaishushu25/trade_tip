@@ -6,12 +6,12 @@
 <template>
 <div class="main" data-tauri-drag-region id="draggable-main">
   <div class="two-column">
-    <img src="../assets/hline.svg" class="icon" alt="水平直线" />
-    <img src="../assets/line.svg" class="icon" alt="水平直线" />
-    <img src="../assets/hpartline.svg" class="icon" alt="水平直线" />
-    <img src="../assets/A.svg" class="icon" alt="水平直线" />
-    <img src="../assets/up.svg" class="icon" alt="水平直线" />
-    <img src="../assets/down.svg" class="icon" alt="水平直线" />
+    <img src="../assets/svg/hline.svg" class="icon" alt="水平直线" />
+    <img src="../assets/svg/line.svg" class="icon" alt="水平直线" />
+    <img src="../assets/svg/hpartline.svg" class="icon" alt="水平直线" />
+    <img src="../assets/svg/A.svg" class="icon" alt="水平直线" />
+    <img src="../assets/svg/up.svg" class="icon" alt="水平直线" />
+    <img src="../assets/svg/down.svg" class="icon" alt="水平直线" />
   </div>
 </div>
 </template>

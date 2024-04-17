@@ -20,6 +20,8 @@ import {
 } from 'echarts/charts';
 import { UniversalTransition } from 'echarts/features';
 import { CanvasRenderer } from 'echarts/renderers';
+
+// import 'virtual:svg-icons-register'
 import Unicon from 'vue-unicons'
 import { uniCopyAlt, uniCopyLandscape,uniWindowSection, uniWindowMaximize, uniCommentMonochrome,uniMultiplyMonochrome,uniMinusSquareFullMonochrome } from 'vue-unicons/dist/icons.js'
 import {icons} from "./icons.js"
@@ -52,6 +54,9 @@ echarts.use([
 ]);
 
 //
-
+// import InlineSvgPlugin from 'vue-inline-svg';
+import InlineSvg from 'vue-inline-svg';
 let app = createApp(App);
+app.component('inline-svg', InlineSvg);
+
 app.use(Unicon).use(VueShortKey).use(router).mount('#app')

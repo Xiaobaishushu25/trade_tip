@@ -41,6 +41,15 @@
   gap: 5px;
 }
 
+.icon{
+  height: 32px;
+  width: 32px;
+}
+.min-icon{
+  height: 20px;
+  width: 20px;
+}
+
 a {
   font-weight: 500;
   color: #646cff;
