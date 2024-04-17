@@ -1,28 +1,20 @@
-use arraystring::typenum::op;
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, NotSet, QueryOrder, QuerySelect};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, NotSet, QueryOrder, QuerySelect, Related};
 use sea_orm::ActiveValue::Set;
 use crate::app_errors::AppError::AnyHow;
 use crate::app_errors::AppResult;
 use crate::entities::init_db_coon;
 use crate::entities::prelude::{ActiveStockGroup, StockGroup, StockGroups, StockInfos};
 use crate::entities::stock_group::Column;
-use crate::service::curd::stock_group_curd;
 
 
 struct StockGroupCurd;
 impl StockGroupCurd {
     pub async fn insert(mut stock_group: StockGroup) -> AppResult<StockGroup>{
         let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
-        //查询index列的最大值
-        // let max_index = StockGroups::find().select_only().expr(Column::Index.max()).into_tuple::<i32>().one(db).await?.unwrap_or(1);
         //注意，这里泛型是into_tuple::<Option<i32>>，有可能没有index值
         let max_index = StockGroups::find().select_only().expr(Column::Index.max()).into_tuple::<Option<i32>>().one(db).await?.unwrap().unwrap_or(0);
         println!("max_index:{:?}",max_index);
-        // let max_index = StockGroups::find().select_only().expr(Column::Index.max()).into_tuple::<Option<i32>>().one(db).await?.unwrap_or(Some(1)).unwrap();
-        // println!("max_index:{:?}",max_index);
-        // let max_index = StockInfos::find().select_only().column(Column::Index).order_by_asc(Column::Index).one(db).await?.unwrap();
         stock_group.index = max_index+1;
-        // let mut model: ActiveStockGroup = stock_group.into();
         let model = ActiveStockGroup{
             index: Set(max_index+1),
             name: Set(stock_group.name),
@@ -40,6 +32,11 @@ impl StockGroupCurd {
         let model = StockGroups::find_by_id(id).one(db).await?.ok_or(anyhow::anyhow!("删除失败:未找到id为{}的记录",id))?;
         let result = model.delete(db).await?;
         Ok(result.rows_affected as i32)
+    }
+    pub async fn find_by_id(id: i32) -> AppResult<Vec<String>> {
+        let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        let vec = StockGroups::find_related().all(db).await?;
+
     }
 }
 #[tokio::test]

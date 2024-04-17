@@ -4,6 +4,7 @@ use crate::entities::{init_db_coon, DB, stock_group};
 use log::info;
 use sea_orm::sea_query::{ColumnDef, TableCreateStatement};
 use sea_orm::{sea_query, ConnectionTrait, DatabaseConnection, DbErr, EntityName, EntityTrait, ExecResult, Statement, Schema};
+use crate::entities::prelude::{GroupStockRs};
 
 // use std::env;
 // use sea_query::{ColumnDef, Iden, SqliteQueryBuilder, Table, Value};
@@ -178,8 +179,14 @@ async fn test_drop_table_with_dyn_name() {
     println!("{result:?}")
 }
 #[tokio::test]
-async fn test_create_table() {
+async fn test_create_table1() {
     init_db_coon().await;
     let result = create_table(&DB.get().unwrap(), stock_group::Entity).await;
+    println!("{result:?}")
+}
+#[tokio::test]
+async fn test_create_table2() {
+    init_db_coon().await;
+    let result = create_table(&DB.get().unwrap(), GroupStockRs).await;
     println!("{result:?}")
 }
