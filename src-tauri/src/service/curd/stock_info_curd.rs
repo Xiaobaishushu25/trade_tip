@@ -18,7 +18,7 @@ impl StockInfoCurd {
         //查询index列的最大值
         // let max_index = StockInfos::find().order_by_desc(Column::Index).limit(1).one(db).await?.unwrap().index;
         // let max_index = StockInfos::find().select_only().column(Column::Index).filter(Column::Index.max()).one(db).await?.unwrap().index;
-        let max_index = StockInfos::find().select_only().expr(Column::Index.max()).into_tuple::<i32>().one(db).await?.unwrap_or(1);
+        let max_index = StockInfos::find().select_only().expr(Column::Index.max()).into_tuple::<Option<i32>>().one(db).await?.unwrap().unwrap_or(0);
         // let max_index = StockInfos::find().select_only().column(Column::Index).order_by_asc(Column::Index).one(db).await?.unwrap();
         stock_info.index = max_index+1;
         let model: ActiveStockInfo = stock_info.into();
@@ -54,7 +54,7 @@ impl StockInfoCurd {
         let new_model = active_model.update(db).await?;
         Ok(new_model)
     }
-    ///查询所有
+    ///查询所有(按照索引排序)
     pub async fn find_all() -> AppResult<Vec<StockInfo>> {
         let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
         let result = StockInfos::find().order_by_asc(stock_info::Column::Index).all(db).await?;

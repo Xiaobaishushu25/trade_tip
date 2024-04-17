@@ -6,16 +6,15 @@ use serde::Serialize;
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize)]
 #[sea_orm(table_name = "group_stock_relation")]
 pub struct Model {
-    #[sea_orm(primary_key, auto_increment = true)]
-    pub id: i32,
+    #[sea_orm(primary_key)]
     pub group_id: i32,
+    #[sea_orm(primary_key)]
     pub stock_code: String,
 }
 
 impl Model {
     pub fn new(group_id:i32,stock_code:String)->Self{
         Self{
-            id: 0,
             group_id,
             stock_code,
         }
@@ -23,6 +22,24 @@ impl Model {
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub enum Relation {
+    #[sea_orm(
+        belongs_to = "super::stock_group::Entity",
+        from = "Column::GroupId",
+        to = "super::stock_group::Column::Id"
+    )]
+    StockGroups,
+    #[sea_orm(
+        belongs_to = "super::stock_info::Entity",
+        from = "Column::StockCode",
+        to = "super::stock_info::Column::Code"
+    )]
+    StockInfos,
+}
+impl Related<super::stock_group::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::StockGroups.def()
+    }
+}
 
 impl ActiveModelBehavior for ActiveModel {}
