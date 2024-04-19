@@ -77,15 +77,7 @@ function showDialog(code: string, name: string){
     </template>
   </el-autocomplete>
   <el-dialog v-model="dialogFormVisible" :title="`添加${nowStock.name}`">
-    <GroupSelect :code="nowStock.code" :name="nowStock.name"></GroupSelect>
-    <template #footer>
-      <div class="dialog-footer">
-        <el-button @click="dialogFormVisible = false">Cancel</el-button>
-        <el-button type="primary" @click="dialogFormVisible = false">
-          Confirm
-        </el-button>
-      </div>
-    </template>
+    <GroupSelect :code="nowStock.code" :name="nowStock.name" @hideDialog="dialogFormVisible=false"></GroupSelect>
   </el-dialog>
 </template>
 

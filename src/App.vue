@@ -83,8 +83,5 @@ const handleSelect = (item: any) => {
 </template>
 
 <style scoped>
-.row{
-  align-items: center; /* 垂直居中 */
-  justify-content: center;
-}
+
 </style>
