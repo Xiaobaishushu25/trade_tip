@@ -1,6 +1,6 @@
 use crate::app_errors::AppResult;
 use crate::entities::stock_data::{Column, Entity, TableName};
-use crate::entities::{init_db_coon, DB, stock_group};
+use crate::entities::{init_db_coon, DB, stock_group, stock_info};
 use log::info;
 use sea_orm::sea_query::{ColumnDef, TableCreateStatement};
 use sea_orm::{sea_query, ConnectionTrait, DatabaseConnection, DbErr, EntityName, EntityTrait, ExecResult, Statement, Schema};
@@ -178,14 +178,22 @@ async fn test_drop_table_with_dyn_name() {
     let result = drop_table_with_dyn_name("sz_123456").await;
     println!("{result:?}")
 }
+
 #[tokio::test]
-async fn test_create_table1() {
+async fn test_create_stock_info() {
+    init_db_coon().await;
+    let result = create_table(&DB.get().unwrap(), stock_info::Entity).await;
+    println!("{result:?}")
+}
+#[tokio::test]
+async fn test_create_stock_group() {
     init_db_coon().await;
     let result = create_table(&DB.get().unwrap(), stock_group::Entity).await;
     println!("{result:?}")
 }
+
 #[tokio::test]
-async fn test_create_table2() {
+async fn test_create_group_stock_r() {
     init_db_coon().await;
     let result = create_table(&DB.get().unwrap(), GroupStockRs).await;
     println!("{result:?}")

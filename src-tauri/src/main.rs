@@ -1,14 +1,17 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod app_errors;
-mod service;
-mod entities;
 mod dtos;
+mod entities;
+mod service;
 
-use log::{error, info};
 use crate::entities::init_db_coon;
-use crate::service::http::{init_http};
-use crate::service::command::command::{get_response,add_stock_info,query_stock_info};
+use crate::service::command::command::{
+    add_stock_info, get_response, query_all_groups, query_groups_by_code, query_stock_info,
+    query_stocks_by_group_name,
+};
+use crate::service::http::init_http;
+use log::{error, info};
 
 #[tokio::main]
 async fn main() {
@@ -25,14 +28,16 @@ async fn main() {
         .invoke_handler(tauri::generate_handler![
             get_response,
             add_stock_info,
-            query_stock_info
+            query_stock_info,
+            query_all_groups,
+            query_stocks_by_group_name,
+            query_groups_by_code
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-async fn init_app(){
+async fn init_app() {
     log4rs::init_file("./config/log4rs.yaml", Default::default()).unwrap();
     init_db_coon().await;
     init_http().await;
 }
-

@@ -8,7 +8,6 @@ use serde::Serialize;
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub code: String,
-    pub index: i32,
     pub name: String,
     pub r#box: Option<String>,
     pub hold: bool,
@@ -18,7 +17,6 @@ impl Model {
     pub fn new(code:String,name:String)->Self{
         Self{
             code,
-            index: 0,
             name,
             r#box: None,
             hold: false,
@@ -27,6 +25,13 @@ impl Model {
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
-
+pub enum Relation {
+    #[sea_orm(has_many = "super::group_stock_relation::Entity")]
+    GroupStockRs,
+}
+impl Related<super::group_stock_relation::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::GroupStockRs.def()
+    }
+}
 impl ActiveModelBehavior for ActiveModel {}

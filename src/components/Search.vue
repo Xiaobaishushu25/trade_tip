@@ -3,6 +3,7 @@ import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {watch, ref} from "vue";
 import {invoke} from "@tauri-apps/api/core";
 import {store} from "../store.ts"
+import GroupSelect from "./group/GroupSelect.vue";
 
 const keyWord = ref("")
 const nowStock = ref<{ code: string, name: string}>({code:"", name:""})
@@ -75,18 +76,8 @@ function showDialog(code: string, name: string){
       </div>
     </template>
   </el-autocomplete>
-  <el-dialog v-model="dialogFormVisible" title="添加" width="500">
-<!--    <el-form :model="form">-->
-<!--      <el-form-item label="Promotion name" :label-width="formLabelWidth">-->
-<!--        <el-input v-model="form.name" autocomplete="off" />-->
-<!--      </el-form-item>-->
-<!--      <el-form-item label="Zones" :label-width="formLabelWidth">-->
-<!--        <el-select v-model="form.region" placeholder="Please select a zone">-->
-<!--          <el-option label="Zone No.1" value="shanghai" />-->
-<!--          <el-option label="Zone No.2" value="beijing" />-->
-<!--        </el-select>-->
-<!--      </el-form-item>-->
-<!--    </el-form>-->
+  <el-dialog v-model="dialogFormVisible" :title="`添加${nowStock.name}`">
+    <GroupSelect :code="nowStock.code" :name="nowStock.name"></GroupSelect>
     <template #footer>
       <div class="dialog-footer">
         <el-button @click="dialogFormVisible = false">Cancel</el-button>

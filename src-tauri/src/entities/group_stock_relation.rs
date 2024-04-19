@@ -7,16 +7,18 @@ use serde::Serialize;
 #[sea_orm(table_name = "group_stock_relation")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub group_id: i32,
+    pub group_name: String,
     #[sea_orm(primary_key)]
     pub stock_code: String,
+    pub index:i32
 }
 
 impl Model {
-    pub fn new(group_id:i32,stock_code:String)->Self{
+    pub fn new(group_name:String,stock_code:String)->Self{
         Self{
-            group_id,
+            group_name,
             stock_code,
+            index:0
         }
     }
 }
@@ -25,8 +27,8 @@ impl Model {
 pub enum Relation {
     #[sea_orm(
         belongs_to = "super::stock_group::Entity",
-        from = "Column::GroupId",
-        to = "super::stock_group::Column::Id"
+        from = "Column::GroupName",
+        to = "super::stock_group::Column::Name"
     )]
     StockGroups,
     #[sea_orm(
@@ -39,6 +41,11 @@ pub enum Relation {
 impl Related<super::stock_group::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::StockGroups.def()
+    }
+}
+impl Related<super::stock_info::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::StockInfos.def()
     }
 }
 

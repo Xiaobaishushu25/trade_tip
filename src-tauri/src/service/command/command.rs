@@ -1,5 +1,7 @@
 use log::{error, info};
-use crate::entities::prelude::StockInfo;
+use crate::entities::prelude::{StockGroup, StockGroups, StockInfo};
+use crate::service::curd::group_stock_relation_curd::{GroupStockRelationCurd, MoreStockInfo};
+use crate::service::curd::stock_group_curd::StockGroupCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
 use crate::service::http::REQUEST;
 
@@ -53,6 +55,59 @@ pub async fn query_stock_info() -> Result<Vec<StockInfo>,String> {
         Ok(stock_infos)=>{
             info!("查询所有信息成功:{:?}",stock_infos);
             Ok(stock_infos)
+        },
+        Err(e)=>{
+            error!("查询失败:{}",e);
+            Err(e.to_string())
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn query_all_groups() -> Result<Vec<StockGroup>,String> {
+    match StockGroupCurd::find_all().await{
+        Ok(stock_groups)=>{
+            info!("查询所有分组成功:{:?}",stock_groups);
+            Ok(stock_groups)
+        },
+        Err(e)=>{
+            error!("查询失败:{}",e);
+            Err(e.to_string())
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn query_stocks_by_group_name(name:String) -> Result<Vec<MoreStockInfo>,String> {
+    if name=="持有"{
+        return match StockInfoCurd::find_all_hold().await{
+            Ok(more_infos)=>{
+                info!("查询持有分组成功:{:?}",more_infos);
+                Ok(more_infos)
+            },
+            Err(e)=>{
+                error!("查询失败:{}",e);
+                Err(e.to_string())
+            }
+        }
+    }
+    match GroupStockRelationCurd::find_stocks_by_group_name(name).await{
+        Ok(more_infos)=>{
+            info!("根据分组名查询成功:{:?}",more_infos);
+            Ok(more_infos)
+        },
+        Err(e)=>{
+            error!("查询失败:{}",e);
+            Err(e.to_string())
+        }
+    }
+}
+#[tauri::command]
+pub async fn query_groups_by_code(code:String) -> Result<Vec<String>,String> {
+    match GroupStockRelationCurd::find_groups_by_stock_code(code).await{
+        Ok(stock_groups)=>{
+            info!("根据股票代码查询分组成功:{:?}",stock_groups);
+            Ok(stock_groups)
         },
         Err(e)=>{
             error!("查询失败:{}",e);

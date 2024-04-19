@@ -38,6 +38,8 @@
 .column{
   display: flex;
   flex-direction: column;
+  justify-content: center; /* 垂直居中 */
+  text-align: center;
   gap: 5px;
 }
 

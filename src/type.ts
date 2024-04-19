@@ -7,4 +7,9 @@ interface StockInfo {
     box?: string; // Optional field in TypeScript corresponds to Option<String> in Rust
     hold: boolean;
 }
-export type { StockInfo };
+interface StockGroup{
+    index: number;
+    name: string;
+    stocks: StockInfo[];
+}
+export type { StockInfo,StockGroup };

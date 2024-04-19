@@ -1,7 +1,8 @@
 // store.js
 import { reactive } from 'vue'
-import {StockInfo} from "./type.ts";
+import {StockGroup, StockInfo} from "./type.ts";
 
-export const store:{stockInfo:StockInfo[]} = reactive({
-    stockInfo: []
+export const store:{stockInfo:StockInfo[],stockGroups:StockGroup[]} = reactive({
+    stockInfo: [],
+    stockGroups:[]
 })

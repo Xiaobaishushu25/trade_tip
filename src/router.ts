@@ -6,6 +6,7 @@ import {
 
 import Tool from './components/Tool.vue'
 import CandleChart from './components/CandleChart.vue'
+import GroupTab  from "./components/GroupTab.vue";
 
 const routes: Array<RouteRecordRaw> = [
 // 路由的默认路径
@@ -20,6 +21,10 @@ const routes: Array<RouteRecordRaw> = [
     {
         path:'/tool',
         component: Tool,
+    },
+    {
+        path:'/tab',
+        component: GroupTab,
     }
 ]
 

@@ -6,16 +6,14 @@ use serde::Serialize;
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize)]
 #[sea_orm(table_name = "stock_group")]
 pub struct Model {
-    #[sea_orm(primary_key, auto_increment = true)]
-    pub id: i32,
     pub index: i32,
+    #[sea_orm(primary_key, auto_increment = false)]
     pub name: String,
 }
 
 impl Model {
     pub fn new(name:String)->Self{
         Self{
-            id: 0,
             index: 0,
             name,
         }

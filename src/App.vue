@@ -7,9 +7,13 @@ import Header from "./components/Header.vue";
 import {StockInfo} from "./type.ts";
 import {invoke} from "@tauri-apps/api/core";
 import {store} from "./store.ts"
+import {useRouter} from "vue-router";
 // const stockInfo = ref<StockInfo[]>([]);
+const router = useRouter()
 onMounted(()=>{
+  //https://router.vuejs.org/zh/guide/advanced/composition-api.html#%E5%9C%A8-setup-%E4%B8%AD%E8%AE%BF%E9%97%AE%E8%B7%AF%E7%94%B1%E5%92%8C%E5%BD%93%E5%89%8D%E8%B7%AF%E7%94%B1
   window.addEventListener("contextmenu",  (e) => {e.preventDefault()},false)
+  router.push("/tab")
   invoke<StockInfo[]>("query_stock_info", {}).then(res => {
     console.log(res);
     store.stockInfo = res;
@@ -25,10 +29,10 @@ function querySearchAsync(key: string, cb: any){
   // console.log(key)
   // console.log(cb)
   // axios.get(`https://searchadapter.eastmoney.com/api/suggest/get?input=${key}&type=8&token=D43BF722C8E33BDC906FB84D85E326E8&markettype=&mktnum=&jys=&classify=&securitytype=&status=&count=4&_=1712919708063`).then((res)=>{
-  axios.get(`https://search-codetable.eastmoney.com/codetable/search/web?clientVersion=lastest&keyword=${key}`).then((res)=>{
-    console.log(res.data.result)
-    cb(res.data.result)
-  })
+  // axios.get(`https://search-codetable.eastmoney.com/codetable/search/web?clientVersion=lastest&keyword=${key}`).then((res)=>{
+  //   console.log(res.data.result)
+  //   cb(res.data.result)
+  // })
 }
 
 const handleSelect = (item: any) => {
