@@ -47,8 +47,7 @@ function newGroup() {
       <inline-svg src="./src/assets/svg/add.svg" class="min-icon"></inline-svg>
       <label style="color: orange;cursor: pointer">新建分组</label>
     </div>
-    <el-checkbox-group v-model="groupList" >
-      <div class="check-boxs"  style="background-color: #535bf2">
+    <el-checkbox-group v-model="groupList" style="background-color: darkred;justify-content: center;text-align: center;" >
       <el-checkbox
           v-for="name in groupList"
           :key="name"
@@ -58,7 +57,6 @@ function newGroup() {
           size="large"
           style="transform: scale(1.15);"
       ></el-checkbox>
-      </div>
     </el-checkbox-group>
   </div>
 
