@@ -1,120 +1,115 @@
 <script setup lang="ts">
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
-import {watch, ref} from "vue";
+import {watch, ref, VNodeChild, h,computed} from "vue";
 import {invoke} from "@tauri-apps/api/core";
 import {store} from "../store.ts"
-import GroupSelect from "./group/GroupSelect.vue";
+import {NTag, SelectGroupOption, SelectOption} from "naive-ui";
+import InlineSvg from "vue-inline-svg";
 
-const keyWord = ref("")
+const keyWord = ref("ce")
 const nowStock = ref<{ code: string, name: string}>({code:"", name:""})
 const dialogFormVisible = ref(false)
-function querySearchAsync(key: string, cb: any){
-  // console.log(key)
-  // console.log(cb)
-  // axios.get(`https://searchadapter.eastmoney.com/api/suggest/get?input=${key}&type=8&token=D43BF722C8E33BDC906FB84D85E326E8&markettype=&mktnum=&jys=&classify=&securitytype=&status=&count=4&_=1712919708063`).then((res)=>{
-  invoke("get_response",{url:`https://search-codetable.eastmoney.com/codetable/search/web?clientVersion=lastest&keyword=${key}`}).then((res)=>{
-    console.log(res)
-    cb(JSON.parse(res).result)
+const showGroupMange = ref(false)
+// function querySearchAsync(key: string, cb: any){
+//   // console.log(key)
+//   // console.log(cb)
+//   if(key.length === 0){
+//     cb([])
+//     return
+//   }
+//   // axios.get(`https://searchadapter.eastmoney.com/api/suggest/get?input=${key}&type=8&token=D43BF722C8E33BDC906FB84D85E326E8&markettype=&mktnum=&jys=&classify=&securitytype=&status=&count=4&_=1712919708063`).then((res)=>{
+//   invoke("get_response",{url:`https://search-codetable.eastmoney.com/codetable/search/web?clientVersion=lastest&keyword=${key}`}).then((res)=>{
+//     // console.log(res)
+//     cb(JSON.parse(res).result)
+//   })
+//   // axios.get(`https://search-codetable.eastmoney.com/codetable/search/web?clientVersion=lastest&keyword=${key}`).then((res)=>{
+//   //   console.log(res.data.result)
+//   //   cb(res.data.result)
+//   // })
+// }
+const options = ref([])
+//下面这两个可以使用一个computed完成，但我还是分开写
+watch(keyWord,(newValue: string)=>{
+  querySearchAsync(newValue)
+})
+function querySearchAsync(key:string){
+  if(key.length === 0){
+    return
+  }
+  invoke<string>("get_response",{url:`https://search-codetable.eastmoney.com/codetable/search/web?clientVersion=lastest&keyword=${key}`}).then((res)=>{
+    options.value = JSON.parse(res).result.map((item: any)=>{
+      return {
+        label: item.shortName,
+        value: item.code,
+        market: item.market,
+        status: item.status,
+        securityTypeName: item.securityTypeName,
+      }
+    })
   })
-  // axios.get(`https://search-codetable.eastmoney.com/codetable/search/web?clientVersion=lastest&keyword=${key}`).then((res)=>{
-  //   console.log(res.data.result)
-  //   cb(res.data.result)
-  // })
 }
 const handleSelect = (item: any) => {
-  console.log(item)
+  console.log("点击了"+item)
 }
-function judgeHaveStock(code: string){
-  //遍历stockinfo数组，如果code相等，则返回false ,不渲染
-  for(let i = 0; i < store.stockInfo.length; i++){
-    if(store.stockInfo[i].code === code){
-      return false
-    }
-  }
-  return true
-}
-function showDialog(code: string, name: string){
-  dialogFormVisible.value = true
+
+function manageGroup(code: string, name: string){
+  showGroupMange.value = !showGroupMange.value
   nowStock.value = {code:code,name:name}
-  // invoke("add_stock_info",{code:code,name:name}).then((res)=>{
-  //   console.log(res)
-  // }).catch((err)=>{
-  //   console.log(err)
-  // })
 }
+
+const hideDialog = (ok: boolean) => {
+  dialogFormVisible.value = false
+  if (ok){
+    keyWord.value=""
+  }
+};
+// const  renderLabel= (info: { node: VNode, option: SelectOption | SelectGroupOption, selected: boolean }) => VNodeChild => [
+//   info.option.label as string,
+//   ' ',
+//   h(NTag, { size: 'small', type: 'info' }, { default: () => 'Email' })
+// ]
+const renderOption = (info: { node: VNode, option: SelectOption | SelectGroupOption, selected: boolean }) => {
+  const  option  = info.option;
+  console.log("选项是",option)
+  // 假设 option 是 SelectOption 类型，并且有 securityTypeName, shortName, 和 code 属性
+  // 如果 option 可能是 SelectGroupOption，你可能需要添加额外的逻辑来处理这种情况
+  return h('div', { class: 'row' }, [
+    h(NTag, { size: 'small', type: 'info' }, { default: () => `${option.securityTypeName}` }),
+    h('label', {}, [
+      `${option.label}(${option.value})`
+    ]),
+    h(InlineSvg, {
+      src: './src/assets/svg/add.svg',
+      class: 'min-icon add',
+      onClick: () => {
+        // 调用 manageGroup 方法，这里假设 manageGroup 是在父组件中定义的方法
+        // 你可能需要通过 info.node.context 或者其他方式访问 manageGroup 方法
+        // 这取决于你的组件结构和数据流
+        info.node.context.manageGroup(option.code, option.shortName);
+      }
+    })
+  ]);
+};
 </script>
 
 <template>
-  <el-autocomplete class="search-input"
-                   v-model="keyWord"
-                   :clearable = "true"
-                   :fetch-suggestions="querySearchAsync"
-                   :trigger-on-focus="false"
-                   placeholder="输入股票代码、名称、简拼或关键字"
-                   @select="handleSelect"
-                   value-key="shortName"
+<!--  注意，他这里是v-model:value，使用v-model绑定不到-->
+  <n-auto-complete
+      v-model:value="keyWord"
+      :clearable = "true"
+      :options="options"
+      placeholder="输入股票代码、名称、简拼或关键字"
+      @select="handleSelect"
+      :render-option="renderOption"
+      size="small"
+      style="width: 40%;margin-left: 50px"
   >
     <template #suffix>
-      <!--        <SvgIcon name="A" color="red" size="20"/>-->
-      <!--        <inline-svg src="./src/assets/svg/A.svg"></inline-svg>-->
       <inline-svg src="./src/assets/svg/search.svg" class="min-icon"></inline-svg>
-      <!--        <inline-svg :src="require('../assets/A.svg')"></inline-svg>-->
-      <!--        <unicon class ="search" viewBox="0 0 1024 1024" name="search" />-->
     </template>
-    <template #default="{ item }">
-      <div class="row">
-        <div class="tag">{{ item.securityTypeName }}</div>
-<!--        <label class="link">{{ `${item.shortName}(${item.code})` }}</label>-->
-        <label>{{ `${item.shortName}(${item.code})` }}</label>
-        <inline-svg
-            src="./src/assets/svg/add.svg"
-            class="min-icon add"
-            v-if="judgeHaveStock(item.code)"
-            @click.left="showDialog(item.code,item.shortName)"
-        ></inline-svg>
-        <!--          <unicon v-if="judgeHaveStock(item.code)" class="icon add" viewBox="0 0 1024 1024" name="add" @click.left="addStock(item.code,item.shortName)" />-->
-      </div>
-    </template>
-  </el-autocomplete>
-  <el-dialog v-model="dialogFormVisible" :title="`添加${nowStock.name}`">
-    <GroupSelect :code="nowStock.code" :name="nowStock.name" @hideDialog="dialogFormVisible=false"></GroupSelect>
-  </el-dialog>
+  </n-auto-complete>
 </template>
 
-<style>
-.row{
-  align-items: center; /* 垂直居中 */
-  text-align: center;
-  cursor: default;
-}
-.search-input{
-  width: 40%;
-  align-items: center; /* 垂直居中 */
-}
+<style scoped>
 
-.search-input .el-input__inner{
-  height: 23px;
-  /*border-radius: 0;*/
-}
-.search-input .el-input__wrapper{
-  height: 25px;
-}
-.add{
-  fill: orange;
-  cursor: pointer;
-  align-self: center;
-}
-.el-input__suffix-inner{
-  align-items: center; /* 垂直居中 */
-}
-.tag{
-  font-size: 11px;
-  color: white;
-  background-color: dodgerblue;
-  height: 20px;
-  width: 35px;
-  text-align: center; /* 水平居中（如果需要）*/
-  line-height: 20px;
-  cursor: default;
-}
 </style>

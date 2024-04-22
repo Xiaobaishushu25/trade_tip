@@ -18,14 +18,13 @@ impl StockGroupCurd {
         let model = ActiveStockGroup{
             index: Set(max_index+1),
             name: Set(stock_group.name),
-            ..Default::default()
+            // ..Default::default()
         };
         // model.id = NotSet;
         //这里实际会有两句，插入后再查询一遍返回刚插的数据，如果不需要可以用let _忽略，这样就不会在查一次了
         let result = model.insert(db).await?;
         // let _ = model.insert(db).await?;
         Ok(result)
-        // Err(AnyHow(anyhow::anyhow!("插入失败")))
     }
     pub async fn delete_by_name(name: String) -> AppResult<i32> {
         let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;

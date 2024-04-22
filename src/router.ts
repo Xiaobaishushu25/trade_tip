@@ -6,6 +6,7 @@ import {
 
 import Tool from './components/Tool.vue'
 import CandleChart from './components/CandleChart.vue'
+import NewCandleChart from './components/NewCandleChart.vue'
 import GroupTab  from "./components/GroupTab.vue";
 
 const routes: Array<RouteRecordRaw> = [
@@ -17,6 +18,10 @@ const routes: Array<RouteRecordRaw> = [
     {
         path:'/candleChart',
         component: CandleChart,
+    },
+    {
+        path:'/newCandleChart',
+        component: NewCandleChart,
     },
     {
         path:'/tool',

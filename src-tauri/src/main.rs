@@ -8,7 +8,8 @@ mod service;
 use crate::entities::init_db_coon;
 use crate::service::command::command::{
     add_stock_info, get_response, query_all_groups, query_groups_by_code, query_stock_info,
-    query_stocks_by_group_name,
+    query_stocks_by_group_name,create_group,update_stock_groups,remove_stock_from_group,
+    update_stock_hold
 };
 use crate::service::http::init_http;
 use log::{error, info};
@@ -31,7 +32,11 @@ async fn main() {
             query_stock_info,
             query_all_groups,
             query_stocks_by_group_name,
-            query_groups_by_code
+            query_groups_by_code,
+            create_group,
+            update_stock_groups,
+            remove_stock_from_group,
+            update_stock_hold
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -47,7 +47,7 @@ impl StockInfoCurd {
         Ok(result.rows_affected as i32)
     }
     ///根据code更新持有情况
-    pub async fn update_hold(code: String, hold: bool) -> AppResult<StockInfo> {
+    pub async fn update_hold_by_code(code: String, hold: bool) -> AppResult<StockInfo> {
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
@@ -91,9 +91,10 @@ impl StockInfoCurd {
                 MoreStockInfo{
                     group_name:"持有".into(),
                     index:0,
-                    stock_code:model.code,
-                    stock_name:model.name,
+                    code:model.code,
+                    name:model.name,
                     r#box: model.r#box,
+                    hold:model.hold,
                 }
             })
             .collect::<Vec<_>>();
@@ -125,7 +126,7 @@ async fn test_delete_by_code() {
 #[tokio::test]
 async fn test_update_hold() {
     init_db_coon().await;
-    let result = StockInfoCurd::update_hold("124357".to_string(), false).await;
+    let result = StockInfoCurd::update_hold_by_code("124357".to_string(), false).await;
     println!("{:?}", result);
 }
 #[tokio::test]

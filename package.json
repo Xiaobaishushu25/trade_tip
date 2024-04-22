@@ -10,6 +10,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@imengyu/vue3-context-menu": "^1.4.1",
     "@tauri-apps/api": ">=2.0.0-beta.0",
     "@tauri-apps/plugin-fs": "^2.0.0-beta.2",
     "@tauri-apps/plugin-http": "2.0.0-beta.2",
@@ -18,15 +19,17 @@
     "echarts": "^5.5.0",
     "element-plus": "^2.4.1",
     "vue": "^3.3.4",
+    "vue-draggable-plus": "^0.4.0",
     "vue-inline-svg": "^3.1.2",
     "vue-router": "^4.2.5",
     "vue-unicons": "^3.3.1",
-    "vue3-shortkey": "^4.0.0"
+    "vue3-shortkey": "^4.0.0",
+    "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": ">=2.0.0-beta.0",
     "@vitejs/plugin-vue": "^5.0.4",
-    "node": "link:/node",
+    "naive-ui": "^2.38.1",
     "typescript": "^5.0.2",
     "unplugin-auto-import": "^0.17.5",
     "unplugin-vue-components": "^0.26.0",

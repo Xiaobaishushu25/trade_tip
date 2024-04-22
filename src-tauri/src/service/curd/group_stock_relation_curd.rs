@@ -8,10 +8,7 @@ use crate::entities::{group_stock_relation, init_db_coon, open_db_log, stock_gro
 use crate::service::curd::stock_group_curd;
 use anyhow::anyhow;
 use sea_orm::ActiveValue::Set;
-use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, FromQueryResult, JoinType, LinkDef, Linked,
-    ModelTrait, QueryFilter, QueryOrder, QuerySelect, RelationTrait,
-};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, FromQueryResult, JoinType, LinkDef, Linked, ModelTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, RelationTrait};
 use serde::Serialize;
 
 pub struct GroupToStockInfo;
@@ -31,20 +28,33 @@ impl Linked for GroupToStockInfo {
 pub struct MoreStockInfo {
     pub(crate) group_name: String,
     pub index: i32,
-    pub stock_code: String,
-    pub stock_name: String,
+    pub code: String,
+    pub name: String,
     pub r#box: Option<String>,
+    pub hold: bool,
 }
 pub struct GroupStockRelationCurd;
 impl GroupStockRelationCurd {
+    ///不检测是否有重复记录，仅计算index后插入
     pub async fn insert(group_stock_r: GroupStockR) -> AppResult<GroupStockR> {
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        //查询当前组的index记录的最大值
+        let max_index = GroupStockRs::find()
+            .select_only()
+            .expr(Column::Index.max())
+            .filter(Column::GroupName.eq(group_stock_r.group_name.clone()))
+            // .order_by_asc(Column::Index)
+            .into_tuple::<Option<i32>>()
+            .one(db)
+            .await?
+            .unwrap()
+            .unwrap_or(0);
         let model = ActiveGroupStockR {
             group_name: Set(group_stock_r.group_name),
             stock_code: Set(group_stock_r.stock_code),
-            ..Default::default()
+            index:Set(max_index+1)
         }
         .insert(db)
         .await?;
@@ -69,7 +79,7 @@ impl GroupStockRelationCurd {
         Ok(())
     }
     ///根据分组名称查询分组下的所有股票（按照索引排序）
-    pub async fn find_stocks_by_group_name(group_name: String) -> AppResult<Vec<MoreStockInfo>> {
+    pub async fn query_stocks_by_group_name(group_name: String) -> AppResult<Vec<MoreStockInfo>> {
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
@@ -84,11 +94,12 @@ impl GroupStockRelationCurd {
         // let x = StockGroups::find().find_with_linked(GroupToStockInfo).all(db).await?;
         // let x = StockGroups::find().find_with_linked(GroupToStockInfo).filter(stock_group::Column::Name.eq(group_name.clone())).all(db).await?;
         let more_infos = GroupStockRs::find()
-            // .column_as(stock_info::Column::Code, "stock_code") // 假设stock_code来自stock_info表
+            .column_as(stock_info::Column::Code, "code") // 假设stock_code来自stock_info表
             // .column_as(stock_group::Column::Name, "group_name")
             // .column_as(group_stock_relation::Column::Index, "index")
-            .column_as(stock_info::Column::Name, "stock_name")
+            .column_as(stock_info::Column::Name, "name")
             .column_as(stock_info::Column::Box, "box")
+            .column_as(stock_info::Column::Hold, "hold")
             // .join(
             //     JoinType::InnerJoin,
             //     group_stock_relation::Relation::StockGroups.def(),
@@ -120,7 +131,7 @@ impl GroupStockRelationCurd {
         Ok(more_infos)
     }
     ///根据股票代码查询所有所在的分组（没有该股票和没有任何分组时返回空的vec）
-    pub async fn find_groups_by_stock_code(stock_code: String) -> AppResult<Vec<String>> {
+    pub async fn query_groups_by_stock_code(stock_code: String) -> AppResult<Vec<String>> {
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
@@ -152,11 +163,52 @@ impl GroupStockRelationCurd {
         // let result = GroupStockRs::find_by_stock_code(stock_code).one(db).await?;
         Ok(groups)
     }
+    pub async fn update_groups_by_code(stock_code: String, groups: Vec<String>) -> AppResult<()> {
+        let db = crate::entities::DB
+            .get()
+            .ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        let _ = GroupStockRs::delete_many()
+            .filter(Column::StockCode.eq(stock_code.clone()))
+            .filter(Column::GroupName.is_not_in(groups.clone()))
+            .exec(db)
+            .await?;
+        for name in groups.clone(){
+            let result = GroupStockRs::find_by_id((name.clone(), stock_code.clone())).count(db).await?;
+            if result == 0{
+                let model = GroupStockR::new(name, stock_code.clone());
+                let _ = Self::insert(model).await?;
+            }
+        }
+        // let models = GroupStockRs::find()
+        //     .filter(Column::StockCode.eq(stock_code))
+        //     .all(db)
+        //     .await?;
+        Ok(())
+    }
+    pub async fn delete_by_code_and_group_name(code:String, group_name:String) -> AppResult<()> {
+        let db = crate::entities::DB
+            .get()
+            .ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        let _ = GroupStockRs::delete_by_id((group_name, code)).exec(db).await?;
+        Ok(())
+    }
+    ///根据股票代码删除所有相关分组信息
+    pub async fn delete_by_stock_code(stock_code:String) -> AppResult<()> {
+        let db = crate::entities::DB
+            .get()
+            .ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        let _ = GroupStockRs::delete_many()
+            .filter(Column::StockCode.eq(stock_code))
+            .exec(db)
+            .await?;
+        Ok(())
+    }
 }
 #[tokio::test]
 async fn test_insert() {
     init_db_coon().await;
-    let model = GroupStockR::new("2".to_string(), "sz_123456".to_string());
+    open_db_log().await;
+    let model = GroupStockR::new("全部".to_string(), "sz_123456".to_string());
     let result = GroupStockRelationCurd::insert(model).await;
     println!("{:?}", result);
 }
@@ -174,13 +226,13 @@ async fn test_insert_many() {
 #[tokio::test]
 async fn test_find_groups_by_stock_code() {
     init_db_coon().await;
-    let result = GroupStockRelationCurd::find_groups_by_stock_code("123456".to_string()).await;
+    let result = GroupStockRelationCurd::query_groups_by_stock_code("123456".to_string()).await;
     println!("{:?}", result);
 }
 #[tokio::test]
 async fn test_find_stocks_by_group_name() {
     init_db_coon().await;
     open_db_log().await;
-    let result = GroupStockRelationCurd::find_stocks_by_group_name("全部".to_string()).await;
+    let result = GroupStockRelationCurd::query_stocks_by_group_name("全部".to_string()).await;
     println!("{:?}", result);
 }
