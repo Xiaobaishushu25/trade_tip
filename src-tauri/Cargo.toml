@@ -18,6 +18,7 @@ tauri-plugin-fs = "2.0.0-beta.3"
 
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+serde_with = "3.7.0"
 #tauri-plugin-http = "2.0.0-beta.4"
 #hyper-tls = "0.6.0"
 reqwest = { version = "0.12", features = ["json"] }

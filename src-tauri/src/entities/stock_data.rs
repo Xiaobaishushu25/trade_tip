@@ -1,5 +1,8 @@
+use serde_with::DisplayFromStr;
+use serde_with::serde_as;
 use arraystring::{typenum::U32, ArrayString};
 use sea_orm::entity::prelude::*;
+use serde::{Deserialize, Serialize};
 
 pub type TableName = ArrayString<U32>;
 
@@ -13,21 +16,34 @@ impl EntityName for Entity {
         self.table_name.as_str()
     }
 }
-
-#[derive(Clone, Debug, PartialEq, DeriveModel, DeriveActiveModel)]
+#[serde_as]
+#[derive(Clone, Debug, PartialEq, DeriveModel, DeriveActiveModel, Deserialize,Serialize)]
 pub struct Model {
+    #[serde(default = "path")]
     pub name: String,
+    #[serde(rename = "day")]
+    // #[serde(rename(deserialize = "volume"))]
     pub date: String,
+    #[serde_as(as = "DisplayFromStr")]
     pub open: f64,
+    #[serde_as(as = "DisplayFromStr")]
     pub close: f64,
+    #[serde_as(as = "DisplayFromStr")]
     pub high: f64,
+    #[serde_as(as = "DisplayFromStr")]
     pub low: f64,
+    #[serde_as(as = "DisplayFromStr")]
+    #[serde(rename(deserialize = "volume"))]
     pub vol: f64,
     pub ma5: Option<f64>,
     pub ma10: Option<f64>,
     pub ma20: Option<f64>,
     pub ma30: Option<f64>,
     pub ma60: Option<f64>,
+}
+fn path()->String{
+    println!("打印出来了");
+    "测试".to_string()
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveColumn)]

@@ -11,35 +11,37 @@ use crate::service::command::command::{
     query_stocks_by_group_name,create_group,update_stock_groups,remove_stock_from_group,
     update_stock_hold
 };
-use crate::service::http::init_http;
+use crate::service::http::{init_http, REQUEST};
 use log::{error, info};
 
 #[tokio::main]
 async fn main() {
-    init_app().await;
-    tauri::Builder::default()
-        // .plugin(tauri_plugin_http::init())
-        .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_fs::init())
-        // .setup(|app|{
-        //     let window = tauri::window::WindowBuilder::new(app, "tool")
-        //         .build()?;
-        //     Ok(())
-        // })
-        .invoke_handler(tauri::generate_handler![
-            get_response,
-            add_stock_info,
-            query_stock_info,
-            query_all_groups,
-            query_stocks_by_group_name,
-            query_groups_by_code,
-            create_group,
-            update_stock_groups,
-            remove_stock_from_group,
-            update_stock_hold
-        ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+    init_http().await;
+    REQUEST.get().unwrap().get_stock_day_data().await.unwrap();
+    // init_app().await;
+    // tauri::Builder::default()
+    //     // .plugin(tauri_plugin_http::init())
+    //     .plugin(tauri_plugin_shell::init())
+    //     .plugin(tauri_plugin_fs::init())
+    //     // .setup(|app|{
+    //     //     let window = tauri::window::WindowBuilder::new(app, "tool")
+    //     //         .build()?;
+    //     //     Ok(())
+    //     // })
+    //     .invoke_handler(tauri::generate_handler![
+    //         get_response,
+    //         add_stock_info,
+    //         query_stock_info,
+    //         query_all_groups,
+    //         query_stocks_by_group_name,
+    //         query_groups_by_code,
+    //         create_group,
+    //         update_stock_groups,
+    //         remove_stock_from_group,
+    //         update_stock_hold
+    //     ])
+    //     .run(tauri::generate_context!())
+    //     .expect("error while running tauri application");
 }
 async fn init_app() {
     log4rs::init_file("./config/log4rs.yaml", Default::default()).unwrap();
