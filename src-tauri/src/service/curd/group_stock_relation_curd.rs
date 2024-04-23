@@ -1,14 +1,11 @@
 use crate::app_errors::AppResult;
 use crate::entities::group_stock_relation::Column;
 use crate::entities::prelude::{
-    ActiveGroupStockR, GroupStockR, GroupStockRs, StockGroup, StockGroups, StockInfos,
+    ActiveGroupStockR, GroupStockR, GroupStockRs, StockGroups, StockInfos,
 };
-use crate::entities::stock_info::Model;
-use crate::entities::{group_stock_relation, init_db_coon, open_db_log, stock_group, stock_info};
-use crate::service::curd::stock_group_curd;
-use anyhow::anyhow;
+use crate::entities::{group_stock_relation, init_db_coon, open_db_log, stock_info};
 use sea_orm::ActiveValue::Set;
-use sea_orm::{ActiveModelTrait, ColumnTrait, DbErr, EntityTrait, FromQueryResult, JoinType, LinkDef, Linked, ModelTrait, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, RelationTrait};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, FromQueryResult, JoinType, LinkDef, Linked, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, RelationTrait};
 use serde::Serialize;
 
 pub struct GroupToStockInfo;

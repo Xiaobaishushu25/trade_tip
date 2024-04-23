@@ -1,7 +1,8 @@
 use log::{error, info};
-use crate::app_errors::AppResult;
-use crate::entities::prelude::{GroupStockR, StockGroup, StockGroups, StockInfo};
+use crate::entities::prelude::{StockData, StockGroup, StockGroups, StockInfo};
+use crate::service::command::handle_data::handle_new_stock;
 use crate::service::curd::group_stock_relation_curd::{GroupStockRelationCurd, MoreStockInfo};
+use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_group_curd::StockGroupCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
 use crate::service::http::REQUEST;
@@ -148,14 +149,13 @@ pub async fn delete_group(name:String) -> Result<i32,String> {
 #[tauri::command]
 pub async fn update_stock_groups(is_new:bool, code:String, name:String, group_names:Vec<String>) -> Result<(),String> {
     info!("is_new:{},code:{},name:{},group_names:{:?}",is_new,code,name,group_names);
-    //全部没选上
     if is_new{
-        match StockInfoCurd::insert(StockInfo::new(code.clone(), name.clone())).await{
+        match handle_new_stock(&code,&name).await{
             Ok(_)=>{
-                // info!("插入成功:{:?}",code);
+                info!("创建成功:{:?}",code);
             },
             Err(e)=>{
-                error!("插入失败:{}",e);
+                error!("创建失败:{}",e);
                 return Err(e.to_string());
             }
         }
@@ -166,7 +166,7 @@ pub async fn update_stock_groups(is_new:bool, code:String, name:String, group_na
         //         return Err(e.to_string());
         //     }
         // }
-    }else if group_names.is_empty(){
+    }else if group_names.is_empty(){//全部没选上
         match GroupStockRelationCurd::delete_by_stock_code(code.clone()).await{
             Ok(_)=>{
                 // info!("删除分组关系成功。");
@@ -218,6 +218,19 @@ pub async fn update_stock_hold(code:String,hold:bool) -> Result<(),String> {
         },
         Err(e)=>{
             error!("更新失败:{}",e);
+            Err(e.to_string())
+        }
+    }
+}
+#[tauri::command]
+pub async fn query_stocks_day_k_limit(code:String) -> Result<Vec<StockData>,String> {
+    match StockDataCurd::query_by_nums(&code, 1000).await{
+        Ok(stock_data_list)=>{
+            // info!("查询成功:{:?}",stock_datas);
+            Ok(stock_data_list)
+        },
+        Err(e)=>{
+            error!("查询股票信息失败失败:{}",e);
             Err(e.to_string())
         }
     }

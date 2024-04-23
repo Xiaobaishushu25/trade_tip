@@ -164,7 +164,7 @@ function updatePosition() {
 }
 function init(rawData:number[][],myChart:EChartsType,option) {
   const data = splitData(rawData);
-  // console.log("数据是"+data)
+  console.log("切分后的数据是",data)
   myChart.setOption(
       (option = {
         animation: false,
@@ -546,7 +546,7 @@ function computeWeek(date:string){
   // console.log(weekDay); // 输出：周四
   return weekDay
 }
-function calculateChangeRate(openPrice, closePrice) {
+function calculateChangeRate(openPrice:number, closePrice:number) {
   // 计算涨跌幅
   const changeRate = ((closePrice - openPrice) / openPrice) * 100;
   // 保留两位小数并返回

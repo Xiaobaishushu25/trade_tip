@@ -6,7 +6,7 @@ use crate::entities::init_db_coon;
 use crate::entities::prelude::StockData;
 use crate::entities::stock_data::{Column, Entity, TableName};
 
-struct StockDataCurd;
+pub struct StockDataCurd;
 impl StockDataCurd {
     pub async fn insert(table_name: &str, stock_data: StockData) -> AppResult<String> {
         let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
@@ -22,7 +22,19 @@ impl StockDataCurd {
         // Execute the insert statement
         Ok(result.last_insert_id)
     }
-    pub async fn find_some_days(table_name: &str,days_num:i32) -> AppResult<Vec<StockData>> {
+    //批量插入
+    pub async fn insert_many(table_name: &str, stock_data: Vec<StockData>) -> AppResult<()> {
+        let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        let entity = Entity {
+            table_name: TableName::from_str_truncate(table_name),
+        };
+        // Prepare insert statement
+        let mut insert = Entity::insert_many(stock_data.into_iter().map(|model| model.into_active_model()));
+        insert.query().into_table(entity.table_ref());
+        let _ = insert.exec(db).await?;
+        Ok(())
+    }
+    pub async fn query_by_nums(table_name: &str, days_num:i32) -> AppResult<Vec<StockData>> {
         let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
         let entity = Entity {
             table_name: TableName::from_str_truncate(table_name),
@@ -36,7 +48,7 @@ impl StockDataCurd {
         let result = select.clone().all(db).await?;
         Ok(result)
     }
-    pub async fn find_all(table_name: &str) -> AppResult<Vec<StockData>> {
+    pub async fn query_all(table_name: &str) -> AppResult<Vec<StockData>> {
         let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
         let entity = Entity {
             table_name: TableName::from_str_truncate(table_name),
@@ -55,7 +67,6 @@ impl StockDataCurd {
 async fn test_insert() {
     init_db_coon().await;
     let model = StockData {
-        name: "sz_123456".to_string(),
         date: "2023-01-01".to_string(),
         open: 1.0,
         close: 2.0,
@@ -79,7 +90,7 @@ async fn test_insert() {
 #[tokio::test]
 async fn test_find_all() {
     init_db_coon().await;
-    let result = StockDataCurd::find_all("sz_123556").await;
+    let result = StockDataCurd::query_all("sz_123556").await;
     match result {
         Ok(result) => {
             println!("{:?}", result);

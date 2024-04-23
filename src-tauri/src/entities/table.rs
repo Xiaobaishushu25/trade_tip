@@ -3,7 +3,7 @@ use crate::entities::stock_data::{Column, Entity, TableName};
 use crate::entities::{init_db_coon, DB, stock_group, stock_info};
 use log::info;
 use sea_orm::sea_query::{ColumnDef, TableCreateStatement};
-use sea_orm::{sea_query, ConnectionTrait, DatabaseConnection, DbErr, EntityName, EntityTrait, ExecResult, Statement, Schema};
+use sea_orm::{sea_query, ConnectionTrait, DatabaseConnection, EntityName, EntityTrait, ExecResult, Statement, Schema};
 use crate::entities::prelude::{GroupStockRs};
 
 // use std::env;
@@ -76,7 +76,7 @@ use crate::entities::prelude::{GroupStockRs};
 //     create_table().await;
 // }
 ///需要使用TableCreateStatement建表，一般用在动态名称建表中。
-async fn create_dyn_table(
+pub async fn create_dyn_table(
     db: &DatabaseConnection,
     stmt: &TableCreateStatement,
 ) -> AppResult<ExecResult> {
@@ -90,7 +90,7 @@ pub async fn create_table_with_dyn_name(name: &str) -> AppResult<()> {
     };
     let create_table_stmt = sea_query::Table::create()
         .table(entity.table_ref())
-        .col(ColumnDef::new(Column::Name).string().not_null())
+        // .col(ColumnDef::new(Column::Name).string().not_null())
         .col(
             ColumnDef::new(Column::Date)
                 .string()
@@ -103,10 +103,10 @@ pub async fn create_table_with_dyn_name(name: &str) -> AppResult<()> {
         .col(ColumnDef::new(Column::Low).double().not_null())
         .col(ColumnDef::new(Column::Vol).double().not_null())
         .col(ColumnDef::new(Column::Ma5).double())
-        .col(ColumnDef::new(Column::Ma10).double().not_null())
-        .col(ColumnDef::new(Column::Ma20).double().not_null())
-        .col(ColumnDef::new(Column::Ma30).double().not_null())
-        .col(ColumnDef::new(Column::Ma60).double().not_null())
+        .col(ColumnDef::new(Column::Ma10).double())
+        .col(ColumnDef::new(Column::Ma20).double())
+        .col(ColumnDef::new(Column::Ma30).double())
+        .col(ColumnDef::new(Column::Ma60).double())
         .to_owned();
     create_dyn_table(&db, &create_table_stmt).await?;
     Ok(())
@@ -121,7 +121,7 @@ pub async fn drop_table_with_dyn_name(table_name: &str) -> AppResult<()> {
 }
 // use sea_orm::{Schema, ConnectionTrait, EntityTrait};
 
-pub async fn create_table<E>(db_connection: &sea_orm::DatabaseConnection, entity: E)
+async fn create_table<E>(db_connection: &sea_orm::DatabaseConnection, entity: E)
     where E: EntityTrait{
     let backend = db_connection.get_database_backend();
     let schema = Schema::new(backend);

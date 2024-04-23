@@ -72,7 +72,6 @@ onMounted(() => {
   updateStockInfoG();
   window.addEventListener('resize',getHeight)
   window.addEventListener('blur', ()=>{
-    console.log("窗口失去焦点",show.value)
     show.value = false;
   })
   // webviewWindow.getCurrent().listen("WINDOW_BLUR", ({ event, payload }) => {
@@ -143,9 +142,19 @@ function manageGroup(){
   // showGroupManage.value = false;
 }
 function openChart(code:string){
-  router.push("/newCandleChart")
+  // router.push("/newCandleChart")
+  router.push({
+    name:"CandleChartNewNew",
+    params: {
+      code: code
+    }
+  });
   // router.back()
 }
+function openoldChart(code:string){
+  router.push("/newCandleChart")
+}
+
 //根据股票code更新是否持有，更新为当前是否持有的反状态
 //如果成功更新成功，更新该股票（当前行）的状态信息，同时判断是否是持有标签页，如果是，要移除
 function updateHold(){
@@ -210,6 +219,7 @@ function updateHold(){
       <context-menu-item label="提醒" @click="removeStock(options.code)" />
       <context-menu-sperator />
       <context-menu-item label="管理分组" @click="manageGroup()" />
+      <context-menu-item label="打开K线图" @click="openoldChart(options.code)" />
 <!--      <context-menu-group label="Menu with child">-->
 <!--        <context-menu-item label="删除" @click="onMenuClick(2)" />-->
 <!--        <context-menu-item label="Item2" @click="onMenuClick(3)" />-->

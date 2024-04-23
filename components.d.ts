@@ -8,6 +8,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     CandleChart: typeof import('./src/components/CandleChart.vue')['default']
+    CandleChartNewNew: typeof import('./src/components/CandleChartNewNew.vue')['default']
     DragTest: typeof import('./src/components/DragTest.vue')['default']
     ElAutocomplete: typeof import('element-plus/es')['ElAutocomplete']
     ElButton: typeof import('element-plus/es')['ElButton']

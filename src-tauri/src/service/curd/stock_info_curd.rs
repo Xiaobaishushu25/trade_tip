@@ -1,20 +1,19 @@
 use crate::app_errors::AppResult;
-use crate::entities::{init_db_coon, stock_info};
-use log::info;
+use crate::entities::{init_db_coon};
 use sea_orm::ActiveValue::Set;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QueryOrder, QuerySelect,
+    ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryFilter,
 };
 
 use crate::entities::prelude::{ActiveStockInfo, StockInfo, StockInfos};
-use crate::entities::stock_info::{Column, Entity};
+use crate::entities::stock_info::{Column};
 use crate::service::curd::group_stock_relation_curd::MoreStockInfo;
 
 pub struct StockInfoCurd;
 impl StockInfoCurd {
     ///按照给定的stock_info插入数据
     /// 注意，除了index字段（index字段会查询当前index列最大值并+1插入），其他字段原样插入
-    pub async fn insert(mut stock_info: StockInfo) -> AppResult<StockInfo> {
+    pub async fn insert(stock_info: StockInfo) -> AppResult<StockInfo> {
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;

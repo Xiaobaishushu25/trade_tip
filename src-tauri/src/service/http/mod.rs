@@ -1,8 +1,8 @@
 use log::info;
 use tokio::sync::OnceCell;
-use crate::service::http::http::{HttpRequest};
+use crate::service::http::http_client::{HttpRequest};
 
-pub mod http;
+pub mod http_client;
 pub static REQUEST:OnceCell<HttpRequest> = OnceCell::const_new();
 pub async fn init_http() {
     REQUEST.get_or_init(||async {

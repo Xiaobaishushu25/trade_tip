@@ -19,9 +19,9 @@ impl EntityName for Entity {
 #[serde_as]
 #[derive(Clone, Debug, PartialEq, DeriveModel, DeriveActiveModel, Deserialize,Serialize)]
 pub struct Model {
-    #[serde(default = "path")]
-    pub name: String,
-    #[serde(rename = "day")]
+    // #[serde(default = "path")]
+    // pub name: String,
+    #[serde(rename(deserialize = "day"))]
     // #[serde(rename(deserialize = "volume"))]
     pub date: String,
     #[serde_as(as = "DisplayFromStr")]
@@ -35,20 +35,25 @@ pub struct Model {
     #[serde_as(as = "DisplayFromStr")]
     #[serde(rename(deserialize = "volume"))]
     pub vol: f64,
+    #[serde(rename(deserialize = "ma_price5"))]
     pub ma5: Option<f64>,
+    #[serde(rename(deserialize = "ma_price10"))]
     pub ma10: Option<f64>,
+    #[serde(rename(deserialize = "ma_price20"))]
     pub ma20: Option<f64>,
+    #[serde(rename(deserialize = "ma_price30"))]
     pub ma30: Option<f64>,
+    #[serde(rename(deserialize = "ma_price60"))]
+    // #[serde_as(as = "Option<DisplayFromStr>")]
     pub ma60: Option<f64>,
 }
 fn path()->String{
-    println!("打印出来了");
     "测试".to_string()
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveColumn)]
 pub enum Column {
-    Name,
+    // Name,
     Date,
     Open,
     Close,
@@ -84,7 +89,7 @@ impl ColumnTrait for Column {
     fn def(&self) -> ColumnDef {
         match self {
             // Self::Id => ColumnType::Integer.def(),
-            Self::Name => ColumnType::String(None).def(),
+            // Self::Name => ColumnType::String(None).def(),
             Column::Date => ColumnType::String(None).def(),
             Column::Open => ColumnType::Double.def(),
             Column::Close => ColumnType::Double.def(),
