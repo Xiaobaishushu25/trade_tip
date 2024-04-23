@@ -2,6 +2,7 @@ use crate::app_errors::AppResult;
 use crate::entities::init_db_coon;
 use crate::entities::prelude::StockInfo;
 use crate::entities::table::{create_table_with_dyn_name};
+use crate::service::curd::group_stock_relation_curd::GroupStockRelationCurd;
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
 use crate::service::http::{init_http, REQUEST};
@@ -29,6 +30,12 @@ async fn handle_and_save_stock_data(code:&str) ->AppResult<()>{
 pub async fn handle_new_stock(code:&str,name:&str) ->AppResult<()>{
     let _ = StockInfoCurd::insert(StockInfo::new(code.to_string(), name.to_string())).await?;
     let _ = handle_and_save_stock_data(code).await?;
+    Ok(())
+}
+pub async fn handle_delete_stock(code:&str) ->AppResult<()>{
+    let  _ = GroupStockRelationCurd::delete_by_stock_code(code.into()).await?;
+    let _ = StockInfoCurd::delete_by_code(code.into()).await?;
+    let _ =StockDataCurd::delete_table_by_stock_code(code).await?;
     Ok(())
 }
 #[tokio::test]

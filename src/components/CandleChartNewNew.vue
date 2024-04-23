@@ -236,7 +236,7 @@ function init_option(){
       {
         type: 'inside',
         xAxisIndex: [0, 1],
-        start: 98,
+        start: 85,
         end: 100,
         zoomOnMouseWheel: "ctrl"// 启用鼠标滚轮触发缩放
       },
@@ -245,7 +245,7 @@ function init_option(){
         xAxisIndex: [0, 1],
         type: 'slider',
         top: '85%',
-        start: 98,
+        start: 85,
         end: 100
       }
     ],

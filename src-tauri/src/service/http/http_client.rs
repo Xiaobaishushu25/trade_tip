@@ -1,5 +1,5 @@
 use anyhow::Context;
-use log::info;
+use log::{error, info};
 use reqwest::Client;
 use reqwest::header::HeaderMap;
 use crate::app_errors::AppResult;
@@ -37,9 +37,12 @@ impl HttpRequest {
     /// num是一共需要获取的数据条数
     pub async fn get_stock_day_data(&self,code:&str,num:i32)->AppResult<Vec<StockData>> {
         let url = format!("https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol={}{code}&scale=240&ma=5,10,20,30&datalen={num}",get_market_by_code(code)?);
+        // let url = format!("https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol={}&scale=240&ma=5,10,20,30&datalen={num}",get_market_by_code(code)?);
         // let result = self.client.get(url).headers(self.header_map.clone()).send().await?;
         let result = self.client.get(url.clone()).send().await.with_context(||format!("请求url:{}",url))?;
-        let stock_data = result.json::<Vec<StockData>>().await?;
+        let stock_data = result.json::<Vec<StockData>>().await.with_context(||format!("发生错误了:{}",url))?;
+        // let stock_data = result.json::<Vec<StockData>>().await.with_context(||{error!("发生错误了:{}",url);format!("请求url:{}",url)})?;
+        // let stock_data = result.json::<Vec<StockData>>().await?;
         // let closes = stock_data.iter().map(|item| item.close).collect::<Vec<f64>>();
         // let vec = compute_ma(5, closes).await;
         // println!("{:?}", vec);
@@ -49,6 +52,7 @@ impl HttpRequest {
 }
 #[tokio::test]
 async fn test_get_stock_day_data() {
+    log4rs::init_file("./config/log4rs.yaml", Default::default()).unwrap();
     init_http().await;
     REQUEST.get().unwrap().get_stock_day_data("600519",1023).await.unwrap();
 }

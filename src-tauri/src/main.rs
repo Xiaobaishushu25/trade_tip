@@ -1,5 +1,8 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
+// #![feature(error_generic_member_access)]
+
 mod app_errors;
 mod dtos;
 mod entities;

@@ -133,7 +133,7 @@ async fn create_table<E>(db_connection: &sea_orm::DatabaseConnection, entity: E)
 }
 ///https://github.com/SeaQL/sea-orm/issues/1399
 ///注意，表不存在时Drop也会返回Ok
-pub async fn drop_table<E>(db_connection: &sea_orm::DatabaseConnection, entity: E) -> AppResult<()>
+async fn drop_table<E>(db_connection: &sea_orm::DatabaseConnection, entity: E) -> AppResult<()>
 where
     E: EntityTrait,
 {

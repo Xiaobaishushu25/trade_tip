@@ -5,6 +5,7 @@ use crate::app_errors::AppResult;
 use crate::entities::init_db_coon;
 use crate::entities::prelude::StockData;
 use crate::entities::stock_data::{Column, Entity, TableName};
+use crate::entities::table::drop_table_with_dyn_name;
 
 pub struct StockDataCurd;
 impl StockDataCurd {
@@ -61,6 +62,14 @@ impl StockDataCurd {
         // Execute the select statement
         let result = select.clone().all(db).await?;
         Ok(result)
+    }
+    pub async fn delete_table_by_stock_code(code: &str) -> AppResult<()> {
+        // let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        // let entity = Entity {
+        //     table_name: TableName::from_str_truncate(code),
+        // };
+        let _  = drop_table_with_dyn_name(code).await?;
+        Ok(())
     }
 }
 #[tokio::test]

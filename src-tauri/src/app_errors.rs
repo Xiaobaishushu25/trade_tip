@@ -11,6 +11,7 @@ pub enum AppError {
     #[error("serde_json::Error:`{0}`")]
     SerdeError(#[from] serde_json::Error),
     #[error("reqwest::Error:`{0}`")]
+    // HttpError(#[from] #[backtrace] reqwest::Error),
     HttpError(#[from] reqwest::Error),
     //数据库错误
     #[error("sea_orm::DbErr:`{0}`")]

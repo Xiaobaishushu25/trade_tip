@@ -1,6 +1,6 @@
 use log::{error, info};
 use crate::entities::prelude::{StockData, StockGroup, StockGroups, StockInfo};
-use crate::service::command::handle_data::handle_new_stock;
+use crate::service::command::handle::{handle_delete_stock, handle_new_stock};
 use crate::service::curd::group_stock_relation_curd::{GroupStockRelationCurd, MoreStockInfo};
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_group_curd::StockGroupCurd;
@@ -167,23 +167,33 @@ pub async fn update_stock_groups(is_new:bool, code:String, name:String, group_na
         //     }
         // }
     }else if group_names.is_empty(){//全部没选上
-        match GroupStockRelationCurd::delete_by_stock_code(code.clone()).await{
+        return match handle_delete_stock(&code).await{
             Ok(_)=>{
-                // info!("删除分组关系成功。");
-                match StockInfoCurd::delete_by_code(code.clone()).await{
-                    Ok(_)=>{
-                        // info!("删除股票信息成功。");
-                        return Ok(());
-                    },
-                    Err(e)=>{
-                        error!("删除股票信息失败:{}",e);
-                    }
-                }
-            }
+                // info!("删除成功:{:?}",code);
+                Ok(())
+            },
             Err(e)=>{
-                error!("删除分组关系失败:{}",e);
+                error!("删除失败:{}",e);
+                Err(e.to_string())
             }
         }
+        // match GroupStockRelationCurd::delete_by_stock_code(code.clone()).await{
+        //     Ok(_)=>{
+        //         // info!("删除分组关系成功。");
+        //         match StockInfoCurd::delete_by_code(code.clone()).await{
+        //             Ok(_)=>{
+        //                 // info!("删除股票信息成功。");
+        //                 return Ok(());
+        //             },
+        //             Err(e)=>{
+        //                 error!("删除股票信息失败:{}",e);
+        //             }
+        //         }
+        //     }
+        //     Err(e)=>{
+        //         error!("删除分组关系失败:{}",e);
+        //     }
+        // }
     };
     match GroupStockRelationCurd::update_groups_by_code(code, group_names).await{
         Ok(_)=>{
