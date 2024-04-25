@@ -5,7 +5,9 @@ import {invoke} from "@tauri-apps/api/core";
 import {store} from "../store.ts"
 import Search from "./Search.vue";
 import ElSearch from "./ElSearch.vue";
+import {useRouter} from "vue-router";
 // const max_state_name = ref('window-maximize')
+const router = useRouter()
 const max_state_name = ref('maximize')
 const max_state= ref(false)
 watch(max_state, async (newValue) => {
@@ -25,8 +27,12 @@ function window_maximize(){
   max_state.value =!max_state.value
 }
 async function window_close(){
-  await WebviewWindow.getCurrent().hide()
+  // await WebviewWindow.getCurrent().hide()
+  await WebviewWindow.getCurrent().close()
   // await appWindow.close()
+}
+function back(){
+  router.back();
 }
 </script>
 
@@ -35,6 +41,7 @@ async function window_close(){
 <!--    <Search></Search>-->
     <ElSearch></ElSearch>
     <div id="stage-button">
+      <inline-svg src="./src/assets/svg/back.svg" class="window-button back" @click.left="back()"></inline-svg>
       <inline-svg src="./src/assets/svg/minimize.svg" class="window-button min" @click.left="window_minimize"></inline-svg>
       <inline-svg :src="`./src/assets/svg/${max_state_name}.svg`" :class="`window-button ${max_state_name}`" @click.left="window_maximize" ></inline-svg>
 <!--      <inline-svg src="./src/assets/svg/max.svg" class="window-button max"></inline-svg>-->
@@ -88,7 +95,9 @@ async function window_close(){
   stroke: #0f0f0f;
 }
 
-
+.back:hover path{
+  fill: #12d912;
+}
 .min:hover,.maximize:hover,.restore:hover{
   background-color: #33303020;
   border-radius: 5px;

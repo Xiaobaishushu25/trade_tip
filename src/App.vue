@@ -9,11 +9,10 @@ import {invoke} from "@tauri-apps/api/core";
 import {store} from "./store.ts"
 import {useRouter} from "vue-router";
 // const stockInfo = ref<StockInfo[]>([]);
-const router = useRouter()
 onMounted(()=>{
   //https://router.vuejs.org/zh/guide/advanced/composition-api.html#%E5%9C%A8-setup-%E4%B8%AD%E8%AE%BF%E9%97%AE%E8%B7%AF%E7%94%B1%E5%92%8C%E5%BD%93%E5%89%8D%E8%B7%AF%E7%94%B1
   window.addEventListener("contextmenu",  (e) => {e.preventDefault()},false)
-  router.push("/tab")
+  // router.push("/tab")
   // invoke<StockInfo[]>("query_stock_info", {}).then(res => {
   //   console.log(res);
   //   store.stockInfo = res;
@@ -39,16 +38,26 @@ onMounted(()=>{
 <!--      </router-view>-->
 <!--    </n-layout-content>-->
 <!--  </n-layout>-->
-  <Header></Header>
-  <div class="container">
-    <router-view v-slot="{ Component }">
-      <keep-alive>
-        <component :is="Component" />
-      </keep-alive>
-    </router-view>
-  </div>
+<!--  <Header></Header>-->
+<!--  <div class="main-container">-->
+<!--    <router-view v-slot="{ Component }">-->
+<!--      <keep-alive>-->
+<!--        <component :is="Component" />-->
+<!--      </keep-alive>-->
+<!--    </router-view>-->
+<!--  </div>-->
+      <router-view v-slot="{ Component }">
+        <keep-alive>
+          <component :is="Component" />
+        </keep-alive>
+      </router-view>
 </template>
 
 <style scoped>
+.main-container{
+  min-height: calc(100vh - 30px);
+  height: calc(100vh - 30px);
+  width: 100vw;
+}
 
 </style>

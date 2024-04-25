@@ -4,10 +4,10 @@ use sea_orm::ActiveValue::Set;
 use sea_orm::{
     ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryFilter,
 };
+use crate::dtos::stock::StockInfoG;
 
 use crate::entities::prelude::{ActiveStockInfo, StockInfo, StockInfos};
 use crate::entities::stock_info::{Column};
-use crate::service::curd::group_stock_relation_curd::MoreStockInfo;
 
 pub struct StockInfoCurd;
 impl StockInfoCurd {
@@ -77,7 +77,7 @@ impl StockInfoCurd {
         let result = StockInfos::find().all(db).await?;
         Ok(result)
     }
-    pub async fn find_all_hold() -> AppResult<Vec<MoreStockInfo>> {
+    pub async fn find_all_hold() -> AppResult<Vec<StockInfoG>> {
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
@@ -87,7 +87,7 @@ impl StockInfoCurd {
             .await?
             .into_iter()
             .map(|model|{
-                MoreStockInfo{
+                StockInfoG {
                     group_name:"持有".into(),
                     index:0,
                     code:model.code,

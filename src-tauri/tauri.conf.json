@@ -13,8 +13,10 @@
       {
         "label": "main",
         "title": "trade_tip",
-        "width": 800,
-        "height": 600,
+        "width": 1025,
+        "height": 625,
+        "minWidth": 1025,
+        "minHeight": 625,
         "decorations": false,
         "resizable": true,
         "dragDropEnabled": false

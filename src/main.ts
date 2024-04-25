@@ -14,6 +14,7 @@ import {
     LegendComponent,
     BrushComponent,
     DataZoomComponent,
+    MarkPointComponent
 } from 'echarts/components';
 import {
     CandlestickChart,
@@ -38,7 +39,8 @@ echarts.use([
     CanvasRenderer,
     UniversalTransition,
     CustomChart,
-    GraphicComponent
+    GraphicComponent,
+    MarkPointComponent
 ]);
 
 //

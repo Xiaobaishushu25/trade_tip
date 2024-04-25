@@ -252,12 +252,13 @@ function init(rawData:number[][],myChart:EChartsType,option) {
           pieces: [
             {
               value: 1,
-              color: downColor
+              color: downColor,
             },
             {
               value: -1,
               // color: upColor
-              color: bColor
+              color: "#ec000050",
+              borderColor: "red",
             }
           ]
         },
@@ -345,6 +346,18 @@ function init(rawData:number[][],myChart:EChartsType,option) {
               borderColor: bColor,
               borderColor0: undefined
             },
+            markPoint: {
+              data:[
+                {
+                  type: 'max',
+                  name: '最大值'
+                },
+                {
+                  type: 'min',
+                  name: '最小值'
+                }
+              ]
+            }
           },
           {
             name: 'MA5',
@@ -395,7 +408,30 @@ function init(rawData:number[][],myChart:EChartsType,option) {
             type: 'bar',
             xAxisIndex: 1,
             yAxisIndex: 1,
-            data: data.volumes
+            data: data.volumes,
+            itemStyle: {
+              // color: function (params: Object){
+              //   console.log("成交量数据是",params)
+              //   console.log(params.data[2])
+              //   if (params.data[2] > 0) {
+              //     return "#BBFFFF00"
+              //   } else {
+              //     return downColor
+              //   }
+              // },
+              // // 设置空心颜色
+              // borderColor: function (params: Object){
+              //   console.log("成交量数据是",params)
+              //   console.log(params.data[2])
+              //   if (params.data[2] > 0) {
+              //     return "red"
+              //   } else {
+              //     return downColor
+              //   }
+              // },
+              // 设置空心的宽度
+              // borderWidth: 1,
+            },
           },
           {
             name:"custom",

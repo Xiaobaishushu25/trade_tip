@@ -5,38 +5,54 @@ import {
 } from 'vue-router'
 
 import Tool from './components/Tool.vue'
-import CandleChart from './components/CandleChart.vue'
-import NewCandleChart from './components/NewCandleChart.vue'
-import CandleChartNewNew from './components/CandleChartNewNew.vue'
 import GroupTab  from "./components/GroupTab.vue";
+import DataDetail from "./components/StockData/DataDetail.vue";
+import MainLayout from "./components/MainLayout.vue";
 
 const routes: Array<RouteRecordRaw> = [
+    // 主界面的路由
+    {
+        path: '/',
+        redirect: '/main/tab'
+    },
+    {
+        path: '/main',
+        component: MainLayout, // 主界面的布局组件
+        children: [
+            // 主界面下的子路由
+            {
+                path: 'tab', // 注意这里的path没有斜杠开头，表示它是/main的子路由
+                component: GroupTab,
+            },
+            {
+                path: 'detail',
+                component: DataDetail,
+            },
+            // 其他主界面下的子路由...
+        ]
+    },
+    // 工具界面的路由
+    {
+        path: '/tool',
+        component: Tool, // 工具界面的布局组件
+    },
 // 路由的默认路径
-    {
-        path:'/',
-        redirect:"/CandleChart"
-    },
-    {
-        path:'/candleChart',
-        component: CandleChart,
-    },
-    {
-        path:'/newCandleChart',
-        component: NewCandleChart,
-    },
-    {
-        path:'/newnewCandleChart/:code',
-        name:'CandleChartNewNew',
-        component: CandleChartNewNew,
-    },
-    {
-        path:'/tool',
-        component: Tool,
-    },
-    {
-        path:'/tab',
-        component: GroupTab,
-    }
+//     {
+//         path:'/',
+//         redirect:"/tab"
+//     },
+//     {
+//         path:'/dataDetail',
+//         component: DataDetail,
+//     },
+//     {
+//         path:'/tool',
+//         component: Tool,
+//     },
+//     {
+//         path:'/tab',
+//         component: GroupTab,
+//     }
 ]
 
 // 创建路由对象

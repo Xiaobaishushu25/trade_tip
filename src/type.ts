@@ -7,13 +7,38 @@ interface StockInfo {
     box?: string; // Optional field in TypeScript corresponds to Option<String> in Rust
     hold: boolean;
 }
+interface StockLiveData {
+    code: string;
+    price: number;
+    change: number;
+    percent: number;
+    volume: number;
+    high: number;
+    low: number;
+    open: number;
+    ma5: number | null;
+    ma10: number | null;
+    ma20: number | null;
+    ma30: number | null;
+    ma60: number | null;
+}
 interface StockInfoG {
     index: number;
     group_name: string;
     code: string;
     name: string;
-    price: number;
-    change_percent: number;
+    live_data: StockLiveData;
+    // price: number;
+    // change_percent: number;
+    // volume: number;
+    // high: number;
+    // low: number;
+    // open: number;
+    // ma5: number | null;
+    // ma10: number | null;
+    // ma20: number | null;
+    // ma30: number | null;
+    // ma60: number | null;
     box?: string; // Optional field in TypeScript corresponds to Option<String> in Rust
     hold: boolean;
 }
@@ -42,9 +67,29 @@ interface StockGroup{
     name: string;
     stocks_change: boolean;
 }
+// 定义枚举类型
+// HLS(Horizontal line )：水平直线
+//HLS(Horizontal line segment)：水平线段
+// LS(line segment)：垂直线段
+// Text(text)：文本
+enum PaintState {
+    Null,HL,HLS,LS,Text
+}
+// 定义点的接口
+interface Point {
+    x: number;
+    y: number;
+}
+interface Line {
+    id: string;
+    start: [number,number];
+    end: [number,number]|undefined;
+    type: PaintState;
+}
 // interface StockGroup{
 //     index: number;
 //     name: string;
 //     stock_codes: string[];
 // }
-export type { StockInfo,StockGroup,StockInfoG,StockData };
+export { PaintState }; // 导出枚举值
+export type { StockInfo,StockLiveData,StockGroup,StockInfoG,StockData,Point,Line };

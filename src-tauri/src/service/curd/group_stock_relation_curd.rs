@@ -6,7 +6,7 @@ use crate::entities::prelude::{
 use crate::entities::{group_stock_relation, init_db_coon, open_db_log, stock_info};
 use sea_orm::ActiveValue::Set;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, FromQueryResult, JoinType, LinkDef, Linked, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, RelationTrait};
-use serde::Serialize;
+use crate::dtos::stock::StockInfoG;
 
 pub struct GroupToStockInfo;
 
@@ -21,15 +21,7 @@ impl Linked for GroupToStockInfo {
         ]
     }
 }
-#[derive(FromQueryResult, Debug, Serialize)]
-pub struct MoreStockInfo {
-    pub(crate) group_name: String,
-    pub index: i32,
-    pub code: String,
-    pub name: String,
-    pub r#box: Option<String>,
-    pub hold: bool,
-}
+
 pub struct GroupStockRelationCurd;
 impl GroupStockRelationCurd {
     ///不检测是否有重复记录，仅计算index后插入
@@ -75,8 +67,23 @@ impl GroupStockRelationCurd {
         let _ = GroupStockRs::insert_many(models).exec(db).await?;
         Ok(())
     }
+    ///根据分组名称查询分组下的所有股票代码（按照索引排序）
+    pub async fn query_only_code_by_group_name(group_name: String) -> AppResult<Vec<String>> {
+        let db = crate::entities::DB
+            .get()
+            .ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        let codes = GroupStockRs::find()
+            .select_only()
+            .column(group_stock_relation::Column::StockCode)
+            .filter(group_stock_relation::Column::GroupName.eq(group_name.clone()))
+            .order_by_asc(group_stock_relation::Column::Index)
+            .into_tuple::<String>()
+            .all(db)
+            .await?;
+        Ok(codes)
+    }
     ///根据分组名称查询分组下的所有股票（按照索引排序）
-    pub async fn query_stocks_by_group_name(group_name: String) -> AppResult<Vec<MoreStockInfo>> {
+    pub async fn query_stocks_by_group_name(group_name: String) -> AppResult<Vec<StockInfoG>> {
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
@@ -111,7 +118,7 @@ impl GroupStockRelationCurd {
             // .filter(stock_group::Column::Name.eq(group_name.clone()))
             // .join_rev(JoinType::InnerJoin, group_stock_relation::Relation::StockInfos.def())
             .order_by_asc(group_stock_relation::Column::Index)
-            .into_model::<MoreStockInfo>()
+            .into_model::<StockInfoG>()
             // .into_tuple::<(String,String,i32,String,Option<String>)>()
             .all(db)
             .await?;

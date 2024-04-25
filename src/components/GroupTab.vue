@@ -26,25 +26,36 @@ function judgeTab(activeName:string){
 </script>
 
 <template>
-<!--  <el-tabs v-model="activeName" class="demo-tabs" tab-position="bottom" @tab-click="handleClick" >-->
-  <el-tabs v-model="activeName"  tab-position="bottom" :before-leave="judgeTab" >
-    <el-tab-pane
-        v-for="(group, index) in store.stockGroups"
-        :key="index"
-        :label="`${group.name}`"
-        :name="`${group.name}`"
-    >
-      <StockTable :stocks_change="group.stocks_change" :group-name="activeName"></StockTable>
-    </el-tab-pane>
-    <el-tab-pane name="设置">
-      <template #label>
-        <inline-svg src="./src/assets/svg/menu.svg" class="min-icon" @click="console.log(1)"></inline-svg>
-      </template>
-    </el-tab-pane>
-  </el-tabs>
+  <div class="tab-container">
+    <!--  <el-tabs v-model="activeName" class="demo-tabs" tab-position="bottom" @tab-click="handleClick" >-->
+    <el-tabs v-model="activeName"  tab-position="bottom" :before-leave="judgeTab" >
+      <el-tab-pane
+          v-for="(group, index) in store.stockGroups"
+          :key="index"
+          :label="`${group.name}`"
+          :name="`${group.name}`"
+          class="tab-pane"
+      >
+        <StockTable :stocks_change="group.stocks_change" :group-name="activeName"></StockTable>
+      </el-tab-pane>
+      <el-tab-pane name="设置">
+        <template #label>
+          <inline-svg src="./src/assets/svg/menu.svg" class="min-icon" @click="console.log(1)"></inline-svg>
+        </template>
+      </el-tab-pane>
+    </el-tabs>
+  </div>
 </template>
 
 <style>
+.tab-container{
+  height: 100%;
+  background-color: rgba(0, 128, 0, 0.1);
+}
+.tab-pane{
+  min-height: 200px;
+  border: darkred 1px solid;
+}
 .min-icon:hover path{
   color: green;
   fill: green;

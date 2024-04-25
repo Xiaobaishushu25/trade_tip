@@ -1,12 +1,22 @@
+use std::collections::HashMap;
+use std::sync::atomic::Ordering;
+use std::time::Duration;
 use log::{error, info};
+use tauri::Manager;
+use tokio::time::sleep;
+use crate::dtos::stock::{StockInfoG, StockLiveData};
 use crate::entities::prelude::{StockData, StockGroup, StockGroups, StockInfo};
+use crate::NEED;
 use crate::service::command::handle::{handle_delete_stock, handle_new_stock};
-use crate::service::curd::group_stock_relation_curd::{GroupStockRelationCurd, MoreStockInfo};
+use crate::service::curd::group_stock_relation_curd::{GroupStockRelationCurd};
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_group_curd::StockGroupCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
 use crate::service::http::REQUEST;
-
+#[tauri::command]
+pub fn init_command(need:bool) {
+    NEED.store(need,Ordering::Relaxed);
+}
 #[tauri::command]
 pub async fn get_response(url: String) -> Result<String,String> {
     return match REQUEST.get().unwrap().get(&url).await{
@@ -80,7 +90,7 @@ pub async fn query_all_groups() -> Result<Vec<StockGroup>,String> {
 }
 
 #[tauri::command]
-pub async fn query_stocks_by_group_name(name:String) -> Result<Vec<MoreStockInfo>,String> {
+pub async fn query_stocks_by_group_name(name:String) -> Result<Vec<StockInfoG>,String> {
     if name=="持有"{
         return match StockInfoCurd::find_all_hold().await{
             Ok(more_infos)=>{
@@ -238,6 +248,33 @@ pub async fn query_stocks_day_k_limit(code:String) -> Result<Vec<StockData>,Stri
         Ok(stock_data_list)=>{
             // info!("查询成功:{:?}",stock_datas);
             Ok(stock_data_list)
+        },
+        Err(e)=>{
+            error!("查询股票信息失败失败:{}",e);
+            Err(e.to_string())
+        }
+    }
+}
+#[tauri::command]
+pub async fn query_live_stocks_data(group_name:String,app_handle: tauri::AppHandle,) -> Result<HashMap<String,StockLiveData>,String> {
+    match GroupStockRelationCurd::query_only_code_by_group_name(group_name).await{
+        Ok(codes)=>{
+            // info!("查询成功:{:?}",stock_datas);
+            loop {
+                if NEED.load(Ordering::Relaxed) {
+                    match REQUEST.get().unwrap().get_live_stock_data(&codes).await{
+                        Ok(stock_data_list)=>{
+                            // info!("查询成功:{:?}",stock_datas);
+                            app_handle.emit("live_stock_data",stock_data_list).unwrap();
+                        },
+                        Err(e)=>{
+                            error!("查询股票实时信息失败失败:{}",e);
+                            return Err(e.to_string())
+                        }
+                    }
+                }
+                sleep(Duration::from_secs(30)).await;
+            }
         },
         Err(e)=>{
             error!("查询股票信息失败失败:{}",e);

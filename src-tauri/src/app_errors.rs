@@ -1,4 +1,4 @@
-use std::backtrace::Backtrace;
+// use std::backtrace::Backtrace;
 use std::io;
 use thiserror::Error;
 
@@ -16,6 +16,8 @@ pub enum AppError {
     //数据库错误
     #[error("sea_orm::DbErr:`{0}`")]
     SqlxError(#[from] sea_orm::DbErr),
+    #[error("std::num::ParseFloatError:`{0}`")]
+    ParseNumError(#[from] std::num::ParseFloatError),
     // #[error("http::ParseError:`{0}`")]
     // ParseError(#[from] ParseError),
     // #[error("sea_orm::DbErr:Error:`{0}`")]

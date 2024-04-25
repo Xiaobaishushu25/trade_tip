@@ -38,6 +38,7 @@ pub async fn handle_delete_stock(code:&str) ->AppResult<()>{
     let _ =StockDataCurd::delete_table_by_stock_code(code).await?;
     Ok(())
 }
+
 #[tokio::test]
 async fn test_handle_new_stock() {
     init_http().await;

@@ -9,14 +9,16 @@ mod entities;
 mod service;
 mod utils;
 
+use std::sync::atomic::AtomicBool;
 use crate::entities::init_db_coon;
 use crate::service::command::tauri_command::{
     add_stock_info, get_response, query_all_groups, query_groups_by_code, query_stock_info,
     query_stocks_by_group_name,create_group,update_stock_groups,remove_stock_from_group,
-    update_stock_hold,query_stocks_day_k_limit
+    update_stock_hold,query_stocks_day_k_limit,query_live_stocks_data
 };
 use crate::service::http::{init_http};
 
+pub static NEED: AtomicBool = AtomicBool::new(false);
 #[tokio::main]
 async fn main() {
     init_app().await;
@@ -40,7 +42,8 @@ async fn main() {
             update_stock_groups,
             remove_stock_from_group,
             update_stock_hold,
-            query_stocks_day_k_limit
+            query_stocks_day_k_limit,
+            query_live_stocks_data
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
