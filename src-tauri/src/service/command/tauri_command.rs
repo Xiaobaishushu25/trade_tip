@@ -1,18 +1,20 @@
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::sync::atomic::Ordering;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 use log::{error, info};
 use tauri::Manager;
 use tokio::time::sleep;
 use crate::dtos::stock::{StockInfoG, StockLiveData};
 use crate::entities::prelude::{StockData, StockGroup, StockGroups, StockInfo};
-use crate::NEED;
+use crate::{NEED, TASK};
+use crate::entities::init_db_coon;
 use crate::service::command::handle::{handle_delete_stock, handle_new_stock};
 use crate::service::curd::group_stock_relation_curd::{GroupStockRelationCurd};
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_group_curd::StockGroupCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
-use crate::service::http::REQUEST;
+use crate::service::http::{init_http, REQUEST};
 #[tauri::command]
 pub fn init_command(need:bool) {
     NEED.store(need,Ordering::Relaxed);
@@ -257,6 +259,11 @@ pub async fn query_stocks_day_k_limit(code:String) -> Result<Vec<StockData>,Stri
 }
 #[tauri::command]
 pub async fn query_live_stocks_data(group_name:String,app_handle: tauri::AppHandle,) -> Result<HashMap<String,StockLiveData>,String> {
+    // NEED.store(true, Ordering::Relaxed);
+    // let x = TASK.lock().unwrap();
+    // if let Some(task) = x.deref(){
+    //     task.abort();
+    // }
     match GroupStockRelationCurd::query_only_code_by_group_name(group_name).await{
         Ok(codes)=>{
             // info!("查询成功:{:?}",stock_datas);
@@ -281,4 +288,66 @@ pub async fn query_live_stocks_data(group_name:String,app_handle: tauri::AppHand
             Err(e.to_string())
         }
     }
+}
+pub async fn query_data(group_name:String)->i32{
+    println!("进来了");
+    NEED.store(true, Ordering::Relaxed);
+    println!("进来了1");
+
+    let x = TASK.lock().unwrap();
+    println!("进来了2");
+
+    if let Some(task) = x.deref(){
+        println!("丢弃前一个");
+        task.abort();
+    }
+    println!("进来了3");
+    // let handle = tokio::spawn(async move {
+    //     println!("分组名是{group_name}")
+    // });
+    // handle.await.unwrap();
+    let join_handle = tokio::spawn(async move{
+        println!("进入工作");
+        match GroupStockRelationCurd::query_only_code_by_group_name(group_name.clone()).await {
+            Ok(codes) => {
+                println!("查询到了{}{:?}",group_name,codes);
+                // info!("查询成功:{:?}",stock_datas);
+                loop {
+                    println!("进来循环了");
+                    if NEED.load(Ordering::Relaxed) {
+                        match REQUEST.get().unwrap().get_live_stock_data(&codes).await {
+                            Ok(stock_data_list) => {
+                                println!("{:?}", SystemTime::now());
+                                println!("查询成功:{:?}", stock_data_list);
+                                // app_handle.emit("live_stock_data",stock_data_list).unwrap();
+                            },
+                            Err(e) => {
+                                println!("查询股票实时信息失败失败:{}", e);
+                            }
+                        }
+                    }
+                    sleep(Duration::from_secs(5)).await;
+                }
+            },
+            Err(e) => {
+                println!("查询股票信息失败失败:{}", e);
+            }
+        }
+    });
+    // sleep(Duration::from_secs(10)).await;
+    // join_handle.await.unwrap();
+    TASK.lock().unwrap().replace(join_handle);
+    println!("结束工作");
+    1
+}
+#[tokio::test]
+async fn test_query_now_stock_data() {
+    println!("开始测试");
+    init_db_coon().await;
+    init_http().await;
+    let _  = query_data("全部".into()).await;
+    sleep(Duration::from_secs(15)).await;
+    let _  = query_data("持有".into()).await;
+    sleep(Duration::from_secs(30)).await;
+    println!("结束测试");
 }

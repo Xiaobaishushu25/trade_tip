@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import {useRouter} from "vue-router";
 import {invoke} from "@tauri-apps/api/core";
 import {onMounted, ref, watch} from "vue";
 import * as echarts from "echarts/core";
