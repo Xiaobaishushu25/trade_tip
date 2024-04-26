@@ -15,11 +15,26 @@ use crate::service::curd::group_stock_relation_curd::{GroupStockRelationCurd};
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_group_curd::StockGroupCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
+use crate::service::curd::update_all_day_k;
 use crate::service::http::{init_http, REQUEST};
 #[tauri::command]
 pub fn update_live_state(state: State<MyState>,live_state:bool) {
     // state.update_live_state(live_state);
+    info!("更新状态:{}",live_state);
     UPDATEING.store(live_state, Ordering::Relaxed);
+}
+#[tauri::command]
+pub async fn update_all_stock_day_k() -> Result<String,String> {
+    // state.update_live_state(live_state);
+    match update_all_day_k().await{
+        Ok(_)=>{
+            Ok("更新成功".to_string())
+        },
+        Err(e)=>{
+            error!("更新日线数据失败:{}",e);
+            Err(format!("更新日线数据失败:{}",e.to_string()))
+        }
+    }
 }
 #[tauri::command]
 pub async fn get_response(url: String) -> Result<String,String> {
@@ -30,7 +45,7 @@ pub async fn get_response(url: String) -> Result<String,String> {
         },
         Err(e)=>{
             error!("http请求错误:{}",e);
-            Err(e.to_string())
+            Err(format!("http请求错误:{}",e.to_string()))
         }
     }
 }
@@ -245,7 +260,7 @@ pub async fn query_stocks_day_k_limit(code:String) -> Result<Vec<StockData>,Stri
 #[tauri::command]
 // pub async fn query_live_stocks_data(group_name:String,app_handle: tauri::AppHandle,) -> Result<HashMap<String,StockLiveData>,String> {
 pub async fn query_live_stocks_data<'r>(state: State<'r, MyState>,group_name:String,app_handle: tauri::AppHandle,) -> Result<(),String> {
-    UPDATEING.store(true, Ordering::Relaxed);
+    // UPDATEING.store(true, Ordering::Relaxed);
     info!("查询实时数据:{}",group_name);
     // state.update_live_state(true);
     let result = if group_name=="持有"{
@@ -257,10 +272,12 @@ pub async fn query_live_stocks_data<'r>(state: State<'r, MyState>,group_name:Str
         Ok(codes) => {
             let handle = tokio::spawn(async move {
                 loop {
-                    if UPDATEING.load(Ordering::Relaxed) {
+                    let x = UPDATEING.load(Ordering::Relaxed);
+                    info!("是否查询实时数据:{}",x);
+                    if x {
                         match REQUEST.get().unwrap().get_live_stock_data(&codes).await {
                             Ok(stock_data_list) => {
-                                // info!("查询成功:{:?}",stock_datas);
+                                // info!("查询成功:{:?}",stock_data_list);
                                 app_handle.emit("live_stock_data", stock_data_list).unwrap();
                             },
                             Err(e) => {
@@ -268,7 +285,7 @@ pub async fn query_live_stocks_data<'r>(state: State<'r, MyState>,group_name:Str
                             }
                         }
                     }
-                    sleep(Duration::from_secs(15)).await;
+                    sleep(Duration::from_secs(10)).await;
                 }
             });
             state.set_task(handle);

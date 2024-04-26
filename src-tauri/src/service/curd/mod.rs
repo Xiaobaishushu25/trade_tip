@@ -1,3 +1,4 @@
+use log::info;
 use crate::app_errors::AppResult;
 use crate::entities::init_db_coon;
 use crate::service::curd::stock_data_curd::StockDataCurd;
@@ -9,7 +10,7 @@ pub mod stock_info_curd;
 pub mod stock_data_curd;
 pub mod stock_group_curd;
 pub mod group_stock_relation_curd;
-
+/// 更新所有股票的日k数据
 pub async fn update_all_day_k() ->AppResult<()> {
     let codes = StockInfoCurd::query_all_only_code().await?;
     for code in codes {
@@ -43,7 +44,8 @@ pub async fn update_all_day_k() ->AppResult<()> {
                     for (model, ma60_value) in data_after_index.iter_mut().zip(ma_60.iter()) {
                         model.ma60 = *ma60_value;
                     }
-                    StockDataCurd::insert_many(&code, data_after_index.to_vec()).await?;
+                    println!("待插入数据{:?}",data_after_index);
+                    StockDataCurd::insert_many(&code, data_after_index.to_vec()).await.unwrap();
                 }
             }
             None => {
