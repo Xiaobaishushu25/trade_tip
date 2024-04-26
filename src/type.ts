@@ -28,17 +28,6 @@ interface StockInfoG {
     code: string;
     name: string;
     live_data: StockLiveData;
-    // price: number;
-    // change_percent: number;
-    // volume: number;
-    // high: number;
-    // low: number;
-    // open: number;
-    // ma5: number | null;
-    // ma10: number | null;
-    // ma20: number | null;
-    // ma30: number | null;
-    // ma60: number | null;
     box?: string; // Optional field in TypeScript corresponds to Option<String> in Rust
     hold: boolean;
 }

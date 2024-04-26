@@ -1,9 +1,7 @@
 use crate::app_errors::AppResult;
 use crate::entities::{init_db_coon};
 use sea_orm::ActiveValue::Set;
-use sea_orm::{
-    ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryFilter,
-};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QuerySelect};
 use crate::dtos::stock::StockInfoG;
 
 use crate::entities::prelude::{ActiveStockInfo, StockInfo, StockInfos};
@@ -68,8 +66,8 @@ impl StockInfoCurd {
     //     let new_model = active_model.update(db).await?;
     //     Ok(new_model)
     // }
-    ///查询所有(按照索引排序)
-    pub async fn find_all() -> AppResult<Vec<StockInfo>> {
+    ///查询所有
+    pub async fn query_all() -> AppResult<Vec<StockInfo>> {
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
@@ -77,7 +75,34 @@ impl StockInfoCurd {
         let result = StockInfos::find().all(db).await?;
         Ok(result)
     }
-    pub async fn find_all_hold() -> AppResult<Vec<StockInfoG>> {
+    ///查询所有code
+    pub async fn query_all_only_code() -> AppResult<Vec<String>> {
+        let db = crate::entities::DB
+            .get()
+            .ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        let codes = StockInfos::find()
+            .select_only()
+            .column(Column::Code)
+            .into_tuple::<String>()
+            .all(db)
+            .await?;
+        Ok(codes)
+    }
+    ///查询所有持有股票的code
+    pub async fn query_all_hold_only_code() -> AppResult<Vec<String>> {
+        let db = crate::entities::DB
+            .get()
+            .ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        let codes = StockInfos::find()
+            .select_only()
+            .column(Column::Code)
+            .filter(Column::Hold.eq(true))
+            .into_tuple::<String>()
+            .all(db)
+            .await?;
+        Ok(codes)
+    }
+    pub async fn query_all_hold_info() -> AppResult<Vec<StockInfoG>> {
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
@@ -137,6 +162,6 @@ async fn test_update_index() {
 #[tokio::test]
 async fn test_find_all() {
     init_db_coon().await;
-    let result = StockInfoCurd::find_all().await;
+    let result = StockInfoCurd::query_all().await;
     println!("{:?}", result);
 }

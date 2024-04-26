@@ -49,6 +49,22 @@ impl StockDataCurd {
         let result = select.clone().all(db).await?;
         Ok(result)
     }
+    pub async fn query_latest(table_name: &str) -> AppResult<Option<StockData>> {
+        let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        let entity = Entity {
+            table_name: TableName::from_str_truncate(table_name),
+        };
+        let mut select = Entity::find();
+        *QueryTrait::query(&mut select) = Query::select()
+            .exprs(Column::iter().map(|col| col.select_as(Expr::col(col))))
+            // .limit(1)
+            .from(entity.table_ref())
+            .to_owned();
+        // Execute the select statement
+        // let result = select.clone().all(db).await?;
+        let result = select.clone().one(db).await?;
+        Ok(result)
+    }
     pub async fn query_all(table_name: &str) -> AppResult<Vec<StockData>> {
         let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
         let entity = Entity {

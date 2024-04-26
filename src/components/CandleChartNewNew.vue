@@ -239,8 +239,16 @@ function handlePaint(state: PaintState){
 
 const clickHandler = function (params: any) {
   console.log("绘制状态",paintState)
-  let clickPoint = myChart.convertFromPixel({seriesIndex: 0}, [params.offsetX, params.offsetY])
-  lineData.value.push({id:generateId(), start: [clickPoint[0],clickPoint[1]], end: [clickPoint[0],clickPoint[1]],type:paintState});
+  const pointInPixel = [params.offsetX, params.offsetY];
+  if (myChart.containPixel('grid',pointInPixel)) {
+    console.log("点击的是统计图图形区域");
+    // let clickPoint = myChart.convertFromPixel({seriesIndex: 0}, [params.offsetX, params.offsetY])
+    let clickPoint = myChart.convertFromPixel({seriesIndex: 0}, pointInPixel)
+    // lineData.value.push({id:generateId(), start: [clickPoint[0],clickPoint[1]], end: [clickPoint[0],clickPoint[1]],type:paintState});
+    lineData.value.push({id:generateId(), start: [0,clickPoint[1]], end: [clickPoint[0],clickPoint[1]],type:paintState});
+  }
+  // let clickPoint = myChart.convertFromPixel({seriesIndex: 0}, [params.offsetX, params.offsetY])
+  // lineData.value.push({id:generateId(), start: [clickPoint[0],clickPoint[1]], end: [clickPoint[0],clickPoint[1]],type:paintState});
 };
 function updateLineOption(){
   myChart.setOption({
@@ -252,11 +260,12 @@ function updateLineOption(){
           shape: {
             x1: myChart.convertToPixel({seriesIndex: 0}, item.start)[0],
             y1: myChart.convertToPixel({seriesIndex: 0}, item.start)[1],
-            x2: myChart.convertToPixel({seriesIndex: 0}, item.start)[0]-1000,
-            y2: myChart.convertToPixel({seriesIndex: 0}, item.start)[1],
+            x2: myChart.convertToPixel({seriesIndex: 0}, item.end)[0],
+            y2: myChart.convertToPixel({seriesIndex: 0}, item.end)[1],
             percent: 100
           },
           draggable: true,
+          bounding: 'all',
         }
       }
     })
@@ -342,7 +351,7 @@ function init_option(){
           // icon: 'image://https://echarts.apache.org/zh/images/favicon.png',
           icon: 'path://M811.562667 348.202667l78.848-78.848a10.666667 10.666667 0 0 0 0-15.082667l-120.682667-120.682667a10.666667 10.666667 0 0 0-15.082667 0l-78.848 78.848 135.765334 135.765334z m-45.248 45.248l-135.765334-135.765334L212.053333 676.181333 171.306667 852.693333l176.512-40.725333L766.293333 393.450667zM814.997333 88.32l120.682667 120.682667a74.666667 74.666667 0 0 1 0 105.6L386.56 863.701333a32 32 0 0 1-15.424 8.533334L135.829333 926.570667a32 32 0 0 1-38.4-38.378667l54.314667-235.306667a32 32 0 0 1 8.554667-15.445333L709.397333 88.32a74.666667 74.666667 0 0 1 105.6 0z',
           onclick: function (){
-            showPaint();
+            showPaintTool();
           }
         },
         restore: {},
@@ -601,7 +610,7 @@ function calculateChangeRate(openPrice:number, closePrice:number) {
   // 保留两位小数并返回
   return changeRate.toFixed(2);
 }
-async function showPaint(){
+async function showPaintTool(){
   const appWindow = WebviewWindow.getByLabel('tool')
   await appWindow?.show()
 }

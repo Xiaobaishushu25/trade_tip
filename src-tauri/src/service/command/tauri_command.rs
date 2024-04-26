@@ -3,11 +3,12 @@ use std::ops::Deref;
 use std::sync::atomic::Ordering;
 use std::time::{Duration, SystemTime};
 use log::{error, info};
-use tauri::Manager;
+use tauri::{Manager, State};
 use tokio::time::sleep;
 use crate::dtos::stock::{StockInfoG, StockLiveData};
 use crate::entities::prelude::{StockData, StockGroup, StockGroups, StockInfo};
-use crate::{NEED, TASK};
+use crate::{MyState, UPDATEING};
+use crate::app_errors::AppResult;
 use crate::entities::init_db_coon;
 use crate::service::command::handle::{handle_delete_stock, handle_new_stock};
 use crate::service::curd::group_stock_relation_curd::{GroupStockRelationCurd};
@@ -16,12 +17,13 @@ use crate::service::curd::stock_group_curd::StockGroupCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
 use crate::service::http::{init_http, REQUEST};
 #[tauri::command]
-pub fn init_command(need:bool) {
-    NEED.store(need,Ordering::Relaxed);
+pub fn update_live_state(state: State<MyState>,live_state:bool) {
+    // state.update_live_state(live_state);
+    UPDATEING.store(live_state, Ordering::Relaxed);
 }
 #[tauri::command]
 pub async fn get_response(url: String) -> Result<String,String> {
-    return match REQUEST.get().unwrap().get(&url).await{
+    match REQUEST.get().unwrap().get(&url).await{
         Ok(response)=>{
             // info!("ok");
             Ok(response.text().await.unwrap())
@@ -31,23 +33,6 @@ pub async fn get_response(url: String) -> Result<String,String> {
             Err(e.to_string())
         }
     }
-    // println!("{:?}", url);
-    // let response = reqwest::blocking::get(url).unwrap();
-    // let client = reqwest::Client::new();
-    // let mut header_map = HeaderMap::new();
-    // // header_map.insert("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36 Edg/91.0.864.41".parse().unwrap());
-    // header_map.insert("User-Agent", "Apifox/1.0.0 (https://apifox.com)".parse().unwrap());
-    // // header_map.insert("Accept", "*/*".parse().unwrap());
-    // // header_map.insert("Host", "echarts.apache.org".parse().unwrap());
-    // // header_map.insert("Connection", "keep-alive".parse().unwrap());
-    //
-    // let x = client.get(url).headers(header_map).send().await.unwrap();
-    // // let x = reqwest::get(url).await.unwrap();
-    // println!("{:?}", x);
-    // // let x1 = x.json().await.unwrap();
-    // x.text().await.unwrap()
-    // // let response = reqwest::get(url).unwrap();
-    // // return response.text().unwrap();
 }
 #[tauri::command]
 pub async fn add_stock_info(code: String,name:String) -> Result<StockInfo,String> {
@@ -65,7 +50,7 @@ pub async fn add_stock_info(code: String,name:String) -> Result<StockInfo,String
 }
 #[tauri::command]
 pub async fn query_stock_info() -> Result<Vec<StockInfo>,String> {
-    match StockInfoCurd::find_all().await{
+    match StockInfoCurd::query_all().await{
         Ok(stock_infos)=>{
             // info!("查询所有信息成功:{:?}",stock_infos);
             Ok(stock_infos)
@@ -94,7 +79,7 @@ pub async fn query_all_groups() -> Result<Vec<StockGroup>,String> {
 #[tauri::command]
 pub async fn query_stocks_by_group_name(name:String) -> Result<Vec<StockInfoG>,String> {
     if name=="持有"{
-        return match StockInfoCurd::find_all_hold().await{
+        return match StockInfoCurd::query_all_hold_info().await{
             Ok(more_infos)=>{
                 // // info!("查询持有分组成功:{:?}",more_infos);
                 Ok(more_infos)
@@ -258,96 +243,66 @@ pub async fn query_stocks_day_k_limit(code:String) -> Result<Vec<StockData>,Stri
     }
 }
 #[tauri::command]
-pub async fn query_live_stocks_data(group_name:String,app_handle: tauri::AppHandle,) -> Result<HashMap<String,StockLiveData>,String> {
-    // NEED.store(true, Ordering::Relaxed);
-    // let x = TASK.lock().unwrap();
-    // if let Some(task) = x.deref(){
-    //     task.abort();
-    // }
-    match GroupStockRelationCurd::query_only_code_by_group_name(group_name).await{
-        Ok(codes)=>{
-            // info!("查询成功:{:?}",stock_datas);
-            loop {
-                if NEED.load(Ordering::Relaxed) {
-                    match REQUEST.get().unwrap().get_live_stock_data(&codes).await{
-                        Ok(stock_data_list)=>{
-                            // info!("查询成功:{:?}",stock_datas);
-                            app_handle.emit("live_stock_data",stock_data_list).unwrap();
-                        },
-                        Err(e)=>{
-                            error!("查询股票实时信息失败失败:{}",e);
-                            return Err(e.to_string())
-                        }
-                    }
-                }
-                sleep(Duration::from_secs(30)).await;
-            }
-        },
-        Err(e)=>{
-            error!("查询股票信息失败失败:{}",e);
-            Err(e.to_string())
-        }
-    }
-}
-pub async fn query_data(group_name:String)->i32{
-    println!("进来了");
-    NEED.store(true, Ordering::Relaxed);
-    println!("进来了1");
-
-    let x = TASK.lock().unwrap();
-    println!("进来了2");
-
-    if let Some(task) = x.deref(){
-        println!("丢弃前一个");
-        task.abort();
-    }
-    println!("进来了3");
-    // let handle = tokio::spawn(async move {
-    //     println!("分组名是{group_name}")
-    // });
-    // handle.await.unwrap();
-    let join_handle = tokio::spawn(async move{
-        println!("进入工作");
-        match GroupStockRelationCurd::query_only_code_by_group_name(group_name.clone()).await {
-            Ok(codes) => {
-                println!("查询到了{}{:?}",group_name,codes);
-                // info!("查询成功:{:?}",stock_datas);
+// pub async fn query_live_stocks_data(group_name:String,app_handle: tauri::AppHandle,) -> Result<HashMap<String,StockLiveData>,String> {
+pub async fn query_live_stocks_data<'r>(state: State<'r, MyState>,group_name:String,app_handle: tauri::AppHandle,) -> Result<(),String> {
+    UPDATEING.store(true, Ordering::Relaxed);
+    info!("查询实时数据:{}",group_name);
+    // state.update_live_state(true);
+    let result = if group_name=="持有"{
+        StockInfoCurd::query_all_hold_only_code().await
+    }else {
+        GroupStockRelationCurd::query_only_code_by_group_name(group_name).await
+    };
+    match result {
+        Ok(codes) => {
+            let handle = tokio::spawn(async move {
                 loop {
-                    println!("进来循环了");
-                    if NEED.load(Ordering::Relaxed) {
+                    if UPDATEING.load(Ordering::Relaxed) {
                         match REQUEST.get().unwrap().get_live_stock_data(&codes).await {
                             Ok(stock_data_list) => {
-                                println!("{:?}", SystemTime::now());
-                                println!("查询成功:{:?}", stock_data_list);
-                                // app_handle.emit("live_stock_data",stock_data_list).unwrap();
+                                // info!("查询成功:{:?}",stock_datas);
+                                app_handle.emit("live_stock_data", stock_data_list).unwrap();
                             },
                             Err(e) => {
-                                println!("查询股票实时信息失败失败:{}", e);
+                                error!("查询股票实时信息失败失败:{}",e);
                             }
                         }
                     }
-                    sleep(Duration::from_secs(5)).await;
+                    sleep(Duration::from_secs(15)).await;
                 }
-            },
-            Err(e) => {
-                println!("查询股票信息失败失败:{}", e);
-            }
+            });
+            state.set_task(handle);
+            Ok(())
         }
-    });
-    // sleep(Duration::from_secs(10)).await;
-    // join_handle.await.unwrap();
-    TASK.lock().unwrap().replace(join_handle);
-    println!("结束工作");
-    1
-}
-#[tokio::test]
-async fn test_query_now_stock_data() {
-    println!("开始测试");
-    init_db_coon().await;
-    init_http().await;
-    let _  = query_data("全部".into()).await;
-    sleep(Duration::from_secs(15)).await;
-    let _  = query_data("持有".into()).await;
-    sleep(Duration::from_secs(30)).await;
-    println!("结束测试");
+        Err(e) => {
+            error!("查询股票实时信息失败失败:{}",e);
+            Err(e.to_string())
+        }
+    }
+    // match GroupStockRelationCurd::query_only_code_by_group_name(group_name).await{
+    //     Ok(codes)=>{
+    //         let handle = tokio::spawn(async move {
+    //             loop {
+    //                 if NEED.load(Ordering::Relaxed) {
+    //                     match REQUEST.get().unwrap().get_live_stock_data(&codes).await {
+    //                         Ok(stock_data_list) => {
+    //                             // info!("查询成功:{:?}",stock_datas);
+    //                             app_handle.emit("live_stock_data", stock_data_list).unwrap();
+    //                         },
+    //                         Err(e) => {
+    //                             error!("查询股票实时信息失败失败:{}",e);
+    //                         }
+    //                     }
+    //                 }
+    //                 sleep(Duration::from_secs(30)).await;
+    //             }
+    //         });
+    //         state.set_task(handle);
+    //         Ok(())
+    //     },
+    //     Err(e)=>{
+    //         error!("查询股票信息失败失败:{}",e);
+    //         Err(e.to_string())
+    //     }
+    // }
 }

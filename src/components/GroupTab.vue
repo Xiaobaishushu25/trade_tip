@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {onMounted,ref} from "vue";
+import {onMounted,ref,watch} from "vue";
 import {invoke} from "@tauri-apps/api/core";
 import {store} from "../store.ts";
 import {StockGroup} from "../type.ts";
@@ -9,14 +9,19 @@ import InlineSvg from "vue-inline-svg";
 const activeName = ref('')
 onMounted(() => {
   invoke<StockGroup[]>("query_all_groups",{}).then(res => {
-    console.log(res)
     store.stockGroups = res
     activeName.value = store.stockGroups[0].name
-    console.log(res)
   }).catch(err => {
     console.log(err)
   })
 })
+watch(activeName, () => {
+  console.log("开始实时查询")
+  invoke("query_live_stocks_data",{groupName:activeName.value}).catch(err => {
+    console.log(err);
+  })
+},{immediate:true})
+
 function judgeTab(activeName:string){
   return activeName != '设置';
 }
@@ -36,7 +41,8 @@ function judgeTab(activeName:string){
           :name="`${group.name}`"
           class="tab-pane"
       >
-        <StockTable :stocks_change="group.stocks_change" :group-name="activeName"></StockTable>
+<!--        <StockTable :stocks_change="group.stocks_change" :group-name="activeName"></StockTable>-->
+        <StockTable :stocks_change="group.stocks_change" :group-name="group.name" :active-name="activeName"></StockTable>
       </el-tab-pane>
       <el-tab-pane name="设置">
         <template #label>

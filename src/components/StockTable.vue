@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {nextTick, onMounted, ref, watch} from "vue";
+import {nextTick, onMounted, ref, watch,onActivated} from "vue";
 import {StockInfoG, StockLiveData} from "../type.ts";
 import {invoke} from "@tauri-apps/api/core";
 import {webviewWindow} from "@tauri-apps/api";
@@ -16,6 +16,10 @@ const props = defineProps({
   },
   stocks_change:{
     type: Boolean,
+    required: true
+  },
+  activeName:{
+    type: String,
     required: true
   }
   // stock_codes: {
@@ -49,6 +53,10 @@ const options = {
 watch(() => props.groupName, (newValue, oldValue) => {
   console.log('groupName changed:', newValue, oldValue);
   updateStockInfoG();
+  // console.log("开始实时查询")
+  // invoke("query_live_stocks_data",{groupName:props.groupName}).catch(err => {
+  //   console.log(err);
+  // })
   // invoke<StockInfoG[]>("query_stocks_by_group_name", {name: newValue}).then(res => {
   //   console.log(res);
   //   StockInfoG.value = res;
@@ -58,15 +66,14 @@ watch(() => props.groupName, (newValue, oldValue) => {
   // })
 });
 watch(() => props.stocks_change, (_) => {
-  console.log('分组的股票changed:', props.groupName);
+  console.log('分组内的的股票changed:', props.groupName);
   updateStockInfoG();
-  // invoke<StockInfoG[]>("query_stocks_by_group_name", {name: newValue}).then(res => {
-  //   console.log(res);
-  //   StockInfoG.value = res;
-  //   console.log(StockInfoG.value)
-  // }).catch(err => {
-  //   console.log(err);
-  // })
+  if (props.activeName === props.groupName){
+    console.log("当前页面更新了，开始实时查询")
+    invoke("query_live_stocks_data",{groupName:props.groupName}).catch(err => {
+      console.log(err);
+    })
+  }
 });
 onMounted(() => {
   console.log(props.groupName)
@@ -75,11 +82,10 @@ onMounted(() => {
   window.addEventListener('blur', ()=>{
     show.value = false;
   })
-  invoke("query_live_stocks_data",{groupName:props.groupName}).catch(err => {
-    console.log(err);
-  })
+  // invoke("query_live_stocks_data",{groupName:props.groupName}).catch(err => {
+  //   console.log(err);
+  // })
   listen("live_stock_data", ({payload }) => {
-    // console.log(payload);
     updateLiveData(payload);
   })
   // webviewWindow.getCurrent().listen("WINDOW_BLUR", ({ event, payload }) => {
@@ -131,8 +137,6 @@ watch(() => show.value, (newValue, oldValue) => {
   console.log("show的值变换了"+newValue, oldValue)
 })
 function updateLiveData(live_data:Record<string, StockLiveData>){
-  // console.log(live_data)
-  console.log(live_data["159967"]);
   //遍历StockInfoGs
   for (let i = 0; i < StockInfoGs.value.length; i++) {
     const element = StockInfoGs.value[i];
@@ -236,12 +240,12 @@ function updateHold(){
         </el-table-column>
         <el-table-column prop="live_data.price" label="现价" >
           <template #default="scope">
-            <el-text :style="{color:getColor(scope.row.live_data.percent),fontSize:'15px'}">{{scope.row.live_data.price}}</el-text>
+            <el-text :style="{color:getColor(scope.row.live_data?.percent),fontSize:'15px'}">{{scope.row.live_data?.price}}</el-text>
           </template>
         </el-table-column>
         <el-table-column prop="live_data.percent" label="涨跌%" >
           <template #default="scope">
-            <el-text :style="{color:getColor(scope.row.live_data.percent),fontSize:'15px',fontWeight:'bold'}">{{scope.row.live_data.percent}}</el-text>
+            <el-text :style="{color:getColor(scope.row.live_data?.percent),fontSize:'15px',fontWeight:'bold'}">{{scope.row.live_data?.percent}}%</el-text>
           </template>
         </el-table-column>
         <el-table-column prop="price" label="均线状态">

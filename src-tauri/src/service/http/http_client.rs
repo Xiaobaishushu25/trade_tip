@@ -42,7 +42,8 @@ impl HttpRequest {
         println!("{:?}", url);
         // let url = format!("https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol={}&scale=240&ma=5,10,20,30&datalen={num}",get_market_by_code(code)?);
         // let result = self.client.get(url).headers(self.header_map.clone()).send().await?;
-        let result = self.client.get(url.clone()).send().await.with_context(||format!("请求url:{}",url))?;
+        // let result = self.client.get(url.clone()).send().await.with_context(||format!("请求url:{}",url))?;
+        let result = self.client.get(url.clone()).send().await?;
         let stock_data = result.json::<Vec<StockData>>().await.with_context(||format!("发生错误了:{}",url))?;
         // let stock_data = result.json::<Vec<StockData>>().await.with_context(||{error!("发生错误了:{}",url);format!("请求url:{}",url)})?;
         // let stock_data = result.json::<Vec<StockData>>().await?;
@@ -94,7 +95,7 @@ impl HttpRequest {
         // let closes = stock_data.iter().map(|item| item.close).collect::<Vec<f64>>();
         // let vec = compute_ma(5, closes).await;
         // println!("{:?}", vec);
-        // println!("{:?}", stock_data);
+        // info!("{:?}", live_data);
         Ok(live_data)
     }
 }

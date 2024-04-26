@@ -1,2 +1,2 @@
 pub mod tauri_command;
-mod handle;
+pub(crate) mod handle;
