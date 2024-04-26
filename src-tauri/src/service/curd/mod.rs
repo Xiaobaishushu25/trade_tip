@@ -27,22 +27,23 @@ pub async fn update_all_day_k() ->AppResult<()> {
                         .map(|(i, _)| i) // 获取索引  
                         .unwrap(); // 假设我们确信可以找到匹配项
                     // let option = data.iter().find(|x| x.date == latest_data.date).unwrap();
-                    let data_after_index = &data[index + 1..].to_vec(); //这个是由旧日期到新日期的顺序
+                    let data_after_index = &mut data[index + 1..].to_vec(); //这个是由旧日期到新日期的顺序
                     //过去的历史收盘价
-                    let mut history = StockDataCurd::query_by_nums(&code, (60 - data_after_index.len()+1) as i32).await?.iter().map(|item| item.close).collect::<Vec<_>>();
+                    // let mut history = StockDataCurd::query_by_nums(&code, (60 - data_after_index.len()+1) as i32).await?.iter().map(|item| item.close).collect::<Vec<_>>();
+                    let mut history = StockDataCurd::query_by_nums(&code, 59).await?.iter().map(|item| item.close).collect::<Vec<_>>();
                     history.reverse(); //查出的数据是从新到旧，所以要reverse
                     history.extend(data_after_index.iter().map(|item| item.close));
                     println!("{:?}",history.len());
                     let ma_60 = compute_single_ma(60, history).await;
-                    println!("{:?}",data_after_index);
+                    let ma_60 = ma_60.into_iter().filter(|x| x.is_some()).collect::<Vec<_>>();
                     // println!("{:?}",history);
-                    println!("结果是{:?}",ma_60);
                     // 确保两个Vec的长度相同  
                     assert_eq!(data_after_index.len(), ma_60.len());
                     // 使用zip迭代两个Vec并更新ma60字段  
                     for (model, ma60_value) in data_after_index.iter_mut().zip(ma_60.iter()) {
                         model.ma60 = *ma60_value;
                     }
+                    StockDataCurd::insert_many(&code, data_after_index.to_vec()).await?;
                 }
             }
             None => {
