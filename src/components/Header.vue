@@ -9,6 +9,8 @@ import {useRouter} from "vue-router";
 // const max_state_name = ref('window-maximize')
 const router = useRouter()
 const max_state_name = ref('maximize')
+const live_name = ref('stop')
+const live_state = ref(true)
 const max_state= ref(false)
 watch(max_state, async (newValue) => {
   if(newValue){ //当前状态是最大化
@@ -19,7 +21,17 @@ watch(max_state, async (newValue) => {
     await WebviewWindow.getCurrent().unmaximize()
   }
 })
-
+watch(live_state, async (newValue) => {
+  if(newValue){ //当前状态是最大化
+    live_name.value = 'stop'
+  }else{
+    live_name.value = 'start'
+  }
+})
+async function changeUpdateState(){
+  await invoke('update_live_state',{liveState:!live_state.value});
+  live_state.value = !live_state.value;
+}
 async function window_minimize(){
   await WebviewWindow.getCurrent().minimize()
 }
@@ -41,6 +53,7 @@ function back(){
 <!--    <Search></Search>-->
     <ElSearch></ElSearch>
     <div id="stage-button">
+      <inline-svg :src="`./src/assets/svg/${live_name}.svg`" class="window-button back" @click.left="changeUpdateState"></inline-svg>
       <inline-svg src="./src/assets/svg/back.svg" class="window-button back" @click.left="back()"></inline-svg>
       <inline-svg src="./src/assets/svg/minimize.svg" class="window-button min" @click.left="window_minimize"></inline-svg>
       <inline-svg :src="`./src/assets/svg/${max_state_name}.svg`" :class="`window-button ${max_state_name}`" @click.left="window_maximize" ></inline-svg>
