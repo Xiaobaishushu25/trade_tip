@@ -86,7 +86,10 @@ onMounted(() => {
   //   console.log(err);
   // })
   listen("live_stock_data", ({payload }) => {
-    updateLiveData(payload);
+    if (props.activeName == props.groupName){
+      console.log("收到实时数据",payload);
+      updateLiveData(payload);
+    }
   })
   // webviewWindow.getCurrent().listen("WINDOW_BLUR", ({ event, payload }) => {
   // webviewWindow.getCurrent().listen(TauriEvent.WINDOW_BLUR, ({ event, payload }) => {

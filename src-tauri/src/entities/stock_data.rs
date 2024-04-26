@@ -47,9 +47,6 @@ pub struct Model {
     // #[serde_as(as = "Option<DisplayFromStr>")]
     pub ma60: Option<f64>,
 }
-fn path()->String{
-    "测试".to_string()
-}
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveColumn)]
 pub enum Column {

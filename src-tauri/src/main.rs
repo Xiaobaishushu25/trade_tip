@@ -11,13 +11,15 @@ mod utils;
 
 use std::sync::atomic::AtomicBool;
 use std::sync::{Mutex};
-use log::info;
+use log::{error, info};
 use tokio::task::JoinHandle;
 use crate::entities::init_db_coon;
-use crate::service::command::tauri_command::{add_stock_info, get_response, query_all_groups, query_groups_by_code, query_stock_info, query_stocks_by_group_name, create_group, update_stock_groups, remove_stock_from_group, update_stock_hold, query_stocks_day_k_limit, query_live_stocks_data};
+use crate::service::command::handle::init_cache;
+use crate::service::command::tauri_command::{add_stock_info, get_response, query_all_groups, query_groups_by_code, query_stock_info, query_stocks_by_group_name, create_group, update_stock_groups, remove_stock_from_group, update_stock_hold, query_stocks_day_k_limit, query_live_stocks_data,update_live_state};
+use crate::service::curd::update_all_day_k;
 use crate::service::http::{init_http};
 ///是否需要实时更新
-pub static UPDATEING: AtomicBool = AtomicBool::new(false);
+pub static UPDATEING: AtomicBool = AtomicBool::new(true);
 pub static NOTICE: Mutex<Option<String>> = Mutex::new(None);
 pub struct MyState{
     // live_state:AtomicBool,
@@ -83,7 +85,8 @@ async fn main() {
             remove_stock_from_group,
             update_stock_hold,
             query_stocks_day_k_limit,
-            query_live_stocks_data
+            query_live_stocks_data,
+            update_live_state
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -92,4 +95,15 @@ async fn init_app() {
     log4rs::init_file("./config/log4rs.yaml", Default::default()).unwrap();
     init_db_coon().await;
     init_http().await;
+    match update_all_day_k().await{
+        Ok(_)=>{
+            info!("更新日线数据成功");
+            NOTICE.lock().unwrap().replace("更新日线数据成功".to_string());
+        },
+        Err(e)=>{
+            error!("更新日线数据失败:{}",e);
+            NOTICE.lock().unwrap().replace(format!("更新日线数据失败:{}",e.to_string()));
+        }
+    };
+    init_cache().await;
 }

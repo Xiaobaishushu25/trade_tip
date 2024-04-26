@@ -33,9 +33,11 @@ let isCtrlPressed = false;
 // })
 let code = store.stockinfoG!.code
 watch(() => store.stockinfoG, (newValue: any) => {
-  code = newValue.code;
-  console.log("infog code变化了",code)
-  query_stocks_day_k_limit();
+  if(code!=newValue.code){
+    code = newValue.code;
+    console.log("info code变化了",code)
+    query_stocks_day_k_limit();
+  }
 },{deep:true})
 // watch(() => store.count, (newValue: any) => {
 //   code = newValue;
@@ -103,7 +105,7 @@ onMounted(async ()=>{
     if (event.ctrlKey) {
       if (!isCtrlPressed){
         isCtrlPressed = true;
-        console.log("解锁图表")
+        console.log("解锁图表缩放")
         myChart.setOption({
           dataZoom: [
             {
@@ -119,7 +121,7 @@ onMounted(async ()=>{
 
   document.addEventListener('keyup', (event: KeyboardEvent) => {
     if (event.key === 'Control') {
-      console.log("锁定图表")
+      console.log("锁定图表缩放")
       if (isCtrlPressed){
         isCtrlPressed = false;
         myChart.setOption({
@@ -218,6 +220,7 @@ function scrollEvent(deltaY:number){
         store.stockinfoG = store.stockinfoGs[index - 1];
       }
     }
+    console.log("滚动了,改变code")
     code = store.stockinfoG!.code;
     // myChart.showLoading();
     query_stocks_day_k_limit();
@@ -433,7 +436,7 @@ function init_option(){
       {
         type: 'inside',
         xAxisIndex: [0, 1],
-        start: 85,
+        start: 90,
         end: 100,
         zoomOnMouseWheel: "ctrl",// 启用鼠标滚轮触发缩放
         zoomLock: true

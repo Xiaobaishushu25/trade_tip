@@ -1,5 +1,8 @@
+use std::collections::HashMap;
 use chrono::NaiveDate;
+use log::info;
 use sea_orm::{DbErr, TransactionTrait};
+use tokio::sync::OnceCell;
 use crate::app_errors::AppResult;
 use crate::entities::{DB, init_db_coon};
 use crate::entities::prelude::StockInfo;
@@ -8,7 +11,24 @@ use crate::service::curd::group_stock_relation_curd::GroupStockRelationCurd;
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
 use crate::service::http::{init_http, REQUEST};
+use crate::service::http::http_client::HttpRequest;
 use crate::utils::stock_util::{calculate_ago_with_num, compute_mul_ma, compute_single_ma};
+
+pub static CACHE:OnceCell<HashMap<String,Vec<f64>>> = OnceCell::const_new();
+pub async fn init_cache()->AppResult<()> {
+    let codes = StockInfoCurd::query_all_only_code().await?;
+    let mut map = HashMap::new();
+    for code in codes {
+        map.insert(code.clone(),StockDataCurd::query_only_close_price_by_nums(&code,60).await?);
+    }
+    CACHE.get_or_init(||async {
+        info!("初始化缓存数据");
+        map
+    }).await;
+    println!("初始化缓存数据完成");
+    println!("{:?}",CACHE.get().unwrap());
+    Ok(())
+}
 ///处理并保存股票数据
 /// 需要先根据code创建表，然后处理日线数据（主要是计算ma60）
 pub(crate) async fn handle_and_save_stock_data(create_need:bool,code:&str) ->AppResult<()>{
@@ -28,7 +48,7 @@ pub(crate) async fn handle_and_save_stock_data(create_need:bool,code:&str) ->App
     for (model, ma60_value) in stock_data.iter_mut().zip(ma_60.iter()) {
         model.ma60 = *ma60_value;
     }
-    stock_data.reverse();
+    // stock_data.reverse(); //不倒序的话数据库里的数据日期是由旧到新的
     let _ = StockDataCurd::insert_many(code, stock_data).await?;
     Ok(())
 }
@@ -62,6 +82,8 @@ pub async fn handle_new_stock(code:&str,name:&str) ->AppResult<()>{
     // let _ = handle_and_save_stock_data(true,code,calculate_ago_with_num(2020, 1, 1)-300,None).await?;
     Ok(())
 }
+///删除股票
+/// 要删除分组和股票关系，股票信息，日线数据表
 pub async fn handle_delete_stock(code:&str) ->AppResult<()>{
     let  _ = GroupStockRelationCurd::delete_by_stock_code(code.into()).await?;
     let _ = StockInfoCurd::delete_by_code(code.into()).await?;

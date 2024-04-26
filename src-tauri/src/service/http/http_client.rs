@@ -36,6 +36,7 @@ impl HttpRequest {
         Ok(result)
     }
     ///注意，这个接口返回的数据只有5、10、20、30日均线的数据。
+    /// 注意：获取的数据是按照日期从旧到新排列的
     /// num是一共需要获取的数据条数
     pub async fn get_stock_day_data(&self,code:&str,num:i32)->AppResult<Vec<StockData>> {
         let url = format!("https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol={}{code}&scale=240&ma=5,10,20,30&datalen={num}",get_market_by_code(code)?);
