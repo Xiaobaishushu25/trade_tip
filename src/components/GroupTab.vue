@@ -2,22 +2,41 @@
 import {onMounted,ref,watch} from "vue";
 import {invoke} from "@tauri-apps/api/core";
 import {store} from "../store.ts";
-import {StockGroup} from "../type.ts";
+import {StockGroup, StockInfoG, StockLiveData} from "../type.ts";
 import StockTable from "./StockTable.vue";
 import {VueDraggable} from "vue-draggable-plus";
 import InlineSvg from "vue-inline-svg";
+import {listen} from "@tauri-apps/api/event";
 const activeName = ref('')
-onMounted(() => {
+onMounted(async () => {
   invoke<StockGroup[]>("query_all_groups",{}).then(res => {
     store.stockGroups = res
     activeName.value = store.stockGroups[0].name
   }).catch(err => {
     console.log(err)
+  });
+  query_box();
+  await listen("graphic_change", () => {
+    query_box();
   })
 })
+function query_box(){
+  invoke<Record<string, number[]>>("query_box",{}).then(res => {
+    store.boxData = res
+  }).catch(err => {
+    console.log(err)
+  })
+}
 watch(activeName, () => {
   console.log("开始实时查询")
-  invoke("query_live_stocks_data",{groupName:activeName.value}).catch(err => {
+  let groupName = activeName.value;
+  store.activeGroup = groupName;
+  invoke("query_live_stocks_data",{groupName: groupName}).catch(err => {
+    console.log(err);
+  });
+  invoke<StockInfoG[]>("query_stocks_by_group_name", {name: groupName}).then(res => {
+    store.stockinfoGs = res;
+  }).catch(err => {
     console.log(err);
   })
 },{immediate:true})
@@ -56,11 +75,12 @@ function judgeTab(activeName:string){
 <style>
 .tab-container{
   height: 100%;
-  background-color: rgba(0, 128, 0, 0.1);
+}
+.el-tabs__nav-scroll{
+  padding-left: 20px;
 }
 .tab-pane{
   min-height: 200px;
-  border: darkred 1px solid;
 }
 .min-icon:hover path{
   color: green;

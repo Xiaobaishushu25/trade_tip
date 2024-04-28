@@ -28,6 +28,8 @@ const hideDialog = (ok:boolean) => {
   // emit('hideDialog');
   if (ok) {
     //update_stock_groups函数要求is_new==true和group_names长度为0不同时出现
+    console.log(isNew)
+    console.log(selectGroups.value)
     if (!(isNew&&selectGroups.value.length==0)){
       invoke("update_stock_groups", {isNew:isNew,code: props.code,name: props.name, groupNames: selectGroups.value}).then((res) => {
         const changes = findChangedStrings(initSelectGroups.value,selectGroups.value)
@@ -38,9 +40,18 @@ const hideDialog = (ok:boolean) => {
             }
           })
         })
-        console.log(res)
+        if (isNew){
+          successNotification("添加成功");
+        }else {
+          successNotification("分组修改成功");
+        }
         initSelectGroups.value = selectGroups.value
       }).catch((err) => {
+        if (isNew){
+          errorNotification(`添加失败${err}`);
+        }else {
+          errorNotification(`分组修改失败${err}`);
+        }
         console.log(err)
       })
     }
@@ -137,6 +148,23 @@ function findChangedStrings(a:string[], b:string[]) {
     }
   });
   return changes;
+}
+const successNotification = (content:string) => {
+  ElNotification({
+    title: 'Success',
+    message: content,
+    type: 'success',
+    position: 'bottom-right',
+  })
+}
+const errorNotification = (content:string) => {
+  ElNotification({
+    title: 'Error',
+    message: content,
+    type: 'error',
+    position: 'bottom-right',
+    duration: 0,
+  })
 }
 </script>
 

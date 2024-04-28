@@ -3,6 +3,7 @@ import {StockInfoG} from "../../type.ts";
 import {store} from "../../store.ts";
 import CandleChartNewNew from "../CandleChartNewNew.vue";
 import Detail from "./Detail.vue";
+import NewNewCandleChart from "../NewNewCandleChart.vue";
 
 // interface Props {
 //   stock:StockInfoG,
@@ -14,7 +15,8 @@ import Detail from "./Detail.vue";
 
 <template>
   <div class="detail-container">
-    <CandleChartNewNew></CandleChartNewNew>
+<!--    <CandleChartNewNew></CandleChartNewNew>-->
+    <NewNewCandleChart></NewNewCandleChart>
     <Detail></Detail>
   </div>
 </template>

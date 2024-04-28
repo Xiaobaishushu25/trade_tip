@@ -2,92 +2,63 @@
 import {invoke} from "@tauri-apps/api/core";
 import {onMounted, ref, watch} from "vue";
 import * as echarts from "echarts/core";
-import {Graphic, Line, PaintState, StockData} from "../type.ts";
+import {Graphic, PaintState, StockData} from "../type.ts";
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {EChartsType} from "echarts";
 import {store} from "../store.ts";
 import {debounce, generateId} from "../utils.ts"
-import {listen} from "@tauri-apps/api/event";
+import {emit, listen} from "@tauri-apps/api/event";
+import {onBeforeRouteLeave} from "vue-router";
 
 let isCtrlPressed = false;
-// const route = useRoute()
-// let code = route.params.code
-// // watch(() => route.params.code, (_) => {
-// //   console.log("code变换了",code)
-// //   query_stocks_day_k_limit();
-// // });
-// watch(
-//     () => router.currentRoute.value,
-//     (newValue: any) => {
-//       console.log('newValue',newValue.params.code)
-//       code = newValue.params.code;
-//       query_stocks_day_k_limit();
-//     },
-//     { immediate: true }
-// )
-// const props = defineProps({
-//   code: {
-//     type: String,
-//     required: true
-//   }
-// })
+
 let code = store.stockinfoG!.code
-watch(() => store.stockinfoG, (newValue: any) => {
+watch(() => store.stockinfoG,async (newValue: any) => {
   if(code!=newValue.code){
+    save_graphic();
     code = newValue.code;
-    console.log("info code变化了",code)
-    query_stocks_day_k_limit();
-    query_graphic();
+    console.log("info code变化了",code);
+    await updateChart();
+    // myChart.setOption({})
   }
 },{deep:true})
-// watch(() => store.count, (newValue: any) => {
-//   code = newValue;
-//   console.log("count code变化了",code)
-//   query_stocks_day_k_limit();
-// })
-// watch('stockinfoG', (newValue: StockInfoG | undefined) => {
-//   if (newValue) {
-//     code = newValue.code;
-//     console.log("code变化了");
-//     query_stocks_day_k_limit();
-//   }
-// });
+
 
 const upColor = 'rgba(255,255,255,0.6)';
 const bColor = '#ec0000';
 const downColor = 'rgb(55,150,55)';
 
-const chart=ref(null)
-// let myChart: any;
+const show = ref(false);
+const chart=ref(null);
 let myChart: EChartsType;
-// const data = ref<StockData[]>([])
-const rawData = ref([])
-const lineData = ref<Line[]>([])
-const newLineData = ref<Graphic[]>([])
-const tipConfig = ref({
-  isVisible:false,
-  x:0,
-  y:0
-})
+const rawData = ref([]);
+const graphicData = ref<Graphic[]>([])
+let newGraphicData:Graphic[] =[]
+// 创建一个映射来存储每个id对应的group
+const groupMap = new Map<string, { group: any }>();
 
-watch(lineData, (_) => {
-  console.log("lineData变化了",lineData.value)
+const options = {
+  // theme: 'win10 dark',
+  name:"",
+  code:"",
+  zIndex: 3,
+  x: 500,
+  y: 200
+}
+
+watch(graphicData, (_) => {
+  // console.log("lineData变化了",graphicData.value);
+  // handleGraphicData();
   updateLineOption()
 },{deep:true});
-// watch(() => props.code, (_) => {
-//
-// });
 onMounted(async ()=>{
-
   myChart = echarts.init(chart.value);
-  // myChart = echarts.init(chart.value);
-  await query_stocks_day_k_limit();
-  await query_graphic();
-  // myChart.setOption(init_option());
+  // await query_stocks_day_k_limit();
+  // await query_graphic();
+  await updateChart();
+  // myChart.on('dataZoom', handleGraphicData);
   myChart.on('dataZoom', updateLineOption);
   await listen('paint', (event) => {
-    // event.event is the event name (useful if you want to use a single callback fn for multiple event types)
-    // event.payload is the payload object
     handlePaint(event.payload.state);
   })
   // 监听鼠标滚轮事件
@@ -96,9 +67,6 @@ onMounted(async ()=>{
     // 这里可以获取滚动事件的信息
     const deltaY = event.deltaY; // 滚动的垂直距离
     debouncedFunction(deltaY)
-    // scrollEvent(deltaY)
-    // 如果你需要阻止页面滚动或其他默认行为
-    // event.preventDefault();
   });
   window.addEventListener('resize', function() {
     // 当窗口大小变化时，这个函数会被调用
@@ -121,7 +89,6 @@ onMounted(async ()=>{
       }
     }
   });
-
   document.addEventListener('keyup', (event: KeyboardEvent) => {
     if (event.key === 'Control') {
       console.log("锁定图表缩放")
@@ -140,161 +107,10 @@ onMounted(async ()=>{
     }
   });
 })
-// 创建一个映射来存储每个id对应的group
-const groupMap = new Map<string, { group: any }>();
-function handleGroupData(graphics:Graphic[]){
-  graphics.forEach((item) => {
-    let start = myChart?.convertToPixel({seriesIndex: 0}, item.start);
-    let end = myChart?.convertToPixel({seriesIndex: 0}, item.end);
-    if (!start) {
-      return; // 如果转换失败，则跳过当前项
-    }
-    const groupId = item.graphic_id;
-    let groupEntry = groupMap.get(groupId);
-    let graphic;
-    if (item.graphic_type === 'line') {
-      graphic = {
-        type: 'line',
-        id: item.id, // 使用graphic_id或id作为line的id
-        shape: {
-          x1: start[0],
-          y1: start[1],
-          x2: end[0],
-          y2: end[1],
-        },
-        style: {
-          lineWidth: 5,
-        },
-      }
-    }else if (item.graphic_type === 'text') {
-      graphic = {
-        type:"text",
-        id: item.id,
-        position: [start[0], start[1]],
-        style: {
-          // stroke: item.config.color,
-          // lineWidth: item.line_width,
-          lineWidth: 1,
-          text: item.content,
-          // lineDash: item.line_dash,
-        },
-        draggable: true,
-        cursor: 'move',
-      }
-    }
-    if (!groupEntry) {
-      // 如果没有找到对应的group，则创建一个新的group和lines数组
-      groupEntry = {
-        group: {
-          type: 'group',
-          id: item.graphic_id,
-          draggable: true,
-          children: [graphic]
-        }
-      };
-      groupMap.set(groupId, groupEntry);
-    } else {
-      groupEntry.group.children.push(graphic)
-    }
-  })
-}
-async function query_graphic(){
-  try {
-    const res = await invoke<Graphic[]>('query_graphic_by_code', { code: code }); // 使用 await 等待 invoke 完成
-    console.log("查到了图形数据",res);
-    console.log("颜色是",res[0].style)
-    newLineData.value = res;
-    handleGroupData(res);
-    myChart.setOption({
-      graphic:Array.from(groupMap.values()).map(function (item) {
-        return item.group;
-      })
-    })
-    console.log("配置是", myChart.getOption().options)
-    // myChart.setOption({
-    //   graphic:newLineData.value.map(function (item:Graphic, dataIndex) {
-    //     if (item.graphic_type==="line"){
-    //       let start = myChart.convertToPixel({seriesIndex: 0}, item.start);
-    //       console.log("start",start)
-    //       let end = myChart.convertToPixel({seriesIndex: 0}, item.end);
-    //       console.log("end",end)
-    //       return {
-    //         type: 'group',
-    //         id: item.graphic_id,
-    //         draggable:true,
-    //         children:[
-    //           {
-    //             type:"line",
-    //             id: item.id,
-    //             shape: {
-    //               x1: start[0],
-    //               y1: start[1],
-    //               x2: end[0],
-    //               y2: end[1],
-    //             },
-    //             style: {
-    //               // stroke: item.config.color,
-    //               // lineWidth: item.line_width,
-    //               lineWidth: 5,
-    //               // lineDash: item.line_dash,
-    //             },
-    //             draggable: true,
-    //             cursor: 'move',
-    //           }
-    //         ]
-    //       }
-    //     }else if (item.graphic_type==="text"){
-    //       let start = myChart.convertToPixel({seriesIndex: 0}, item.start);
-    //       console.log("start",start)
-    //       return {
-    //         type: 'group',
-    //         id: item.graphic_id,
-    //         action: 'replace',
-    //         draggable:true,
-    //         children:[
-    //           {
-    //             type:"text",
-    //             id: item.id,
-    //             position: [start[0], start[1]],
-    //             style: {
-    //               // stroke: item.config.color,
-    //               // lineWidth: item.line_width,
-    //               lineWidth: 1,
-    //               text: item.content,
-    //               // lineDash: item.line_dash,
-    //             },
-    //             draggable: true,
-    //             cursor: 'move',
-    //           }
-    //         ]
-    //       }
-    //     }
-    //   })
-    // })
-    // myChart.hideLoading();
-  } catch (err) {
-    console.log(err);
-  }
-}
-async function query_stocks_day_k_limit(){
-  try {
-    const res = await invoke<StockData[]>('query_stocks_day_k_limit', { code: code }); // 使用 await 等待 invoke 完成
-    rawData.value = res.reverse(); // 处理查询到的数据
-    myChart.setOption(init_option())
-    console.log("查到了K线数据",res);
-    // myChart.hideLoading();
-  } catch (err) {
-    console.log(err);
-  }
-  // invoke<StockData[]>('query_stocks_day_k_limit',{code:code}).then((res)=>{
-  //   // console.log(res)
-  //   // data.value = handleRawData(res)
-  //   console.log("查到了数据")
-  //   rawData.value = res
-  // }).catch((err)=>{
-  //   console.log(err)
-  // })
-}
+onBeforeRouteLeave(async function (){
+  console.log("离开蜡烛图路由")
+  save_graphic();
+})
 function handleRawData(raw: StockData[]){
   let categoryData = [];
   let values = [];
@@ -338,7 +154,229 @@ function handleRawData(raw: StockData[]){
     ma60:ma60
   };
 }
-function scrollEvent(deltaY:number){
+function handleGraphicData(graphics: Graphic[]=graphicData.value){
+  // let graphics = lineData.value;
+  graphics.forEach((item) => {
+    let start = myChart?.convertToPixel({seriesIndex: 0}, item.start);
+    if (!start) {
+      return; // 如果转换失败，则跳过当前项
+    }
+    const groupId = item.group_id;
+    let style = item.style;
+    let groupEntry = groupMap.get(groupId);
+    let graphic;
+    if (item.graphic_type === 'line') {
+      let end = myChart?.convertToPixel({seriesIndex: 0}, item.end);
+      graphic = {
+        type: 'line',
+        id: item.id, // 使用graphic_id或id作为line的id
+        // $action: 'replace',
+        shape: {
+          x1: start[0],
+          y1: start[1],
+          x2: end[0],
+          y2: end[1],
+        },
+        style: {
+          lineWidth: style?.line_width?style?.line_width:1,
+          fill: style?.color,
+        },
+        onmousedown: function (param:any) {
+          console.log(param.event)
+          if (param.event.button==2){
+            show.value = true;
+          }
+          param.event.stopPropagation();
+        }
+      }
+    }else if (item.graphic_type === 'text') {
+      let thisLine:Graphic;
+      if (item.content==null){
+        thisLine = graphics.filter(function (item2) {
+          return (item2.group_id===item.group_id&&item2.graphic_type=="line")
+        })[0];
+      }
+      graphic = {
+        type:"text",
+        id: item.id,
+        position: [start[0], start[1]],
+        style: {
+          fill: style?.color?style?.color:'black',
+          size: style?.size?style?.size:10,
+          lineWidth: style?.line_width?style?.line_width:1,
+          // text: item.content?item.content:item.start[1].toFixed(3),
+          text: item.content?item.content:thisLine.start[1].toFixed(3),
+        },
+        draggable: true,
+        cursor: 'move',
+        // ondrag: function (param) {
+        //   // console.log(dataIndex, [this.x, this.y]);
+        //   let newPointData = myChart.convertFromPixel({seriesIndex: 0}, [this.x, this.y]);
+        // },
+        ondragend: function () {
+          let newPointData = myChart.convertFromPixel({seriesIndex: 0}, [this.x, this.y]);
+          console.log("文本的拖动结束",newPointData)
+          graphicData.value.filter(function (item2) {
+            if (item2.id===item.id){
+              item2.start = newPointData;
+            }
+          })
+        }
+      }
+    }
+    if (!groupEntry) {
+      let startPointData:number[];
+      // 如果没有找到对应的group，则创建一个新的group和lines数组
+      groupEntry = {
+        group: {
+          type: 'group',
+          id: item.group_id,
+          draggable: true,
+          children: [graphic],
+          ondragstart: function () {
+            startPointData = myChart.convertFromPixel({seriesIndex: 0}, [this.x, this.y]);
+          },
+          ondragend: function () {
+            let endPointData = myChart.convertFromPixel({seriesIndex: 0}, [this.x, this.y]);
+            let diff = [endPointData[0]-startPointData[0],endPointData[1]-startPointData[1]];
+            graphicData.value.forEach(function (item2){
+              if (item2.group_id===item.group_id){
+                item2.start = [item2.start[0]+diff[0],item2.start[1]+diff[1]];
+                item2.end = [item2.end[0]+diff[0],item2.end[1]+diff[1]];
+              }
+            });
+            //一定要重新设置group的位置，不然会造成孩子定位异常！！
+            this.x = 0;
+            this.y = 0;
+          }
+        }
+      };
+      groupMap.set(groupId, groupEntry);
+    } else {
+      groupEntry.group.children.push(graphic)
+    }
+  });
+  myChart.setOption({
+    graphic:Array.from(groupMap.values()).map(function (item) {
+      return item.group;
+    })
+  });
+  groupMap.clear();//处理完就清空，还要接着用
+}
+function handleNewGraphicData(graphics: Graphic[]=newGraphicData){
+  handleGraphicData(graphics);
+  graphicData.value.push(...graphics);
+  newGraphicData = [];
+}
+async function updateChart(){
+  await clear_all();
+  await query_stocks_day_k_limit();
+  await query_graphic();
+}
+function updateLineOption(){
+  myChart.setOption({
+    graphic: graphicData.value.map(function (item, dataIndex) {
+      let startPixel = myChart.convertToPixel({seriesIndex: 0}, item.start);
+      let style = item.style;
+      if (item.graphic_type==="line"){
+        let endPixel = myChart.convertToPixel({seriesIndex: 0}, item.end);
+        return {
+              id:item.id,
+              type: 'line',
+              shape: {
+                x1: startPixel[0],
+                y1: startPixel[1],
+                x2: endPixel[0],
+                y2: endPixel[1],
+                percent: 100
+              },
+              z:1000,
+        }
+      }else if (item.graphic_type==="text"){
+        let thisLine:Graphic;
+        if (item.content==null){
+          thisLine = graphicData.value.filter(function (item2) {
+            return (item2.group_id===item.group_id&&item2.graphic_type=="line")
+          })[0];
+        }
+        return {
+          id:item.id,
+          type:"text",
+          position: [startPixel[0], startPixel[1]],
+          style: {
+            fill: style?.color?style?.color:'black',
+            size: style?.size?style?.size:10,
+            lineWidth: style?.line_width?style?.line_width:1,
+            text: item.content?item.content:thisLine.start[1].toFixed(3),
+            // text: item.content?item.content:item.start[1].toFixed(3),
+         },
+       }
+      }
+    })
+  })
+}
+//本来是想仅清除graphic,但是直接全部清除更简单，而且避免了k线图残留闪烁的问题（当切换k线图时，会从上一个直接绘制出新的，现在是由空白绘制新的）
+async function clear_all(){
+  // groupMap.clear();
+  myChart.clear();
+  // myChart.setOption({ //本来想把这个封装到updateLineOption里面的，发现默认值给action是merge还是replace都不行。
+  //   //function updateLineOption(action: any='replace或者merge')无法更新位置
+  //   graphic: lineData.value.map(function (item) {
+  //     let startPixel = myChart.convertToPixel({seriesIndex: 0}, item.start);
+  //     if (item.graphic_type==="line"){
+  //       let endPixel = myChart.convertToPixel({seriesIndex: 0}, item.end);
+  //       console.log("清除线",startPixel)
+  //       return {
+  //         id:item.id,
+  //         type: 'line',
+  //         $action: 'remove',
+  //       }
+  //     }else if(item.graphic_type==="text"){
+  //       return {
+  //         type:"text",
+  //         id: item.id,
+  //         $action: 'remove',
+  //       }
+  //     }
+  //   })
+  // });
+  graphicData.value.length = 0;
+}
+async function query_graphic(){
+  try {
+    const res = await invoke<Graphic[]>('query_graphic_by_code', { code: code }); // 使用 await 等待 invoke 完成
+    console.log("查到了图形数据",res);
+    graphicData.value = res;
+    handleGraphicData();
+  } catch (err) {
+    console.log(err);
+  }
+}
+async function query_stocks_day_k_limit(){
+  try {
+    const res = await invoke<StockData[]>('query_stocks_day_k_limit', { code: code }); // 使用 await 等待 invoke 完成
+    rawData.value = res.reverse(); // 处理查询到的数据
+    myChart.setOption(init_option())
+    console.log("查到了K线数据",res);
+    return;
+    // myChart.hideLoading();
+  } catch (err) {
+    console.log(err);
+  }
+}
+function save_graphic(){
+  let data = graphicData.value;
+  console.log("保存图形",data);
+  invoke('save_graphic', { code:code,graphic: data }).then(() => {
+    console.log("保存图形成功");
+    emit("graphic_change",{})
+  }).catch((err) => {
+    console.log("保存图形失败",err);
+  });
+}
+async function scrollEvent(deltaY:number){
+  //打印下面的信息
+  console.log("滚动事件",store.stockinfoG?.code,store.stockinfoGs);
   let index = store.stockinfoGs.findIndex((item)=>item.code==store.stockinfoG?.code)
   if (index !== -1) {
     if (deltaY > 0) {
@@ -360,42 +398,46 @@ function scrollEvent(deltaY:number){
         store.stockinfoG = store.stockinfoGs[index - 1];
       }
     }
-    console.log("滚动了,改变code")
+    save_graphic();
     code = store.stockinfoG!.code;
     // myChart.showLoading();
-    query_stocks_day_k_limit();
-    query_graphic();
+    await updateChart();
   } else {
     console.log('stockinfoG不在stockinfoGs数组中');
   }
 }
 
 let paintState: PaintState = PaintState.Null;
-
+let currentCount = 0;
+let start: number[];
+let line: echarts.graphic.Line
 function handlePaint(state: PaintState){
   paintState = state;
+  currentCount = 0;
+  start = [];
   if (state==PaintState.Null){
     myChart.getZr().off('click', clickHandler);
-    myChart.getZr().off('mousehover', hoverHandler);
+    myChart.getZr().off('mousemove', hoverHandler);
   }else {
-    console.log("进入绘制hl")
-    if (state==PaintState.HLS){
-      console.log("进入绘制hls")
+    if (state==PaintState.HLS||state==PaintState.PHLS||state==PaintState.LS){
       myChart.getZr().on('mousemove', hoverHandler);
     }
     myChart.getZr().on('click', clickHandler);
   }
 }
-let number = "first";
-const newLineR = ref()
 const hoverHandler = function (params: any) {
   const pointInPixel = [params.offsetX, params.offsetY];
+  let zr = myChart.getZr();
   if (myChart.containPixel('grid',pointInPixel)) {
-    let hoverPoint = myChart.convertFromPixel({seriesIndex: 0}, pointInPixel);
-    console.log("在移动")
-    if (number=="first"){
-    }else if (number=="second"){
-      newLineR.value.end = [hoverPoint[0],hoverPoint[1]];
+    zr.remove(line);
+    // let hoverPoint = myChart.convertFromPixel({seriesIndex: 0}, pointInPixel);
+    if(currentCount==1){
+      if (paintState==PaintState.HL||paintState==PaintState.HLS||paintState==PaintState.PHL||paintState==PaintState.PHLS){
+        line = get_line(start,[pointInPixel[0],start[1]])
+      }else if (paintState==PaintState.LS){
+        line = get_line(start,pointInPixel)
+      }
+      zr.add(line)
     }
   }
 };
@@ -403,84 +445,75 @@ const clickHandler = function (params: any) {
   console.log("绘制状态",paintState)
   const pointInPixel = [params.offsetX, params.offsetY];
   if (myChart.containPixel('grid',pointInPixel)) {
-    let clickPoint = myChart.convertFromPixel({seriesIndex: 0}, pointInPixel)
-    if (number=="first"){
+    // let clickPointData = myChart.convertFromPixel({seriesIndex: 0}, pointInPixel);
+    if (currentCount==0){
       console.log("绘制第一个点")
-      // lineData.value.push({id:generateId(), start: [clickPoint[0],clickPoint[1]], end: [clickPoint[0],clickPoint[1]],type:paintState});
-      let newLine = {id:generateId(), start: [clickPoint[0],clickPoint[1]], end: [clickPoint[0],clickPoint[1]],type:paintState};
-      newLineR.value = newLine;
-      number = "second"
-      lineData.value.push(newLineR.value);
-    }else if (number=="second"){
-      console.log("绘制第2个点")
-      newLineR.value.end = [clickPoint[0],clickPoint[1]];
-      number = "first";
-      handlePaint(PaintState.Null);
+      start = pointInPixel;
+      currentCount = 1;
+    }else if (currentCount == 1){
+      if (paintState==PaintState.HL||paintState==PaintState.HLS||paintState==PaintState.PHL||paintState==PaintState.PHLS){
+        console.log("绘制水平线段")
+        let startPointData = myChart.convertFromPixel({seriesIndex: 0},[start[0], start[1]]);
+        let endPointData = myChart.convertFromPixel({seriesIndex: 0},[pointInPixel[0], start[1]]);
+        let groupId = generateId();
+        // graphicData.value.push({
+        newGraphicData.push({
+          group_id: groupId,
+          code: code,
+          id: generateId(),
+          graphic_type: "line",
+          start: startPointData,
+          end: endPointData,
+          horizontal:true
+        });
+        if(paintState==PaintState.PHLS||paintState==PaintState.PHL){
+          //为了让标价线的价格文本稍微在线上一点
+          let startPointData = myChart.convertFromPixel({seriesIndex: 0},[start[0], start[1]-15]);
+          newGraphicData.push({
+            group_id: groupId,
+            code: code,
+            id: generateId(),
+            graphic_type: "text",
+            start: [startPointData[0], startPointData[1]],
+            end:[0,0],
+            style:{
+              color:"#da5c0d"
+            }
+          })
+        }
+      }else if (paintState==PaintState.LS){
+        console.log("绘制线段")
+        // let endPoint = myChart.convertFromPixel({seriesIndex: 0},[clickPointData[0], clickPointData[1]]);
+        let startPointData = myChart.convertFromPixel({seriesIndex: 0},[start[0], start[1]]);
+        let endPointData = myChart.convertFromPixel({seriesIndex: 0},[pointInPixel[0], pointInPixel[1]]);
+        // newLineR.value.end = [clickPointData[0],clickPointData[1]];
+        // graphicData.value.push({
+        newGraphicData.push({
+          group_id: generateId(),
+          code: code,
+          id: generateId(),
+          graphic_type: "line",
+          start: startPointData,
+          end: endPointData
+        })
+      }
+      handleNewGraphicData();
+      currentCount = 0;
     }
   }
 };
-function updateLineOption(){
-  myChart.setOption({
-    graphic: lineData.value.map(function (item, dataIndex) {
-      if (item.type===PaintState.HL||item.type===PaintState.HLS){
-        let pixelElement = myChart.convertToPixel({seriesIndex: 0}, item.start);
-        console.log("绘制线",pixelElement)
-        return {
-          type:'group',
-          x: pixelElement[0],
-          y: pixelElement[1]-20,
-          draggable: true,
-          children:[
-            {
-              id:item.id,
-              type: 'line',
-              shape: {
-                x1: 0,
-                //x1: pixelElement[0],
-                // y1: myChart.convertToPixel({seriesIndex: 0}, item.start)[1],
-                y1: 20,
-                x2: myChart.convertToPixel({seriesIndex: 0}, item.end)[0]-pixelElement[0],
-                y2: myChart.convertToPixel({seriesIndex: 0}, item.end)[1]-pixelElement[1]+20,
-                percent: 100
-              },
-              z:100,
-            },
-            {
-              type: 'text',
-              style: {
-                text: item.start[1],
-                fill: '#ecc032',
-                font: '14px Microsoft YaHei'
-              },
-              textConfig: {
-                // inside:true,
-                position: 'insideTopLeft',
-              },
-            }
-          ],
-          ondrag: function (param) {
-            console.log(dataIndex, [this.x, this.y]);
-            let numbers = myChart.convertFromPixel({seriesIndex: 0}, [this.x, this.y+20]);
-            let diffx = numbers[0]-lineData.value[dataIndex].start[0];
-            let diffy = numbers[1]-lineData.value[dataIndex].start[1];
-            //打印这两个diff
-            console.log("diff",diffx,diffy);
-            //计算ponit与lineData.value[dataIndex].start的差值
-            // let diff = [numbers[0]-lineData.value[dataIndex].start[0],numbers[1]-lineData.value[dataIndex].start[1]];
-            lineData.value.forEach(function (item2, index) {
-              if (item2.id===item.id){
-                console.log("进来改变")
-                item2.end = [lineData.value[dataIndex].end[0]+diffx,lineData.value[dataIndex].end[1]+diffy];
-
-                item2.start = [numbers[0],numbers[1]];
-                console.log("改变",item2.start)
-              }
-            })
-            console.log(param);
-          },
-        }
-      }
-    })
+function get_line(start:number[],end:number[]){
+  return new echarts.graphic.Line({
+    shape:{
+      x1: start[0],
+      y1: start[1],
+      x2: end[0],
+      y2: end[1],
+      percent: 100
+    },
+    style:{
+      fill:'red',
+    },
   })
 }
 function init_option(){
@@ -551,12 +584,22 @@ function init_option(){
       ],
       label: {
         backgroundColor: '#e1bf2c',
-        color:"black"
+        color:"black",
+        precision:3
       }
     },
     toolbox: {
       show: true,
       feature: {
+        myTool3: {
+          show: true,
+          title: '保存图线',
+          // icon: 'image://https://echarts.apache.org/zh/images/favicon.png',
+          icon: 'path://M426.666667 682.666667v42.666666h170.666666v-42.666666h-170.666666z m-42.666667-85.333334h298.666667v128h42.666666V418.133333L605.866667 298.666667H298.666667v426.666666h42.666666v-128h42.666667z m260.266667-384L810.666667 379.733333V810.666667H213.333333V213.333333h430.933334zM341.333333 341.333333h85.333334v170.666667H341.333333V341.333333z',
+          onclick: function (){
+            save_graphic();
+          }
+        },
         myTool2: {
           show: true,
           title: '画线',
@@ -750,23 +793,6 @@ function init_option(){
     ],
   }
 }
-// function updatePosition() {
-//   console.log("更新点了")
-//   myChart.setOption({
-//     graphic: dataItem.map(function (item, dataIndex) {
-//       return {
-//         id: 'text1',
-//         shape: {
-//           x1: myChart.convertToPixel({seriesIndex: 0}, item[0])[0],
-//           y1: myChart.convertToPixel({seriesIndex: 0}, item[0])[1],
-//           x2: myChart.convertToPixel({seriesIndex: 0}, item[1])[0],
-//           y2: myChart.convertToPixel({seriesIndex: 0}, item[1])[1],
-//           percent: 100
-//         },
-//       };
-//     })
-//   });
-// }
 function computeWeek(date:string){
   // console.log(date)
   var date = new Date(date)
@@ -826,32 +852,25 @@ async function showPaintTool(){
   const appWindow = WebviewWindow.getByLabel('tool')
   await appWindow?.show()
 }
+function deleteGraphic(){
+
+}
 </script>
 
 <template>
   <div id="main" ref="chart" class="candle-chart-container" style="border: #9d6a09 1px solid "></div>
-
-<!--  <div class="candle-chart-container">-->
-<!--  <el-button @click="back()">退回</el-button>-->
-<!--  <div v-shortkey.once="['f10']"  @shortkey="handleKeydown()">-->
-<!--    &lt;!&ndash;  <div >&ndash;&gt;-->
-<!--    &lt;!&ndash; 为 ECharts 准备一个定义了宽高的 DOM &ndash;&gt;-->
-<!--    <div id="main" ref="chart" class="candle-chart-container" style="border: #9d6a09 1px solid "></div>-->
-<!--    &lt;!&ndash;    <input ref="tip" style="width: 60px;font-size: 12px;visibility: hidden">&ndash;&gt;-->
-<!--    <input v-if="tipConfig.isVisible" ref="tip" :style="{-->
-<!--      width: `60px`,-->
-<!--      fontSize:`11px`,-->
-<!--        position: 'absolute',-->
-<!--        // position: 'relative',-->
-<!--        left: `${tipConfig.x}px`,-->
-<!--        top: `${tipConfig.y}px`,-->
-<!--        // visibility: tipConfig.isVisible ? 'visible' : 'hidden'-->
-<!--      }"-->
-<!--           @keydown.enter = "addTip()"-->
-<!--           @focus = "focusChange()"-->
-<!--    >-->
-<!--  </div>-->
-<!--  </div>-->
+  <context-menu
+      v-model:show="show"
+      :options="options"
+  >
+    <context-menu-item label="删除当前图形" @click="deleteGraphic" />
+    <context-menu-item label="删除当前组全部图形" @click="deleteGraphic" />
+    <context-menu-item label="管理所有图形" @click="" />
+    <!--      <context-menu-group label="Menu with child">-->
+    <!--        <context-menu-item label="删除" @click="onMenuClick(2)" />-->
+    <!--        <context-menu-item label="Item2" @click="onMenuClick(3)" />-->
+    <!--      </context-menu-group>-->
+  </context-menu>
 </template>
 
 <style >

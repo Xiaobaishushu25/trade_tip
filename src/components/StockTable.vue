@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import {nextTick, onMounted, ref, watch,onActivated} from "vue";
+import {nextTick, onMounted, ref, watch} from "vue";
 import {StockInfoG, StockLiveData} from "../type.ts";
 import {invoke} from "@tauri-apps/api/core";
-import {webviewWindow} from "@tauri-apps/api";
-import {listen, TauriEvent} from "@tauri-apps/api/event";
+import {listen} from "@tauri-apps/api/event";
 import StockGroupMange from "./group/StockGroupMange.vue";
 import {useRouter} from "vue-router";
 import {store} from "../store.ts";
+import {ElNotification} from "element-plus";
 
 // defineProps<{groupName: string, stocks:StockInfoG[]}>({
 const props = defineProps({
@@ -50,21 +50,11 @@ const options = {
 // watch(groupName, (newValue, oldValue) => {
 //   console.log(newValue, oldValue)
 // })
-watch(() => props.groupName, (newValue, oldValue) => {
-  console.log('groupName changed:', newValue, oldValue);
-  updateStockInfoG();
-  // console.log("开始实时查询")
-  // invoke("query_live_stocks_data",{groupName:props.groupName}).catch(err => {
-  //   console.log(err);
-  // })
-  // invoke<StockInfoG[]>("query_stocks_by_group_name", {name: newValue}).then(res => {
-  //   console.log(res);
-  //   StockInfoG.value = res;
-  //   console.log(StockInfoG.value)
-  // }).catch(err => {
-  //   console.log(err);
-  // })
-});
+
+// watch(() => props.groupName, (newValue, oldValue) => {
+//   console.log('groupName changed:', newValue, oldValue);
+//   updateStockInfoG();
+// });
 watch(() => props.stocks_change, (_) => {
   console.log('分组内的的股票changed:', props.groupName);
   updateStockInfoG();
@@ -102,7 +92,6 @@ onMounted(() => {
 function updateStockInfoG() {
   invoke<StockInfoG[]>("query_stocks_by_group_name", {name: props.groupName}).then(res => {
     StockInfoGs.value = res;
-    store.stockinfoGs = StockInfoGs.value;
   }).catch(err => {
     console.log(err);
   })
@@ -126,8 +115,7 @@ async function getHeight(){
 }
 function showContextMenu(row: StockInfoG, _: any, e: MouseEvent) {
   nowSelectStock.value = row;
-  console.log(row)
-  console.log("当前选择的股票de value",nowSelectStock.value)
+  // console.log("当前选择的股票de value",nowSelectStock.value)
   // console.log(row, column, e,show.value)
   options.x = e.x;
   options.y = e.y;
@@ -136,9 +124,9 @@ function showContextMenu(row: StockInfoG, _: any, e: MouseEvent) {
   show.value=true
 
 }
-watch(() => show.value, (newValue, oldValue) => {
-  console.log("show的值变换了"+newValue, oldValue)
-})
+// watch(() => show.value, (newValue, oldValue) => {
+//   console.log("show的值变换了"+newValue, oldValue)
+// })
 function updateLiveData(live_data:Record<string, StockLiveData>){
   //遍历StockInfoGs
   for (let i = 0; i < StockInfoGs.value.length; i++) {
@@ -163,12 +151,15 @@ function removeStock(code: string){
     })
   }
 }
-function computeBox(box:string|undefined){
-  if (box==undefined){
-    return "----";
-  }else {
-    return box.substring(0, 2);
+function computeBox(stock: StockInfoG){
+  let code = stock.code;
+  let boxes = store.boxData[code];
+  //打印code和对应的boxes
+  // console.log(code,stock.live_data, boxes);
+  if (boxes!=undefined&&stock.live_data?.price!=undefined){
+    return comparePriceWithBox(stock.live_data.price, boxes);
   }
+  return "----";
 }
 
 function manageGroup(){
@@ -183,26 +174,25 @@ function clickRow(row: StockInfoG, _: any){
   router.push("/main/detail")
 }
 function openChart(code:string){
-  console.log("打开",code)
   store.stockinfoG = nowSelectStock.value;
   router.push("/main/detail")
-  // router.push({
-  //   name:"CandleChartNewNew",
-  //   params: {
-  //     code: code,
-  //   }
-  // });
-  // router.back()
 }
 function openoldChart(code:string){
   router.push("/newCandleChart")
 }
 
 //根据股票code更新是否持有，更新为当前是否持有的反状态
-//如果成功更新成功，更新该股票（当前行）的状态信息，同时判断是否是持有标签页，如果是，要移除
+//如果成功更新成功，更新该股票（当前行）的状态信息，还要通知"持有"分组股票有变化了
+// 同时判断是否是持有标签页，如果是，要移除
 function updateHold(){
   let code = nowSelectStock.value!.code;
   invoke("update_stock_hold", {code: code,hold: !nowSelectStock.value!.hold}).then(_ => {
+    successNotification("更新成功");
+    store.stockGroups.forEach((item) => {
+      if (item.name=="持有"){
+        item.stocks_change = !item.stocks_change
+      }
+    })
     const index = StockInfoGs.value.findIndex(item => item.code === code);
     if (index !== -1) {
       if (props.groupName=="持有"){
@@ -212,16 +202,88 @@ function updateHold(){
       }
     }
   }).catch(err => {
-    console.log(err)
+    console.log(err);
+    errorNotification(err)
   })
 }
-// watch(showGroupManage,(newValue,oldValue)=>{
-//   if (newValue){
-//     console.log("值变换了 展示管理分组")
-//   }else{
-//     console.log("值变换了 隐藏管理分组")
-//   }
-// })
+const successNotification = (content:string) => {
+  ElNotification({
+    title: 'Success',
+    message: content,
+    type: 'success',
+    position: 'bottom-right',
+  })
+}
+const errorNotification = (content:string) => {
+  ElNotification({
+    title: 'Error',
+    message: content,
+    type: 'error',
+    position: 'bottom-right',
+    duration: 0,
+  })
+}
+function judgeMaState(stock:StockInfoG){
+  if (stock.live_data == undefined){
+    return "---";
+  }
+  let ma5 = stock.live_data.ma5;
+  let ma10 = stock.live_data.ma10;
+  let ma20 = stock.live_data.ma20;
+  if (ma5 > ma10 && ma10 > ma20) {
+    return ["均线多头","red"];
+  } else if (ma20 > ma10 && ma10 > ma5) {
+    return ["均线空头","green"];
+  } else {
+    return ["均线缠绕","black"];
+  }
+}
+function comparePriceWithBox(price: number,boxes:number[]): string {
+  if (price < boxes[0]) {
+    return "已跌破箱体";
+  } else if (price > boxes[boxes.length - 1]) {
+    return "已突破箱体";
+  }
+  for (let i = 0; i < boxes.length - 1; i++) {
+    if (price >= boxes[i] && price <= boxes[i + 1]) {
+      // 假设 divideBox 是一个函数，根据价格与支撑位和压力位计算分区信息
+      // 由于您没有提供 divideBox 的实现，这里我们简单地返回价格所在的区间描述
+      // const divideBox = `价格在${boxes[i].toFixed(3)}和${boxes[i + 1].toFixed(3)}之间`;
+      // const divideBox = `价格在${boxes[i].toFixed(3)}和${boxes[i + 1].toFixed(3)}之间`;
+      return divideBox(price, boxes[i], boxes[i + 1]);
+      // list.push(divideBox);
+      // list.push("支撑位：" + boxes[i].toFixed(3));
+      // list.push("压力位：" + boxes[i + 1].toFixed(3));
+      // return list;
+    }
+  }
+  // 如果没有找到合适的位置，可以添加一个默认信息或者返回一个空列表
+  // list.push("价格未找到在箱体中的合适位置");
+  // list.push("未知");
+  return "未知";
+}
+function divideBox(price: number, down: number, up: number): string {
+  const range = up - down;
+  const eachPart = range / 5.0;
+
+  const lowerBound = down;
+  const middleLowerBound = down + eachPart;
+  const middleUpperBound = up - eachPart;
+  // const upperBound = up;
+  //打印下限和上限和中间两个分界线
+  // console.log("现价，下限和上限和中间两个分界线",price,lowerBound,middleLowerBound,middleUpperBound,upperBound);
+  if (price >= lowerBound && price <= middleLowerBound) {
+    return "下轨区";
+  } else if (price > middleLowerBound && price <= middleUpperBound) {
+    return "中轨区";
+  } else if (price > middleUpperBound) {
+    return "上轨区";
+  } else {
+    // 如果价格恰好在中间两个边界上，可以根据需要调整返回的结果
+    // 这里假设它们属于中轨区
+    return "中轨区";
+  }
+}
 </script>
 
 <template>
@@ -253,12 +315,12 @@ function updateHold(){
         </el-table-column>
         <el-table-column prop="price" label="均线状态">
           <template #default="scope">
-            <el-text >{{computeBox(scope.row.box)}}</el-text>
+            <el-text :style="{color:judgeMaState(scope.row)[1],fontSize:'15px',fontWeight:'bold'}" >{{judgeMaState(scope.row)[0]}}</el-text>
           </template>
         </el-table-column>
         <el-table-column prop="box" label="箱体">
           <template #default="scope">
-            <el-text style="cursor: pointer" @click="openChart(scope.row.code)" >{{computeBox(scope.row.box)}}</el-text>
+            <el-text style="cursor: pointer" @click="openChart(scope.row.code)" >{{computeBox(scope.row)}}</el-text>
           </template>
         </el-table-column>
       </el-table>
@@ -284,7 +346,6 @@ function updateHold(){
 
 <style scoped>
 .table-container{
-  background-color: #9d6a09;
-  min-height: calc(100% - 50px);
+  min-height: calc(100vh - 100px);
 }
 </style>

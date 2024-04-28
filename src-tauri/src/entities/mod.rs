@@ -9,6 +9,7 @@ pub(crate) mod prelude;
 pub mod stock_data;
 pub mod stock_group;
 pub mod group_stock_relation;
+pub mod graphic;
 
 // pub static DB:OnceLock<DatabaseConnection> = OnceLock::new();
 pub static DB:OnceCell<DatabaseConnection> = OnceCell::const_new();

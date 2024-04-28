@@ -13,3 +13,7 @@ pub use super::stock_group::ActiveModel as ActiveStockGroup;
 pub use super::group_stock_relation::Entity as GroupStockRs;
 pub use super::group_stock_relation::Model as GroupStockR;
 pub use super::group_stock_relation::ActiveModel as ActiveGroupStockR;
+
+pub use super::graphic::Entity as Graphics;
+pub use super::graphic::Model as Graphic;
+pub use super::graphic::ActiveModel as ActiveGraphic;

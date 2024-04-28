@@ -32,7 +32,7 @@ impl StockGroupCurd {
         Ok(result.rows_affected as i32)
     }
     ///查询所有的分组信息，并排好序
-    pub async fn find_all() -> AppResult<Vec<StockGroup>> {
+    pub async fn query_all() -> AppResult<Vec<StockGroup>> {
         let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
         let vec = StockGroups::find().order_by_asc(Column::Index).all(db).await?;
         Ok(vec)

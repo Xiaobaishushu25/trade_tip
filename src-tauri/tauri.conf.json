@@ -19,7 +19,8 @@
         "minHeight": 625,
         "decorations": false,
         "resizable": true,
-        "dragDropEnabled": false
+        "dragDropEnabled": false,
+        "center": true
       },
       {
         "label": "tool",
@@ -31,7 +32,8 @@
         "skipTaskbar": true,
         "decorations": false,
         "visible": false,
-        "url": "http://localhost:1420/#/tool"
+        "url": "http://localhost:1420/#/tool",
+        "center": true
       }
     ],
     "security": {

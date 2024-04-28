@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use chrono::{DateTime, Local, Month, NaiveDate};
+use chrono::{Local, NaiveDate};
 use crate::app_errors::AppError::AnyHow;
 use crate::app_errors::AppResult;
 
@@ -26,18 +26,20 @@ pub async fn compute_single_ma(day_count: usize, close_price: Vec<f64>) -> Vec<O
 }
 ///同时计算多条ma，用于实时更新当日最新的ma
 /// mas：需要计算的ma，要从小到大的顺序排列，比如[5,10,20,60]
-/// close_prices：最近n日的的收盘价列表，顺序是按照日期从新到旧排列
+/// close_prices：最近n日的的收盘价列表，顺序是按照日期从新到旧排列,因为是从头求和
 /// 返回：返回一个长度为mas.len()的Vec，其中每个元素代表计算出的ma值
-pub async fn compute_mul_ma(mas:Vec<usize>,close_prices:&Vec<f64>)->Vec<f64>{
+///一开始的函数签名： pub async fn compute_mul_ma(mas:Vec<usize>,close_prices:&Vec<f64>)->Vec<f64>{}
+/// 为了不大量克隆close_prices，选择把price单独传进来
+pub async fn compute_mul_ma(mas:Vec<usize>, now_price:f64, close_prices:&Vec<f64>) ->Vec<f64>{
     // close_prices.reverse();
     //从后往前遍历close_prices
-    let mut sum:f64 = 0f64;
+    let mut sum:f64 = now_price;
     let mut result = vec![];
     for (index,value) in close_prices.iter().enumerate(){
         sum += value;
-        if mas.contains(&(index + 1)) {
-            let value = sum / ((index + 1) as f64);
-            let rounded = (value * 1000.0).round() / 1000.0; // 四舍五入到最接近的0.001  
+        if mas.contains(&(index + 2)) {
+            let value = sum / ((index + 2) as f64);
+            let rounded = (value * 1000.0).round() / 1000.0; // 四舍五入到最接近的0.001，gpt说这样比parse效率高  
             result.push(rounded);
             // result.push(sum / (index+1) as f64);
         }

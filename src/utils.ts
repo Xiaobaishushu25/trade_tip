@@ -1,3 +1,5 @@
+import {ElNotification} from "element-plus";
+
 function debounce<T extends (...args: any[]) => any>(
     callback: T,
     delay: number,
@@ -49,4 +51,12 @@ function generateId(): string {
 
     return paddedId;
 }
+// const successNotification = (content:string) => {
+//     ElNotification({
+//         title: 'Success',
+//         message: content,
+//         type: 'success',
+//         position: 'bottom-right',
+//     })
+// }
 export { debounce, generateId};

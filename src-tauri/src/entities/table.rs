@@ -1,10 +1,10 @@
 use crate::app_errors::AppResult;
 use crate::entities::stock_data::{Column, Entity, TableName};
-use crate::entities::{init_db_coon, DB, stock_group, stock_info};
+use crate::entities::{DB, init_db_coon, stock_group, stock_info};
 use log::info;
 use sea_orm::sea_query::{ColumnDef, TableCreateStatement};
 use sea_orm::{sea_query, ConnectionTrait, DatabaseConnection, EntityName, EntityTrait, ExecResult, Statement, Schema};
-use crate::entities::prelude::{GroupStockRs};
+use crate::entities::prelude::{Graphics, GroupStockRs};
 
 // use std::env;
 // use sea_query::{ColumnDef, Iden, SqliteQueryBuilder, Table, Value};
@@ -196,5 +196,11 @@ async fn test_create_stock_group() {
 async fn test_create_group_stock_r() {
     init_db_coon().await;
     let result = create_table(&DB.get().unwrap(), GroupStockRs).await;
+    println!("{result:?}")
+}
+#[tokio::test]
+async fn test_create_graphic() {
+    init_db_coon().await;
+    let result = create_table(&DB.get().unwrap(), Graphics).await;
     println!("{result:?}")
 }

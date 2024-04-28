@@ -16,11 +16,16 @@ interface StockLiveData {
     high: number;
     low: number;
     open: number;
-    ma5: number | null;
-    ma10: number | null;
-    ma20: number | null;
-    ma30: number | null;
-    ma60: number | null;
+    ma5: number;
+    ma10: number;
+    ma20: number;
+    ma30: number;
+    ma60: number;
+    // ma5: number | null;
+    // ma10: number | null;
+    // ma20: number | null;
+    // ma30: number | null;
+    // ma60: number | null;
 }
 interface StockInfoG {
     index: number;
@@ -57,28 +62,38 @@ interface StockGroup{
     stocks_change: boolean;
 }
 // 定义枚举类型
-// HLS(Horizontal line )：水平直线
-//HLS(Horizontal line segment)：水平线段
-// LS(line segment)：垂直线段
+// HL(Horizontal line )：水平直线
+// HLS(Horizontal line segment)：水平线段
+// PHL 标价直线
+// PHLS 标价线段
+// LS(line segment)：斜线段
 // Text(text)：文本
 enum PaintState {
-    Null,HL,HLS,LS,Text
+    Null,HL,HLS,PHL,PHLS,LS,Text
 }
-// 定义点的接口
-interface Point {
-    x: number;
-    y: number;
-}
-interface Line {
-    id: string;
-    start: [number,number];
-    end: [number,number]|undefined;
-    type: PaintState;
-}
-// interface StockGroup{
-//     index: number;
-//     name: string;
-//     stock_codes: string[];
+
+// interface Line {
+//     id: string;
+//     start: [number,number];
+//     end: [number,number];
+//     type: PaintState;
 // }
+interface Graphic{
+    group_id: string;
+    code: string;
+    id: string; // 使用Option<String>在Rust中表示可选字段，在TypeScript中对应为可选属性
+    graphic_type: string;
+    start: number[]; // 假设start是一个JSON格式的字符串，例如"[1.0,2.0]"
+    end: number[];
+    content?: string; // 文本内容
+    style?: Style; // 假设config是包含文本配置信息的字符串
+    horizontal?: boolean;
+}
+interface Style {
+    color?: string; // 使用?表示属性是可选的，相当于Option<String>
+    size?: number; // 文字专用，使用number类型对应f64，?表示可选
+    font?: string; // 文字专用，使用string类型，?表示可选
+    line_width?: number; // 线专用，使用number类型对应f64，?表示可选
+}
 export { PaintState }; // 导出枚举值
-export type { StockInfo,StockLiveData,StockGroup,StockInfoG,StockData,Point,Line };
+export type { StockInfo,StockLiveData,StockGroup,StockInfoG,StockData,Graphic };

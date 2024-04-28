@@ -1,10 +1,10 @@
 use std::collections::HashMap;
-use anyhow::{anyhow, Context};
-use log::{error, info};
+use anyhow::{Context};
+use log::{info};
 use reqwest::Client;
 use reqwest::header::HeaderMap;
 use crate::app_errors::AppResult;
-use crate::dtos::stock::StockLiveData;
+use crate::dtos::stock_dto::StockLiveData;
 use crate::entities::prelude::StockData;
 use crate::service::http::{init_http, REQUEST};
 use crate::utils::stock_util::{get_market_by_code};
@@ -59,6 +59,7 @@ impl HttpRequest {
         let codes = codes.iter().map(|item| format!("{}{item}",get_market_by_code(item).unwrap())).collect::<Vec<String>>();
         let codes = codes.join(",");
         let url = format!("https://qt.gtimg.cn/q={}",codes);
+        info!("发起get请求:{}",url);
         let result = self.client.get(url.clone()).send().await.with_context(||format!("请求url:{}",url))?;
         let content = result.text().await.unwrap();
         let split = content.split("v_").filter(|item| !item.is_empty()).collect::<Vec<&str>>();
@@ -88,6 +89,7 @@ impl HttpRequest {
                 // let split = content.split("~");
                 // let split = split.collect::<Vec<&str>>();
                 // println!("{:?}", split);
+                // info!("获取实时数据:{:?}", live_data);
             }
         }
         // let stock_data = result.json::<Vec<StockData>>().await.with_context(||format!("发生错误了:{}",url))?;

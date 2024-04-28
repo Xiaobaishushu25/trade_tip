@@ -5,7 +5,7 @@ import {invoke} from "@tauri-apps/api/core";
 import {store} from "../store.ts"
 import Search from "./Search.vue";
 import ElSearch from "./ElSearch.vue";
-import {useRouter} from "vue-router";
+import {onBeforeRouteLeave, useRouter} from "vue-router";
 // const max_state_name = ref('window-maximize')
 const router = useRouter()
 const max_state_name = ref('maximize')
@@ -29,7 +29,7 @@ watch(live_state, async (newValue) => {
   }
 })
 async function changeUpdateState(){
-  await invoke('update_live_state',{liveState:!live_state.value});
+  await invoke('update_live_state',{groupName:store.activeGroup,liveState:!live_state.value});
   live_state.value = !live_state.value;
 }
 async function window_minimize(){

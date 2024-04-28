@@ -5,8 +5,8 @@ use crate::entities::prelude::{
 };
 use crate::entities::{group_stock_relation, init_db_coon, open_db_log, stock_info};
 use sea_orm::ActiveValue::Set;
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, FromQueryResult, JoinType, LinkDef, Linked, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, RelationTrait};
-use crate::dtos::stock::StockInfoG;
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, JoinType, LinkDef, Linked, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, RelationTrait};
+use crate::dtos::stock_dto::StockInfoG;
 
 pub struct GroupToStockInfo;
 
@@ -55,14 +55,7 @@ impl GroupStockRelationCurd {
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
         let models = group_stock_rs
             .into_iter()
-            .map(|group_stock_r| {
-                // ActiveGroupStockR {
-                //     group_id: Set(group_stock_r.group_id),
-                //     stock_code: Set(group_stock_r.stock_code),
-                // }
-                let ac: ActiveGroupStockR = group_stock_r.into();
-                ac
-            })
+            .map(|group_stock_r|crate::entities::group_stock_relation::ActiveModel::from(group_stock_r))
             .collect::<Vec<_>>();
         let _ = GroupStockRs::insert_many(models).exec(db).await?;
         Ok(())
@@ -167,6 +160,8 @@ impl GroupStockRelationCurd {
         // let result = GroupStockRs::find_by_stock_code(stock_code).one(db).await?;
         Ok(groups)
     }
+    ///根据分组名称和股票代码更新分组
+    /// 采取删除后插入的方式，先删除现存的所有主键相同的分组，再插入新的分组
     pub async fn update_groups_by_code(stock_code: String, groups: Vec<String>) -> AppResult<()> {
         let db = crate::entities::DB
             .get()
@@ -183,10 +178,6 @@ impl GroupStockRelationCurd {
                 let _ = Self::insert(model).await?;
             }
         }
-        // let models = GroupStockRs::find()
-        //     .filter(Column::StockCode.eq(stock_code))
-        //     .all(db)
-        //     .await?;
         Ok(())
     }
     pub async fn delete_by_code_and_group_name(code:String, group_name:String) -> AppResult<()> {
