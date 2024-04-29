@@ -1,10 +1,11 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::{Duration};
 use log::{error, info};
 use tauri::{Manager, State};
 use tokio::time::sleep;
-use crate::dtos::stock_dto::{StockInfoG};
+use crate::dtos::stock_dto::{StockInfoG, StockLiveData};
 use crate::entities::prelude::{Graphic, Graphics, StockData, StockGroup, StockInfo};
 use crate::{get_close_prices, MyState, UPDATEING};
 use crate::dtos::graphic_dto::GraphicDTO;
@@ -291,6 +292,37 @@ pub async fn query_box() -> Result<HashMap<String,Vec<f64>>,String> {
         },
         Err(e)=>{
             error!("查询失败:{}",e);
+            Err(e.to_string())
+        }
+    }
+}
+#[tauri::command]
+// pub async fn query_live_stock_data_by_code(code:String,app_handle: tauri::AppHandle,) -> Result<HashMap<String,StockLiveData>,String> {
+pub async fn query_live_stock_data_by_code<'r>(code:String,state: State<'r, MyState>) -> Result<StockLiveData,String> {
+    // info!("查询实时数据:{}",group_name);
+    let data:&Arc<Vec<f64>>;
+    let mut history_close_price = HashMap::new();
+    {
+        let guard = state.history_close_price.lock().unwrap();
+        data = guard.get(&code).unwrap();
+        history_close_price.insert(code.clone(),data.clone());
+    }
+    let codes = vec![code.clone()];
+    match REQUEST.get().unwrap().get_live_stock_data(&codes).await{
+        Ok(mut stock_data_list) => {
+            match handle_stock_livedata(&codes,&mut stock_data_list,&history_close_price).await{
+                Ok(_)=>{
+                    Ok(stock_data_list.get(&code).unwrap().clone())
+                    // info!("查询成功:{:?}",stock_data_list);
+                },
+                Err(e)=>{
+                    error!("处理股票实时信息失败:{}",e);
+                    Err(e.to_string())
+                }
+            }
+        },
+        Err(e) => {
+            error!("查询股票实时信息失败失败:{}",e);
             Err(e.to_string())
         }
     }

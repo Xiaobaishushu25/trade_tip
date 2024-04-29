@@ -16,7 +16,7 @@ use log::{error, info};
 use tokio::task::JoinHandle;
 use crate::app_errors::AppResult;
 use crate::entities::init_db_coon;
-use crate::service::command::tauri_command::{add_stock_info, get_response, query_all_groups, query_groups_by_code, query_stock_info, query_stocks_by_group_name, create_group, update_stock_groups, remove_stock_from_group, update_stock_hold, query_stocks_day_k_limit, query_live_stocks_data,update_live_state,query_graphic_by_code,save_graphic,query_box};
+use crate::service::command::tauri_command::{add_stock_info, get_response, query_all_groups, query_groups_by_code, query_stock_info, query_stocks_by_group_name, create_group, update_stock_groups, remove_stock_from_group, update_stock_hold, query_stocks_day_k_limit, query_live_stocks_data,update_live_state,query_graphic_by_code,save_graphic,query_box,query_live_stock_data_by_code};
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
 use crate::service::curd::update_all_day_k;
@@ -109,6 +109,7 @@ async fn main() {
             update_stock_hold,
             query_stocks_day_k_limit,
             query_live_stocks_data,
+            query_live_stock_data_by_code,
             update_live_state,
             query_graphic_by_code,
             save_graphic,

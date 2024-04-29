@@ -2,13 +2,31 @@
 import {invoke} from "@tauri-apps/api/core";
 import {onMounted, ref, watch} from "vue";
 import * as echarts from "echarts/core";
-import {Graphic, PaintState, StockData} from "../type.ts";
+import {Graphic, PaintState, StockData, StockLiveData} from "../type.ts";
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {EChartsType} from "echarts";
 import {store} from "../store.ts";
 import {debounce, generateId} from "../utils.ts"
 import {emit, listen} from "@tauri-apps/api/event";
 import {onBeforeRouteLeave} from "vue-router";
+
+interface VolumeItem {
+  value: number;
+  itemStyle: {
+    color: string;
+    borderColor: string;
+  };
+}
+
+interface CandleStockData {
+  categoryData: string[];
+  values: [number, number, number, number, number][];
+  volumes: VolumeItem[];
+  ma5: number[];
+  ma10: number[];
+  ma20: number[];
+  ma60: number[];
+}
 
 let isCtrlPressed = false;
 
@@ -27,6 +45,7 @@ watch(() => store.stockinfoG,async (newValue: any) => {
 const upColor = 'rgba(255,255,255,0.6)';
 const bColor = '#ec0000';
 const downColor = 'rgb(55,150,55)';
+const nowDate = getFormattedDate();
 
 const show = ref(false);
 const chart=ref(null);
@@ -34,6 +53,7 @@ let myChart: EChartsType;
 const rawData = ref([]);
 const graphicData = ref<Graphic[]>([])
 let newGraphicData:Graphic[] =[]
+let stockData:CandleStockData;
 // 创建一个映射来存储每个id对应的group
 const groupMap = new Map<string, { group: any }>();
 
@@ -60,6 +80,10 @@ onMounted(async ()=>{
   myChart.on('dataZoom', updateLineOption);
   await listen('paint', (event) => {
     handlePaint(event.payload.state);
+  })
+  await listen("live_stock_data", ({payload }) => {
+    console.log("K线图也受到了推送的数据")
+    updateLiveData(payload);
   })
   // 监听鼠标滚轮事件
   const debouncedFunction = debounce(scrollEvent, 700, true);
@@ -144,7 +168,7 @@ function handleRawData(raw: StockData[]){
     ma20.push(element.ma20);
     ma60.push(element.ma60);
   }
-  return {
+  stockData = {
     categoryData: categoryData,
     values: values,
     volumes: volumes,
@@ -152,7 +176,8 @@ function handleRawData(raw: StockData[]){
     ma10: ma10,
     ma20:ma20,
     ma60:ma60
-  };
+  }
+  return stockData;
 }
 function handleGraphicData(graphics: Graphic[]=graphicData.value){
   // let graphics = lineData.value;
@@ -271,7 +296,167 @@ function handleNewGraphicData(graphics: Graphic[]=newGraphicData){
 async function updateChart(){
   await clear_all();
   await query_stocks_day_k_limit();
+  // await query_least_stock_data();
   await query_graphic();
+}
+function updateLiveData(live_data:Record<string, StockLiveData>){
+  console.log("更新实时数据",live_data[code],live_data[code] != undefined)
+  if (live_data[code] != undefined){
+    // console.log("进来了吗",stockData[stockData.length-1].categoryData);
+    const newData = live_data[code];
+    let len = stockData.categoryData.length-1;
+    let color, borderColor;
+    if (newData.open < newData.price) {
+      color = 'white';
+      borderColor = 'red';
+    } else {
+      color = 'green';
+      borderColor = 'green';
+    }
+    if(stockData.categoryData[len]!=nowDate){
+      console.log("不是一天的数据，更新");
+      stockData.categoryData.push(nowDate);
+      stockData.values.push([newData.open,newData.price,newData.low,newData.high,newData.volume]);
+      // stockData.volumes.push([newData.volume, newData.open > newData.price ? 1 : -1]);
+      stockData.volumes.push({
+        value:newData.volume,
+        itemStyle: {
+          color:color,
+          borderColor:borderColor
+        }
+      });
+      stockData.ma5.push(newData.ma5);
+      stockData.ma10.push(newData.ma10);
+      stockData.ma20.push(newData.ma20);
+      stockData.ma60.push(newData.ma60);
+    }else{
+      console.log("已有今天的数据，更新")
+      // stockData.categoryData[len] = getFormattedDate();
+      stockData.values[len] = [newData.open,newData.price,newData.low,newData.high,newData.volume];
+      stockData.volumes[len] = {
+        value:newData.volume,
+        itemStyle: {
+          color:color,
+          borderColor:borderColor
+        }
+      };
+      stockData.ma5[len] = newData.ma5;
+      stockData.ma10[len] = newData.ma10;
+      stockData.ma20[len] = newData.ma20;
+      stockData.ma60[len] = newData.ma60;
+      // stockData[stockData.length-1] = ({
+      //   categoryData: getFormattedDate(),
+      //   values: [newData.open,newData.price,newData.low,newData.high,newData.volume],
+      //   volumes: [newData.volume, newData.open > newData.price ? 1 : -1],
+      //   ma5: newData.ma5,
+      //   ma10: newData.ma10,
+      //   ma20:newData.ma20,
+      //   ma60:newData.ma60
+      // })
+    }
+    myChart.setOption({
+      xAxis: [
+        {
+          type: 'category',
+          data: stockData.categoryData,
+        },
+        {
+          type: 'category',
+          gridIndex: 1,
+          data: stockData.categoryData,
+        }
+      ],
+      series: [
+        {
+          name: 'K线',
+          type: 'candlestick',
+          data: stockData.values,
+          itemStyle: {
+            color: upColor,
+            color0: downColor,
+            borderColor: bColor,
+            borderColor0: undefined
+          },
+          //https://echarts.apache.org/zh/option.html#series-candlestick
+          //https://echarts.apache.org/zh/option.html#series-line.markPoint.data.valueDim
+          markPoint: {
+            data:[
+              {
+                type: 'max',
+                name: '最大值',
+                valueDim: 'highest'
+              },
+              {
+                type: 'min',
+                name: '最小值',
+                valueDim: 'lowest'
+              }
+            ],
+            symbol: "arrow",
+            symbolSize: 30,
+            silent: true,
+            itemStyle:{
+              color:"#ecece400"
+            },
+            label:{
+              color:"blue"
+            }
+          }
+        },
+        {
+          name: 'MA5',
+          type: 'line',
+          data: stockData.ma5,
+          smooth: true,
+          // symbol:'none',
+          symbolSize: 0,
+          lineStyle: {
+            opacity: 0.5
+          },
+        },
+        {
+          name: 'MA10',
+          type: 'line',
+          data: stockData.ma10,
+          smooth: true,
+          // symbol:'none',
+          symbolSize: 0,
+          lineStyle: {
+            opacity: 0.5
+          }
+        },
+        {
+          name: 'MA20',
+          type: 'line',
+          // symbol:'none',
+          symbolSize: 0,
+          data: stockData.ma20,
+          smooth: true,
+          lineStyle: {
+            opacity: 0.5
+          }
+        },
+        {
+          name: 'MA60',
+          type: 'line',
+          // symbol:'none',
+          symbolSize: 0,
+          data: stockData.ma60,
+          smooth: true,
+          lineStyle: {
+            opacity: 0.5
+          },
+        },
+        {
+          name: 'Volume',
+          type: 'bar',
+          xAxisIndex: 1,
+          yAxisIndex: 1,
+          data: stockData.volumes,
+        },
+      ],
+    })
+  }
 }
 function updateLineOption(){
   myChart.setOption({
@@ -354,11 +539,40 @@ async function query_graphic(){
 }
 async function query_stocks_day_k_limit(){
   try {
-    const res = await invoke<StockData[]>('query_stocks_day_k_limit', { code: code }); // 使用 await 等待 invoke 完成
-    rawData.value = res.reverse(); // 处理查询到的数据
+    const data = await invoke<StockData[]>('query_stocks_day_k_limit', { code: code }); // 使用 await 等待 invoke 完成
+    const liveData = await invoke<StockLiveData>('query_live_stock_data_by_code', { code: code }); // 使用 await 等待 invoke 完成
+    const leastData = {
+      date:nowDate,
+      open:liveData.open,
+      close:liveData.price,
+      high:liveData.high,
+      low:liveData.low,
+      vol:liveData.volume,
+      ma5:liveData.ma5,
+      ma10:liveData.ma10,
+      ma20:liveData.ma20,
+      ma60:liveData.ma60,
+    }
+    console.log("最新数据",leastData);
+    data.unshift(leastData)
+    rawData.value = data.reverse(); // 处理查询到的数据
     myChart.setOption(init_option())
-    console.log("查到了K线数据",res);
+    console.log("查到了K线数据",data);
     return;
+    // myChart.hideLoading();
+  } catch (err) {
+    console.log(err);
+  }
+}
+async function query_least_stock_data(){
+  try {
+    const res = await invoke<StockData>('query_live_stock_data_by_code', { code: code }); // 使用 await 等待 invoke 完成
+    console.log("查到了最新K线数据",res);
+    const liveDataRecord: Record<string, StockLiveData> = {
+      [code]: res
+    };
+    updateLiveData(liveDataRecord);
+    return res;
     // myChart.hideLoading();
   } catch (err) {
     console.log(err);
@@ -842,6 +1056,13 @@ function formatLargeNumber(num:number) {
   }
   return formatted;
 }
+function getFormattedDate(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0'); // 月份从0开始，所以需要+1，并用padStart补全为两位数字
+  const day = String(now.getDate()).padStart(2, '0'); // 用padStart补全为两位数字
+  return `${year}-${month}-${day}`;
+}
 function calculateChangeRate(openPrice:number, closePrice:number) {
   // 计算涨跌幅
   const changeRate = ((closePrice - openPrice) / openPrice) * 100;
@@ -852,13 +1073,14 @@ async function showPaintTool(){
   const appWindow = WebviewWindow.getByLabel('tool')
   await appWindow?.show()
 }
-function deleteGraphic(){
+const isPointer = ref(true)
 
+function deleteGraphic(){
 }
 </script>
 
 <template>
-  <div id="main" ref="chart" class="candle-chart-container" style="border: #9d6a09 1px solid "></div>
+  <div id="main" ref="chart" :class="{ pointer: isPointer }" class="candle-chart-container" style="border: #9d6a09 1px solid "></div>
   <context-menu
       v-model:show="show"
       :options="options"
@@ -895,7 +1117,9 @@ function deleteGraphic(){
 .green-label {
   color: green;
 }
-
+.pointer {
+  cursor: not-allowed;
+}
 .black-label {
   color: black;
 }
