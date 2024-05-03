@@ -14,6 +14,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use log::{error, info};
 use tauri::Manager;
+use tauri_plugin_window_state::{StateFlags, WindowExt};
 // use tauri_plugin_window_state::{StateFlags, WindowExt};
 use tokio::task::JoinHandle;
 use crate::app_errors::AppResult;
@@ -97,23 +98,26 @@ async fn main() {
         // .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
-        // .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(tauri_plugin_window_state::Builder::default().build())
         .setup(|app|{
             // let window = tauri::window::WindowBuilder::new(app, "tool")
             //     .build()?;
             // app.get_window("main").
             // let main_window = app.get_window("main").unwrap();
             // let tool_window = app.get_window("tool").unwrap();
-            // let main_window = app.get_webview_window("main").unwrap().get_window();
+            info!("{:?}",app.app_handle().path().app_config_dir().unwrap()); //"C:\\Users\\Xbss\\AppData\\Roaming\\com.xbss.trade-tip"
+            let main_window = app.get_webview_window("main").unwrap();
+            let tool_window = app.get_webview_window("tool").unwrap();
             tokio::spawn(async move{
-                // if result.is_err(){
-                //     error!("restore state error:{}",result.err().unwrap().to_string());
-                // };
-                // main_window.show().unwrap();
-                // let mut result = tool_window.restore_state(StateFlags::all());
-                // if result.is_err(){
-                //     error!("restore state error:{}",result.err().unwrap().to_string());
-                // };
+                let mut result = main_window.restore_state(StateFlags::all());
+                if result.is_err(){
+                    error!("restore main window state error:{}",result.err().unwrap().to_string());
+                };
+                main_window.show().unwrap();
+                 result = tool_window.restore_state(StateFlags::all());
+                if result.is_err(){
+                    error!("restore tool window state error:{}",result.err().unwrap().to_string());
+                };
             });
             // let result = main_window.restore_state(StateFlags::all());
             // if result.is_err(){

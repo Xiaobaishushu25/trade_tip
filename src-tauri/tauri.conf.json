@@ -1,6 +1,6 @@
 {
   "productName": "金融助手",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "identifier": "com.xbss.trade-tip",
   "build": {
     "beforeDevCommand": "pnpm dev",
@@ -20,7 +20,8 @@
         "decorations": false,
         "resizable": true,
         "dragDropEnabled": false,
-        "center": true
+        "center": true,
+        "visible": false
       },
       {
         "label": "tool",

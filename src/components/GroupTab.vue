@@ -60,7 +60,6 @@ function query_box(){
   })
 }
 watch(activeName, () => {
-  console.log("开始实时查询")
   let groupName = activeName.value;
   store.activeGroup = groupName;
   invoke("query_live_stocks_data",{groupName: groupName}).catch(err => {

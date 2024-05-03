@@ -5,6 +5,7 @@ import {invoke} from "@tauri-apps/api/core";
 import {store} from "../store.ts"
 import ElSearch from "./ElSearch.vue";
 import { useRouter} from "vue-router";
+import {saveWindowState, StateFlags} from "@tauri-apps/plugin-window-state";
 // import { saveWindowState, StateFlags } from '@tauri-apps/plugin-window-state';
 
 const router = useRouter()
@@ -42,9 +43,8 @@ function window_maximize(){
 async function window_close(){
   // await WebviewWindow.getCurrent().hide()
   // 从 ALL 中排除 VISIBLE
-  // const ALL_WITHOUT_VISIBLE = StateFlags.ALL & ~StateFlags.VISIBLE;
-  // await saveWindowState(ALL_WITHOUT_VISIBLE);
-  console.log("退出程序")
+  const ALL_WITHOUT_VISIBLE = StateFlags.ALL & ~StateFlags.VISIBLE;
+  await saveWindowState(ALL_WITHOUT_VISIBLE);
   await invoke('exit_app', {})
   await WebviewWindow.getCurrent().close();
   // await appWindow.close()
