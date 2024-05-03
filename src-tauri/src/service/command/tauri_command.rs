@@ -1,9 +1,10 @@
 use std::collections::HashMap;
+use std::process::exit;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::{Duration};
 use log::{error, info};
-use tauri::{Manager, State};
+use tauri::{AppHandle, Manager, State};
 use tokio::time::sleep;
 use crate::dtos::stock_dto::{StockInfoG, StockLiveData};
 use crate::entities::prelude::{Graphic, Graphics, StockData, StockGroup, StockInfo};
@@ -83,9 +84,10 @@ pub async fn query_stock_info() -> Result<Vec<StockInfo>,String> {
 
 #[tauri::command]
 pub async fn query_all_groups() -> Result<Vec<StockGroup>,String> {
+    info!("查询所有分组");
     match StockGroupCurd::query_all().await{
         Ok(stock_groups)=>{
-            // info!("查询所有分组成功:{:?}",stock_groups);
+            info!("查询所有分组成功:{:?}",stock_groups);
             Ok(stock_groups)
         },
         Err(e)=>{
@@ -142,6 +144,19 @@ pub async fn create_group(name:String) -> Result<i32,String> {
         },
         Err(e)=>{
             error!("插入分组失败:{}",e);
+            Err(e.to_string())
+        }
+    }
+}
+#[tauri::command]
+pub async fn update_groups(groups:Vec<StockGroup>) -> Result<(),String> {
+    match StockGroupCurd::update_all_index(groups).await{
+        Ok(_)=>{
+            // info!("删除分组成功:{:?}",count);
+            Ok(())
+        },
+        Err(e)=>{
+            error!("更新分组索引失败:{}",e);
             Err(e.to_string())
         }
     }
@@ -284,10 +299,36 @@ pub async fn save_graphic(code:String,graphic:Vec<GraphicDTO>) -> Result<(),Stri
     }
 }
 #[tauri::command]
+pub async fn delete_graphic_by_id(id:String) -> Result<(),String> {
+    match GraphicCurd::delete_by_id(id.clone()).await{
+        Ok(_)=>{
+            info!("删除图形{:?}成功",id);
+            Ok(())
+        },
+        Err(e)=>{
+            error!("删除图形{:?}失败",id);
+            Err(format!("删除图形{:?}失败:{}",id,e.to_string()))
+        }
+    }
+}
+#[tauri::command]
+pub async fn delete_graphic_by_group_id(group_id:String) -> Result<(),String> {
+    match GraphicCurd::delete_by_group_id(group_id.clone()).await{
+        Ok(_)=>{
+            info!("删除图形{:?}成功",group_id);
+            Ok(())
+        },
+        Err(e)=>{
+            error!("删除图形{:?}失败",group_id);
+            Err(format!("删除图形{:?}失败:{}",group_id,e.to_string()))
+        }
+    }
+}
+#[tauri::command]
 pub async fn query_box() -> Result<HashMap<String,Vec<f64>>,String> {
     match GraphicCurd::query_only_horizontal_all().await{
         Ok(data)=>{
-            info!("查到了箱体数据{:?}",data);
+            // info!("查到了箱体数据{:?}",data);
             Ok(data)
         },
         Err(e)=>{
@@ -296,6 +337,7 @@ pub async fn query_box() -> Result<HashMap<String,Vec<f64>>,String> {
         }
     }
 }
+//查询单个股票的实时数据，用于点击k线图时获取最新数据，无需等待
 #[tauri::command]
 // pub async fn query_live_stock_data_by_code(code:String,app_handle: tauri::AppHandle,) -> Result<HashMap<String,StockLiveData>,String> {
 pub async fn query_live_stock_data_by_code<'r>(code:String,state: State<'r, MyState>) -> Result<StockLiveData,String> {
@@ -328,9 +370,10 @@ pub async fn query_live_stock_data_by_code<'r>(code:String,state: State<'r, MySt
     }
 }
 #[tauri::command]
-// pub async fn query_live_stocks_data(group_name:String,app_handle: tauri::AppHandle,) -> Result<HashMap<String,StockLiveData>,String> {
 pub async fn query_live_stocks_data<'r>(state: State<'r, MyState>,group_name:String,app_handle: tauri::AppHandle) -> Result<(),String> {
     info!("查询实时数据:{}",group_name);
+    // app_handle.get_webview_window("main").unwrap().window()
+    // let window = app_handle.get_webview_window("main").unwrap().window();
     let result = if group_name =="持有"{
         StockInfoCurd::query_all_hold_only_code().await
     }else {
@@ -338,6 +381,7 @@ pub async fn query_live_stocks_data<'r>(state: State<'r, MyState>,group_name:Str
     };
     match result {
         Ok(codes) => {
+            if codes.is_empty() { return Ok(()) }
             let mut history_close_price = HashMap::new();
             for code in &codes {
                 let guard = state.history_close_price.lock().unwrap();
@@ -378,4 +422,9 @@ pub async fn query_live_stocks_data<'r>(state: State<'r, MyState>,group_name:Str
             Err(e.to_string())
         }
     }
+}
+#[tauri::command]
+pub fn exit_app() {
+    info!("退出程序");
+    exit(0)
 }

@@ -1,9 +1,10 @@
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryOrder, QuerySelect};
+use sea_orm::{ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait, ModelTrait, QueryFilter, QueryOrder, QuerySelect, Statement};
 use sea_orm::ActiveValue::Set;
 use crate::app_errors::AppResult;
-use crate::entities::init_db_coon;
+use crate::entities::{init_db_coon, open_db_log};
 use crate::entities::prelude::{ActiveStockGroup, StockGroup, StockGroups};
 use crate::entities::stock_group::Column;
+use crate::service::curd::group_stock_relation_curd::GroupStockRelationCurd;
 
 
 pub struct StockGroupCurd;
@@ -25,8 +26,25 @@ impl StockGroupCurd {
         // let _ = model.insert(db).await?;
         Ok(result)
     }
+    pub async fn insert_init(db:&DatabaseConnection) -> AppResult<()>{
+        let model = ActiveStockGroup{
+            index: Set(0),
+            name: Set("全部".into()),
+            // ..Default::default()
+        };
+        let _ = model.insert(db).await?;
+        let model = ActiveStockGroup{
+            index: Set(1),
+            name: Set("持有".into()),
+            // ..Default::default()
+        };
+        let _ = model.insert(db).await?;
+        // let _ = model.insert(db).await?;
+        Ok(())
+    }
     pub async fn delete_by_name(name: String) -> AppResult<i32> {
         let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        let _ = GroupStockRelationCurd::delete_by_group_name(name.clone()).await?;
         let model = StockGroups::find_by_id(name.clone()).one(db).await?.ok_or(anyhow::anyhow!("删除失败:未找到name为{}的分组",name))?;
         let result = model.delete(db).await?;
         Ok(result.rows_affected as i32)
@@ -36,6 +54,22 @@ impl StockGroupCurd {
         let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
         let vec = StockGroups::find().order_by_asc(Column::Index).all(db).await?;
         Ok(vec)
+    }
+    ///更新所有分组的索引，直接先全部删除，然后插入
+    pub async fn update_all_index(groups:Vec<StockGroup>) -> AppResult<()> {
+        let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        // let statement = Statement::from_string(db.get_database_backend(), "delete from stock_group");
+        // let _ = db.execute(statement).await?;
+        for group in groups.into_iter() {
+            let model = ActiveStockGroup::from(group).reset_all();
+            // let model = model.reset_all();
+            model.update(db).await?;
+            // let _ = StockGroups::update(model).filter(Column::Name.eq("全部")).exec(db).await?;
+            //2024-05-01T17:58:26.948600Z DEBUG sea_orm::driver::sqlx_sqlite: SELECT "stock_group"."index", "stock_group"."name" FROM "stock_group" WHERE "stock_group"."name" = '全部' LIMIT 1
+        }
+        // StockGroups::update(ActiveStockGroup::from(groups[0]))
+        // let _ = StockGroups::insert_many(groups.into_iter().map(|group| ActiveStockGroup::from(group))).exec(db).await?;
+        Ok(())
     }
     // pub async fn find_by_id(id: i32) -> AppResult<Vec<String>> {
     // pub async fn find_by_name(id: i32) -> AppResult<()> {
@@ -70,3 +104,12 @@ fn test_option() {
 //     let result = StockGroupCurd::find_by_id(1).await;
 //     println!("{:?}",result);
 // }
+#[tokio::test]
+async fn test_update_all_index() {
+    init_db_coon().await;
+    open_db_log().await;
+    StockGroupCurd::update_all_index(vec![StockGroup{
+        index: 20,
+        name: "全部".to_string(),
+    }]).await.unwrap()
+}

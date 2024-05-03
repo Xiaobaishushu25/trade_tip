@@ -78,4 +78,16 @@ impl GraphicCurd {
         active.insert(db).await?;
         Ok(())
     }
+    pub async fn delete_by_id(id:String)->AppResult<()>{
+        let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        let _ = Graphics::delete_by_id(id).exec(db).await?;
+        Ok(())
+    }
+    pub async fn delete_by_group_id(group_id:String)->AppResult<()>{
+        let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        let _ = Graphics::delete_many()
+            .filter(Column::GroupId.eq(group_id))
+            .exec(db).await?;
+        Ok(())
+    }
 }

@@ -187,6 +187,16 @@ impl GroupStockRelationCurd {
         let _ = GroupStockRs::delete_by_id((group_name, code)).exec(db).await?;
         Ok(())
     }
+    pub async fn delete_by_group_name(group_name:String) -> AppResult<()> {
+        let db = crate::entities::DB
+            .get()
+            .ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        let _ = GroupStockRs::delete_many()
+            .filter(Column::GroupName.eq(group_name))
+            .exec(db)
+            .await?;
+        Ok(())
+    }
     ///根据股票代码删除所有相关分组信息
     pub async fn delete_by_stock_code(stock_code:String) -> AppResult<()> {
         let db = crate::entities::DB

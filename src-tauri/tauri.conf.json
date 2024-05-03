@@ -1,7 +1,7 @@
 {
-  "productName": "trade_tip",
-  "version": "0.0.0",
-  "identifier": "com.tauri.dev",
+  "productName": "金融助手",
+  "version": "0.0.1",
+  "identifier": "com.xbss.trade-tip",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -25,14 +25,14 @@
       {
         "label": "tool",
         "title": "tool",
-        "width": 80,
+        "width": 190,
         "height": 200,
         "resizable": false,
         "alwaysOnTop": true,
         "skipTaskbar": true,
         "decorations": false,
         "visible": false,
-        "url": "http://localhost:1420/#/tool",
+        "url": "/#/tool",
         "center": true
       }
     ],
@@ -49,6 +49,11 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "wix": {
+        "language": "zh-CN"
+      }
+    }
   }
 }

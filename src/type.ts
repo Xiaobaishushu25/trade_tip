@@ -21,11 +21,15 @@ interface StockLiveData {
     ma20: number;
     ma30: number;
     ma60: number;
-    // ma5: number | null;
-    // ma10: number | null;
-    // ma20: number | null;
-    // ma30: number | null;
-    // ma60: number | null;
+}
+interface rowData{
+    code:string,
+    price:number,
+    ma:string,
+    box:string,
+    change:string,
+    breathClass:string,
+    advise:string[]
 }
 interface StockInfoG {
     index: number;
@@ -51,11 +55,6 @@ interface StockData {
     ma30?: number; // Rust中的`ma30`字段
     ma60?: number; // Rust中的`ma60`字段
 }
-// interface StockGroup{
-//     index: number;
-//     name: string;
-//     stock_codes: string[];
-// }
 interface StockGroup{
     index: number;
     name: string;
@@ -72,12 +71,6 @@ enum PaintState {
     Null,HL,HLS,PHL,PHLS,LS,Text
 }
 
-// interface Line {
-//     id: string;
-//     start: [number,number];
-//     end: [number,number];
-//     type: PaintState;
-// }
 interface Graphic{
     group_id: string;
     code: string;
@@ -96,4 +89,4 @@ interface Style {
     line_width?: number; // 线专用，使用number类型对应f64，?表示可选
 }
 export { PaintState }; // 导出枚举值
-export type { StockInfo,StockLiveData,StockGroup,StockInfoG,StockData,Graphic };
+export type { StockInfo,StockLiveData,StockGroup,StockInfoG,StockData,Graphic,rowData };

@@ -1,14 +1,15 @@
 <script lang="ts" setup>
 import {invoke} from "@tauri-apps/api/core";
-import {onMounted, ref, watch} from "vue";
+import {nextTick, onMounted, ref, watch} from "vue";
 import * as echarts from "echarts/core";
 import {Graphic, PaintState, StockData, StockLiveData} from "../type.ts";
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {EChartsType} from "echarts";
 import {store} from "../store.ts";
-import {debounce, generateId} from "../utils.ts"
-import {emit, listen} from "@tauri-apps/api/event";
-import {onBeforeRouteLeave} from "vue-router";
+import {debounce, errorNotification, generateId, successNotification} from "../utils.ts"
+import {emit, listen, TauriEvent, UnlistenFn} from "@tauri-apps/api/event";
+import {onBeforeRouteLeave, useRouter} from "vue-router";
+import InlineSvg from "vue-inline-svg";
 
 interface VolumeItem {
   value: number;
@@ -30,7 +31,36 @@ interface CandleStockData {
 
 let isCtrlPressed = false;
 
-let code = store.stockinfoG!.code
+const router = useRouter()
+
+router.afterEach(async (to) => {
+  // 这段代码会在路由跳转完成后执行
+  // 注意：它不会等待组件挂载完成，也不提供组件实例的访问
+  if (myChart!=undefined&&to.fullPath.includes("detail")){
+    unlistenResize = await listen(TauriEvent.WINDOW_RESIZED, async () => {
+      myChart.resize();
+      updateLineOption();
+    });
+    unlistenPaint = await listen('paint', (event) => {
+      handlePaint(event.payload.state);
+    })
+    unlistenLiveData = await listen("live_stock_data", ({payload }) => {
+      if (chartIsInit){
+        updateLiveData(payload);
+      }
+    })
+    document.addEventListener('keydown', unlockZoom);
+    document.addEventListener('keyup', lockZoom);
+    document.addEventListener('wheel',wheelChangeCode);
+  }
+});
+
+let unlistenPaint:UnlistenFn;
+let unlistenResize:UnlistenFn;
+let unlistenLiveData:UnlistenFn;
+const debouncedFunction = debounce(scrollEvent, 700, true);
+
+let code = store.stockinfoG!.code;
 watch(() => store.stockinfoG,async (newValue: any) => {
   if(code!=newValue.code){
     save_graphic();
@@ -47,8 +77,9 @@ const bColor = '#ec0000';
 const downColor = 'rgb(55,150,55)';
 const nowDate = getFormattedDate();
 
-const show = ref(false);
+const contextMenuShow = ref(false);
 const chart=ref(null);
+let chartIsInit = false;
 let myChart: EChartsType;
 const rawData = ref([]);
 const graphicData = ref<Graphic[]>([])
@@ -56,84 +87,116 @@ let newGraphicData:Graphic[] =[]
 let stockData:CandleStockData;
 // 创建一个映射来存储每个id对应的group
 const groupMap = new Map<string, { group: any }>();
+const inputVisible = ref(false)
+const inputValue = ref('');
+const inputRef = ref();
+const newTextColor = ref("#FF6A00")
+const newTextFontSize = ref(16)
 
 const options = {
   // theme: 'win10 dark',
-  name:"",
-  code:"",
+  id:"",
+  group_id:"",
   zIndex: 3,
   x: 500,
   y: 200
 }
+watch(()=>store.isBlur,(newValue)=>{
+  if (newValue){
+    contextMenuShow.value = false;
+  }
+})
 
 watch(graphicData, (_) => {
   // console.log("lineData变化了",graphicData.value);
   // handleGraphicData();
   updateLineOption()
 },{deep:true});
+
 onMounted(async ()=>{
   myChart = echarts.init(chart.value);
   // await query_stocks_day_k_limit();
   // await query_graphic();
   await updateChart();
-  // myChart.on('dataZoom', handleGraphicData);
   myChart.on('dataZoom', updateLineOption);
-  await listen('paint', (event) => {
+  unlistenPaint = await listen('paint', (event) => {
+    // console.log("开启绘制1")
     handlePaint(event.payload.state);
   })
-  await listen("live_stock_data", ({payload }) => {
-    console.log("K线图也受到了推送的数据")
-    updateLiveData(payload);
+  unlistenLiveData = await listen("live_stock_data", ({payload }) => {
+    // console.log("K线图也受到了推送的数据")
+    if (chartIsInit){ //https://www.cnblogs.com/boke-biji123/p/15514457.html
+      updateLiveData(payload);
+    }
   })
-  // 监听鼠标滚轮事件
-  const debouncedFunction = debounce(scrollEvent, 700, true);
-  document.addEventListener('wheel', (event: WheelEvent) => {
-    // 这里可以获取滚动事件的信息
-    const deltaY = event.deltaY; // 滚动的垂直距离
-    debouncedFunction(deltaY)
-  });
-  window.addEventListener('resize', function() {
-    // 当窗口大小变化时，这个函数会被调用
-    myChart.resize();
-  });
-  document.addEventListener('keydown', (event: KeyboardEvent) => {
-    if (event.ctrlKey) {
-      if (!isCtrlPressed){
-        isCtrlPressed = true;
-        console.log("解锁图表缩放")
-        myChart.setOption({
-          dataZoom: [
-            {
-              type: 'inside',
-              xAxisIndex: [0, 1],
-              zoomLock: false
-            },
-          ],
-        })
-      }
+  unlistenResize = await listen(TauriEvent.WINDOW_RESIZED, async (param) => {
+    console.log("蜡烛图1监听到了窗口尺寸改变",param);
+    if (param.payload.height>50){
+      await nextTick();
+      // myChart.resize();
+      myChart.resize();
+      updateLineOption();
     }
   });
-  document.addEventListener('keyup', (event: KeyboardEvent) => {
-    if (event.key === 'Control') {
-      console.log("锁定图表缩放")
-      if (isCtrlPressed){
-        isCtrlPressed = false;
-        myChart.setOption({
-          dataZoom: [
-            {
-              type: 'inside',
-              xAxisIndex: [0, 1],
-              zoomLock: true
-            },
-          ],
-        })
-      }
-    }
-  });
+  // unlistenResize();
+  // myChart.on('dataZoom', updateLineOption);
+  // const debouncedFunction = debounce(scrollEvent, 700, true);
+  // document.addEventListener('wheel', (event: WheelEvent) => {
+  //   console.log("deltaY",event.deltaY)
+  //   // 这里可以获取滚动事件的信息
+  //   const deltaY = event.deltaY; // 滚动的垂直距离
+  //   debouncedFunction(deltaY)
+  // });
+  document.addEventListener('wheel',wheelChangeCode);
+  document.addEventListener('keydown', unlockZoom);
+  document.addEventListener('keyup', lockZoom);
+
+  // document.addEventListener('keydown', (event: KeyboardEvent) => {
+  //   if (event.ctrlKey) {
+  //     if (!isCtrlPressed){
+  //       isCtrlPressed = true;
+  //       console.log("解锁图表缩放")
+  //       myChart.setOption({
+  //         dataZoom: [
+  //           {
+  //             type: 'inside',
+  //             xAxisIndex: [0, 1],
+  //             zoomLock: false
+  //           },
+  //         ],
+  //       })
+  //     }
+  //   }
+  // });
+  // document.addEventListener('keyup', (event: KeyboardEvent) => {
+  //   if (event.key === 'Control') {
+  //     console.log("锁定图表缩放")
+  //     if (isCtrlPressed){
+  //       isCtrlPressed = false;
+  //       myChart.setOption({
+  //         dataZoom: [
+  //           {
+  //             type: 'inside',
+  //             xAxisIndex: [0, 1],
+  //             zoomLock: true
+  //           },
+  //         ],
+  //       })
+  //     }
+  //   }
+  // });
 })
 onBeforeRouteLeave(async function (){
-  console.log("离开蜡烛图路由")
+  console.log("离开蜡烛图路由");
+  // myChart.off('dataZoom', updateLineOption);
   save_graphic();
+  unlistenResize();
+  unlistenLiveData();
+  unlistenPaint();
+  document.removeEventListener('wheel',wheelChangeCode);
+  document.removeEventListener('keydown', unlockZoom);
+  document.removeEventListener('keyup', lockZoom);
+  // window.removeEventListener('resize', calculateTableHeight);
 })
 function handleRawData(raw: StockData[]){
   let categoryData = [];
@@ -206,10 +269,14 @@ function handleGraphicData(graphics: Graphic[]=graphicData.value){
           lineWidth: style?.line_width?style?.line_width:1,
           fill: style?.color,
         },
-        onmousedown: function (param:any) {
+        onmouseup: function (param:any) {
           console.log(param.event)
           if (param.event.button==2){
-            show.value = true;
+            options.x=param.event.offsetX+10;
+            options.y=param.event.offsetY+10;
+            options.id=item.id;
+            options.group_id=item.group_id;
+            contextMenuShow.value = true;
           }
           param.event.stopPropagation();
         }
@@ -227,20 +294,26 @@ function handleGraphicData(graphics: Graphic[]=graphicData.value){
         position: [start[0], start[1]],
         style: {
           fill: style?.color?style?.color:'black',
-          size: style?.size?style?.size:10,
+          // fontsize: style?.size?`${style?.size}rem`:'15rem',
+          fontSize:style?.size?style?.size:14,
           lineWidth: style?.line_width?style?.line_width:1,
           // text: item.content?item.content:item.start[1].toFixed(3),
           text: item.content?item.content:thisLine.start[1].toFixed(3),
         },
         draggable: true,
         cursor: 'move',
-        // ondrag: function (param) {
-        //   // console.log(dataIndex, [this.x, this.y]);
-        //   let newPointData = myChart.convertFromPixel({seriesIndex: 0}, [this.x, this.y]);
-        // },
+        onmouseup: function (param:any) {
+          if (param.event.button==2){
+            options.x=param.event.offsetX+10;
+            options.y=param.event.offsetY+10;
+            options.id=item.id;
+            options.group_id=item.group_id;
+            contextMenuShow.value = true;
+          }
+          param.event.stopPropagation();
+        },
         ondragend: function () {
           let newPointData = myChart.convertFromPixel({seriesIndex: 0}, [this.x, this.y]);
-          console.log("文本的拖动结束",newPointData)
           graphicData.value.filter(function (item2) {
             if (item2.id===item.id){
               item2.start = newPointData;
@@ -288,6 +361,7 @@ function handleGraphicData(graphics: Graphic[]=graphicData.value){
   });
   groupMap.clear();//处理完就清空，还要接着用
 }
+
 function handleNewGraphicData(graphics: Graphic[]=newGraphicData){
   handleGraphicData(graphics);
   graphicData.value.push(...graphics);
@@ -344,15 +418,6 @@ function updateLiveData(live_data:Record<string, StockLiveData>){
       stockData.ma10[len] = newData.ma10;
       stockData.ma20[len] = newData.ma20;
       stockData.ma60[len] = newData.ma60;
-      // stockData[stockData.length-1] = ({
-      //   categoryData: getFormattedDate(),
-      //   values: [newData.open,newData.price,newData.low,newData.high,newData.volume],
-      //   volumes: [newData.volume, newData.open > newData.price ? 1 : -1],
-      //   ma5: newData.ma5,
-      //   ma10: newData.ma10,
-      //   ma20:newData.ma20,
-      //   ma60:newData.ma60
-      // })
     }
     myChart.setOption({
       xAxis: [
@@ -371,87 +436,86 @@ function updateLiveData(live_data:Record<string, StockLiveData>){
           name: 'K线',
           type: 'candlestick',
           data: stockData.values,
-          itemStyle: {
-            color: upColor,
-            color0: downColor,
-            borderColor: bColor,
-            borderColor0: undefined
-          },
+          // itemStyle: {
+          //   color: upColor,
+          //   color0: downColor,
+          //   borderColor: bColor,
+          //   borderColor0: undefined
+          // },
           //https://echarts.apache.org/zh/option.html#series-candlestick
           //https://echarts.apache.org/zh/option.html#series-line.markPoint.data.valueDim
-          markPoint: {
-            data:[
-              {
-                type: 'max',
-                name: '最大值',
-                valueDim: 'highest'
-              },
-              {
-                type: 'min',
-                name: '最小值',
-                valueDim: 'lowest'
-              }
-            ],
-            symbol: "arrow",
-            symbolSize: 30,
-            silent: true,
-            itemStyle:{
-              color:"#ecece400"
-            },
-            label:{
-              color:"blue"
-            }
-          }
+          // markPoint: {
+          //   data:[
+          //     {
+          //       type: 'max',
+          //       name: '最大值',
+          //       valueDim: 'highest'
+          //     },
+          //     {
+          //       type: 'min',
+          //       name: '最小值',
+          //       valueDim: 'lowest'
+          //     }
+          //   ],
+          //   symbol: "arrow",
+          //   symbolSize: 30,
+          //   silent: true,
+          //   itemStyle:{
+          //     color:"#ecece400"
+          //   },
+          //   label:{
+          //     color:"blue"
+          //   }
+          // }
         },
         {
           name: 'MA5',
           type: 'line',
           data: stockData.ma5,
-          smooth: true,
-          // symbol:'none',
-          symbolSize: 0,
-          lineStyle: {
-            opacity: 0.5
-          },
+          // smooth: true,
+          // symbolSize: 0,
+          // lineStyle: {
+          //   opacity: 0.5
+          // },
         },
         {
           name: 'MA10',
           type: 'line',
           data: stockData.ma10,
-          smooth: true,
-          // symbol:'none',
-          symbolSize: 0,
-          lineStyle: {
-            opacity: 0.5
-          }
+          // smooth: true,
+          // // symbol:'none',
+          // symbolSize: 0,
+          // lineStyle: {
+          //   opacity: 0.5
+          // }
         },
         {
           name: 'MA20',
           type: 'line',
-          // symbol:'none',
-          symbolSize: 0,
-          data: stockData.ma20,
-          smooth: true,
-          lineStyle: {
-            opacity: 0.5
-          }
+          // // symbol:'none',
+          // symbolSize: 0,
+          // data: stockData.ma20,
+          // smooth: true,
+          // lineStyle: {
+          //   opacity: 0.5
+          // }
         },
         {
           name: 'MA60',
           type: 'line',
-          // symbol:'none',
-          symbolSize: 0,
-          data: stockData.ma60,
-          smooth: true,
-          lineStyle: {
-            opacity: 0.5
-          },
+          // // symbol:'none',
+          // symbolSize: 0,
+          // data: stockData.ma60,
+          // smooth: true,
+          // lineStyle: {
+          //   opacity: 0.5
+          // },
         },
         {
           name: 'Volume',
           type: 'bar',
-          xAxisIndex: 1,
-          yAxisIndex: 1,
+          // xAxisIndex: 1,
+          // yAxisIndex: 1,
           data: stockData.volumes,
         },
       ],
@@ -461,6 +525,7 @@ function updateLiveData(live_data:Record<string, StockLiveData>){
 function updateLineOption(){
   myChart.setOption({
     graphic: graphicData.value.map(function (item, dataIndex) {
+      console.log("渲染graphic:",item);
       let startPixel = myChart.convertToPixel({seriesIndex: 0}, item.start);
       let style = item.style;
       if (item.graphic_type==="line"){
@@ -490,7 +555,8 @@ function updateLineOption(){
           position: [startPixel[0], startPixel[1]],
           style: {
             fill: style?.color?style?.color:'black',
-            size: style?.size?style?.size:10,
+            // size: style?.size?style?.size:10,
+            fontSize:style?.size?style?.size:14,
             lineWidth: style?.line_width?style?.line_width:1,
             text: item.content?item.content:thisLine.start[1].toFixed(3),
             // text: item.content?item.content:item.start[1].toFixed(3),
@@ -504,6 +570,8 @@ function updateLineOption(){
 async function clear_all(){
   // groupMap.clear();
   myChart.clear();
+  chartIsInit = false;
+  console.log("清除全部数据")
   // myChart.setOption({ //本来想把这个封装到updateLineOption里面的，发现默认值给action是merge还是replace都不行。
   //   //function updateLineOption(action: any='replace或者merge')无法更新位置
   //   graphic: lineData.value.map(function (item) {
@@ -531,6 +599,9 @@ async function query_graphic(){
   try {
     const res = await invoke<Graphic[]>('query_graphic_by_code', { code: code }); // 使用 await 等待 invoke 完成
     console.log("查到了图形数据",res);
+    if (res.length===0){
+      return;
+    }
     graphicData.value = res;
     handleGraphicData();
   } catch (err) {
@@ -540,44 +611,47 @@ async function query_graphic(){
 async function query_stocks_day_k_limit(){
   try {
     const data = await invoke<StockData[]>('query_stocks_day_k_limit', { code: code }); // 使用 await 等待 invoke 完成
-    const liveData = await invoke<StockLiveData>('query_live_stock_data_by_code', { code: code }); // 使用 await 等待 invoke 完成
-    const leastData = {
-      date:nowDate,
-      open:liveData.open,
-      close:liveData.price,
-      high:liveData.high,
-      low:liveData.low,
-      vol:liveData.volume,
-      ma5:liveData.ma5,
-      ma10:liveData.ma10,
-      ma20:liveData.ma20,
-      ma60:liveData.ma60,
+    if (data[0].date!=nowDate){
+      const liveData = await invoke<StockLiveData>('query_live_stock_data_by_code', { code: code }); // 使用 await 等待 invoke 完成
+      const leastData = {
+        date:nowDate,
+        open:liveData.open,
+        close:liveData.price,
+        high:liveData.high,
+        low:liveData.low,
+        vol:liveData.volume,
+        ma5:liveData.ma5,
+        ma10:liveData.ma10,
+        ma20:liveData.ma20,
+        ma60:liveData.ma60,
+      }
+      data.unshift(leastData)
     }
-    console.log("最新数据",leastData);
-    data.unshift(leastData)
-    rawData.value = data.reverse(); // 处理查询到的数据
-    myChart.setOption(init_option())
     console.log("查到了K线数据",data);
+    rawData.value = data.reverse(); // 处理查询到的数据
+    myChart.setOption(init_option(),true);
+    myChart.resize();
+    chartIsInit = true;
     return;
     // myChart.hideLoading();
   } catch (err) {
     console.log(err);
   }
 }
-async function query_least_stock_data(){
-  try {
-    const res = await invoke<StockData>('query_live_stock_data_by_code', { code: code }); // 使用 await 等待 invoke 完成
-    console.log("查到了最新K线数据",res);
-    const liveDataRecord: Record<string, StockLiveData> = {
-      [code]: res
-    };
-    updateLiveData(liveDataRecord);
-    return res;
-    // myChart.hideLoading();
-  } catch (err) {
-    console.log(err);
-  }
-}
+// async function query_least_stock_data(){
+//   try {
+//     const res = await invoke<StockData>('query_live_stock_data_by_code', { code: code }); // 使用 await 等待 invoke 完成
+//     console.log("查到了最新K线数据",res);
+//     const liveDataRecord: Record<string, StockLiveData> = {
+//       [code]: res
+//     };
+//     updateLiveData(liveDataRecord);
+//     return res;
+//     // myChart.hideLoading();
+//   } catch (err) {
+//     console.log(err);
+//   }
+// }
 function save_graphic(){
   let data = graphicData.value;
   console.log("保存图形",data);
@@ -588,15 +662,53 @@ function save_graphic(){
     console.log("保存图形失败",err);
   });
 }
+function wheelChangeCode(event: WheelEvent){
+  const deltaY = event.deltaY; // 滚动的垂直距离
+  debouncedFunction(deltaY)
+}
+function unlockZoom(event:KeyboardEvent){
+  if (event.ctrlKey) {
+    if (!isCtrlPressed){
+      isCtrlPressed = true;
+      setZoomLock(false);
+    }
+  }
+}
+//键盘抬起锁上放缩
+function lockZoom(event:KeyboardEvent){
+  if (event.key === 'Control') {
+    if (isCtrlPressed){
+      isCtrlPressed = false;
+      setZoomLock(true);
+    }
+  }
+}
+//为true的时候无法进行图表缩放，但是可以监听到鼠标滚动事件
+function setZoomLock(flag:boolean){
+  console.log("设置图表缩放锁定",flag)
+  myChart.setOption({
+    dataZoom: [
+      {
+        type: 'inside',
+        xAxisIndex: [0, 1],
+        zoomLock: flag
+      },
+    ],
+  })
+}
 async function scrollEvent(deltaY:number){
+  if (inputVisible.value){ //当显示输入框时，不响应滚动事件
+    return;
+  }
   //打印下面的信息
-  console.log("滚动事件",store.stockinfoG?.code,store.stockinfoGs);
-  let index = store.stockinfoGs.findIndex((item)=>item.code==store.stockinfoG?.code)
+  // console.log("滚动事件",store.stockinfoG?.code,store.stockinfoGs);
+  let index = store.stockinfoGs.findIndex((item)=>item.code==store.stockinfoG?.code);
   if (index !== -1) {
     if (deltaY > 0) {
       // 向下滚动
       if (index === store.stockinfoGs.length - 1) {
         // 如果当前是最后一个元素，则回到第一个元素
+        successNotification("第一个");
         store.stockinfoG = store.stockinfoGs[0];
       } else {
         // 否则滚动到下一个元素
@@ -617,7 +729,7 @@ async function scrollEvent(deltaY:number){
     // myChart.showLoading();
     await updateChart();
   } else {
-    console.log('stockinfoG不在stockinfoGs数组中');
+    console.log('stockinfoG不在stockinfoGs数组中',code,store.stockinfoGs);
   }
 }
 
@@ -633,9 +745,10 @@ function handlePaint(state: PaintState){
     myChart.getZr().off('click', clickHandler);
     myChart.getZr().off('mousemove', hoverHandler);
   }else {
-    if (state==PaintState.HLS||state==PaintState.PHLS||state==PaintState.LS){
-      myChart.getZr().on('mousemove', hoverHandler);
-    }
+    // if (state==PaintState.HLS||state==PaintState.PHLS||state==PaintState.LS){
+    //   myChart.getZr().on('mousemove', hoverHandler);
+    // }
+    myChart.getZr().on('mousemove', hoverHandler);
     myChart.getZr().on('click', clickHandler);
   }
 }
@@ -643,19 +756,33 @@ const hoverHandler = function (params: any) {
   const pointInPixel = [params.offsetX, params.offsetY];
   let zr = myChart.getZr();
   if (myChart.containPixel('grid',pointInPixel)) {
-    zr.remove(line);
-    // let hoverPoint = myChart.convertFromPixel({seriesIndex: 0}, pointInPixel);
-    if(currentCount==1){
-      if (paintState==PaintState.HL||paintState==PaintState.HLS||paintState==PaintState.PHL||paintState==PaintState.PHLS){
-        line = get_line(start,[pointInPixel[0],start[1]])
-      }else if (paintState==PaintState.LS){
-        line = get_line(start,pointInPixel)
+    if (paintState==PaintState.Text){
+      zr.setCursorStyle('text')
+    }else {
+      zr.setCursorStyle('crosshair')
+      if(currentCount==1){
+        zr.remove(line);
+        if (paintState==PaintState.HL||paintState==PaintState.HLS||paintState==PaintState.PHL||paintState==PaintState.PHLS){
+          line = get_line(start,[pointInPixel[0],start[1]])
+        }else if (paintState==PaintState.LS){
+          line = get_line(start,pointInPixel)
+        }
+        zr.add(line)
       }
-      zr.add(line)
     }
+    // zr.remove(line);
+    // zr.setCursorStyle('text')
+    // if(currentCount==1){
+    //   if (paintState==PaintState.HL||paintState==PaintState.HLS||paintState==PaintState.PHL||paintState==PaintState.PHLS){
+    //     line = get_line(start,[pointInPixel[0],start[1]])
+    //   }else if (paintState==PaintState.LS){
+    //     line = get_line(start,pointInPixel)
+    //   }
+    //   zr.add(line)
+    // }
   }
 };
-const clickHandler = function (params: any) {
+const clickHandler = async function (params: any) {
   console.log("绘制状态",paintState)
   const pointInPixel = [params.offsetX, params.offsetY];
   if (myChart.containPixel('grid',pointInPixel)) {
@@ -663,7 +790,16 @@ const clickHandler = function (params: any) {
     if (currentCount==0){
       console.log("绘制第一个点")
       start = pointInPixel;
-      currentCount = 1;
+      if (paintState==PaintState.Text){
+        inputVisible.value = true;
+        await nextTick();
+        await nextTick();
+        if(inputRef.value){
+          inputRef.value.focus();
+        }
+      }else {
+        currentCount = 1;
+      }
     }else if (currentCount == 1){
       if (paintState==PaintState.HL||paintState==PaintState.HLS||paintState==PaintState.PHL||paintState==PaintState.PHLS){
         console.log("绘制水平线段")
@@ -712,10 +848,35 @@ const clickHandler = function (params: any) {
         })
       }
       handleNewGraphicData();
+      myChart.getZr().remove(line);
       currentCount = 0;
     }
   }
 };
+function newText(){
+  const text = inputValue.value;
+  if (text.length!=0){
+    let startPointData = myChart.convertFromPixel({seriesIndex: 0},[start[0], start[1]]);
+    let groupId = generateId();
+    // graphicData.value.push({
+    newGraphicData.push({
+      group_id: groupId,
+      code: code,
+      id: generateId(),
+      graphic_type: "text",
+      start: startPointData,
+      end: [0,0],
+      content: text,
+      style:{
+        color:newTextColor.value,
+        size:newTextFontSize.value,
+      }
+    });
+    handleNewGraphicData();
+  }
+  inputValue.value = "";
+  inputVisible.value = false
+}
 function get_line(start:number[],end:number[]){
   return new echarts.graphic.Line({
     shape:{
@@ -902,7 +1063,7 @@ function init_option(){
       {
         type: 'inside',
         xAxisIndex: [0, 1],
-        start: 90,
+        start: 80,
         end: 100,
         zoomOnMouseWheel: "ctrl",// 启用鼠标滚轮触发缩放
         zoomLock: true
@@ -1073,33 +1234,118 @@ async function showPaintTool(){
   const appWindow = WebviewWindow.getByLabel('tool')
   await appWindow?.show()
 }
-const isPointer = ref(true)
 
-function deleteGraphic(){
+// function deleteGraphic(id:string){
+//   invoke('delete_graphic_by_id',{id:id}).then(()=>{
+//     successNotification("删除成功");
+//     //从列表中删除id为id的图形
+//     const index = graphicData.value.findIndex((item:any)=>item.id === id);
+//     if (index !== -1) {
+//       graphicData.value.splice(index, 1);
+//     }
+//   }).catch((e)=>{
+//     errorNotification(e.toString())
+//   })
+// }
+function deleteGroupGraphic(group_id:string){
+  invoke('delete_graphic_by_group_id',{groupId:group_id}).then(()=>{
+    successNotification("删除成功");
+    //从列表中删除所有group_id为group_id的图形
+    console.log("删除前",group_id,graphicData.value)
+    const deleteGraphics = graphicData.value.filter((item:any)=>item.group_id === group_id);
+    myChart.setOption({ //本来想把这个封装到updateLineOption里面的，发现默认值给action是merge还是replace都不行。
+      //function updateLineOption(action: any='replace或者merge')无法更新位置
+      graphic: deleteGraphics.map(function (item) {
+        if (item.graphic_type==="line"){
+          return {
+            id:item.id,
+            type: 'line',
+            $action: 'remove',
+          }
+        }else if(item.graphic_type==="text"){
+          return {
+            type:"text",
+            id: item.id,
+            $action: 'remove',
+          }
+        }
+      })
+    });
+    graphicData.value = graphicData.value.filter((item:any)=>item.group_id !== group_id);
+    console.log("删除后",graphicData.value)
+
+    // if(group_id === ""){
+    //   //从列表中删除所有group_id为group_id的图形
+    //   graphicData.value = graphicData.value.filter((item:any)=>item.group_id !== group_id);
+    // }
+  }).catch((e)=>{
+    errorNotification(e.toString())
+  })
 }
 </script>
 
 <template>
-  <div id="main" ref="chart" :class="{ pointer: isPointer }" class="candle-chart-container" style="border: #9d6a09 1px solid "></div>
+  <div id="main" ref="chart"  class="candle-chart-container" ></div>
   <context-menu
-      v-model:show="show"
+      v-model:show="contextMenuShow"
       :options="options"
   >
-    <context-menu-item label="删除当前图形" @click="deleteGraphic" />
-    <context-menu-item label="删除当前组全部图形" @click="deleteGraphic" />
+    <context-menu-item label="编辑此图形" @click="" />
     <context-menu-item label="管理所有图形" @click="" />
+    <context-menu-sperator />
+<!--    <context-menu-item label="删除当前图形" @click="deleteGraphic(options.id)" />-->
+    <context-menu-item label="删除当前组全部图形" @click="deleteGroupGraphic(options.group_id)" />
     <!--      <context-menu-group label="Menu with child">-->
     <!--        <context-menu-item label="删除" @click="onMenuClick(2)" />-->
     <!--        <context-menu-item label="Item2" @click="onMenuClick(3)" />-->
     <!--      </context-menu-group>-->
   </context-menu>
+  <el-dialog v-model="inputVisible" :show-close="false" draggable="true" width="400" align-center style="padding: 0">
+    <template #header="{ }">
+      <div class="my-header">
+        <label style="font-size: 14px;margin-left: 15px;font-family:sans-serif">添加文本</label>
+        <inline-svg src="../assets/svg/close.svg" class="small-close"  @click.left="inputVisible=false"></inline-svg>
+      </div>
+    </template>
+    <div style="margin: 20px">
+      <el-input v-model="inputValue" ref="inputRef" placeholder="请输入文字内容"  type="textarea" rows="3" clearable ></el-input>
+      <div style="margin-top: 20px">
+        <label>颜色</label><el-color-picker v-model="newTextColor" />
+        <label style="margin-left: 20px" >大小</label><el-input-number v-model="newTextFontSize" :min="9" :max="25" style="margin-left: 10px;width: 110px"/>
+      </div>
+    </div>
+    <div class="dialog-footer right" style="margin-top: 20px">
+      <el-button class="dialog-button" @click="inputVisible=false">取消</el-button>
+      <el-button class="dialog-button dialog-confirm" type="primary" @click="newText">
+        确定
+      </el-button>
+    </div>
+  </el-dialog>
+<!--  <el-dialog v-model="inputVisible" :show-close="false" width="400" align-center>-->
+<!--&lt;!&ndash;    <div class="text-input-container"></div>&ndash;&gt;-->
+<!--    <el-input v-model="inputValue" ref="inputRef" placeholder="请输入文字内容(按回车确认)" @keydown.enter.prevent="newText" type="textarea" rows="3" clearable ></el-input>-->
+<!--    <div style="margin-top: 20px">-->
+<!--      <label>颜色</label><el-color-picker v-model="newTextColor" />-->
+<!--      <label style="margin-left: 20px" >大小</label><el-input-number v-model="newTextFontSize" :min="9" :max="25" style="margin-left: 10px;width: 110px"/>-->
+<!--    </div>-->
+<!--  </el-dialog>-->
 </template>
 
 <style >
+.dialog-button{
+  height: 25px;
+  width: 35px;
+  font-size: 13px;
+  background: rgba(229, 219, 219, 0.85);
+  color:black;
+  font-weight: bold;
+  border-color: #9170b000;
+}
+
 .candle-chart-container{
   width: 85%;
   height: 100%;
-  border: #535bf2 1px solid;
+  border: #f25378 1px solid;
 }
 .tip{
   font-family:"Adobe 黑体 Std R",serif;
@@ -1110,6 +1356,9 @@ function deleteGraphic(){
   width: 110px;
   background-color: #ecece498;
 }
+.el-color-picker{
+  margin-left: 10px;
+}
 .red-label {
   color: red;
 }
@@ -1117,10 +1366,10 @@ function deleteGraphic(){
 .green-label {
   color: green;
 }
-.pointer {
-  cursor: not-allowed;
-}
 .black-label {
   color: black;
 }
+/*.el-dialog__header{
+  display: none;
+}*/
 </style>

@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import {StockInfoG} from "../../type.ts";
-import {store} from "../../store.ts";
-import CandleChartNewNew from "../CandleChartNewNew.vue";
 import Detail from "./Detail.vue";
 import NewNewCandleChart from "../NewNewCandleChart.vue";
 
@@ -16,8 +13,8 @@ import NewNewCandleChart from "../NewNewCandleChart.vue";
 <template>
   <div class="detail-container">
 <!--    <CandleChartNewNew></CandleChartNewNew>-->
-    <NewNewCandleChart></NewNewCandleChart>
-    <Detail></Detail>
+    <NewNewCandleChart class="chart-container"></NewNewCandleChart>
+    <Detail class="info-container"></Detail>
   </div>
 </template>
 
@@ -26,6 +23,14 @@ import NewNewCandleChart from "../NewNewCandleChart.vue";
   display: flex;
   flex-direction: row;
   height: 100%;
+  width: 100%;
   border: #24c8db 1px solid;
+}
+.chart-container{
+  flex: 4; /* 宽度上占据4份 */
+}
+.info-container{
+  flex: 1;
+  padding: 1em;
 }
 </style>

@@ -1,3 +1,5 @@
+// import {ElNotification} from "element-plus";
+
 import {ElNotification} from "element-plus";
 
 function debounce<T extends (...args: any[]) => any>(
@@ -6,7 +8,7 @@ function debounce<T extends (...args: any[]) => any>(
     isFirstExecutionImmediate: boolean = false
 ): (...args: Parameters<T>) => void {
     let timer: number | null = null;
-    let firstExecutionHappened = false;
+    // let firstExecutionHappened = false;
 
     return function (...args: Parameters<T>): void {
         const context = this;
@@ -51,12 +53,21 @@ function generateId(): string {
 
     return paddedId;
 }
-// const successNotification = (content:string) => {
-//     ElNotification({
-//         title: 'Success',
-//         message: content,
-//         type: 'success',
-//         position: 'bottom-right',
-//     })
-// }
-export { debounce, generateId};
+const successNotification = (content:string) => {
+    ElNotification({
+        title: 'Success',
+        message: content,
+        type: 'success',
+        position: 'bottom-right',
+    })
+}
+const errorNotification = (content:string) => {
+    ElNotification({
+        title: 'Error',
+        message: content,
+        type: 'error',
+        position: 'bottom-right',
+        duration: 0,
+    })
+}
+export { debounce, generateId,successNotification,errorNotification};

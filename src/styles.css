@@ -19,7 +19,13 @@
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
 }
-
+/* 我后来随便加的 ：https://zhuanlan.zhihu.com/p/677492706?utm_psn=1768373613344706563*/
+.html,body{
+  margin: 0;
+  /* 禁止 html,body 滚动，避免滚动条出现在标题栏右边 */
+  overflow: hidden;
+  height: 100%;
+}
 .container {
   margin: 0;
   /*padding-top: 10vh;*/
@@ -33,6 +39,7 @@
   display: flex;
   flex-direction: row;
   justify-content: center;
+  align-items: center;
   gap: 20px;
 }
 .column{
@@ -105,4 +112,49 @@ button {
   button:active {
     background-color: #0f0f0f69;
   }
+}
+
+.el-dialog{
+  padding: 0;
+}
+.my-header {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center; /* 使得容器内的子元素垂直居中 */
+  gap: 16px;
+  background-color: #d3bfa0;
+}
+.small-close path{
+  transform: scale(0.5);
+  transform-origin: center;
+  stroke-width: 20;
+  stroke: #30312b;
+  fill: #30312b;
+}
+.small-close:hover{
+  border-radius: 5px;
+  cursor: pointer;
+}
+.small-close:hover path{
+  fill: white;
+  stroke: white;
+}
+.dialog-button{
+  height: 25px;
+  width: 35px;
+  font-size: 13px;
+  background: rgba(229, 219, 219, 0.85);
+  color:black;
+  font-weight: bold;
+  border-color: #9170b000;
+}
+.dialog-confirm{
+  color: #9d6a09;
+}
+.right{
+  display: flex;
+  justify-content: right;
+  margin-right: 10px;
+  margin-bottom: 10px;
 }

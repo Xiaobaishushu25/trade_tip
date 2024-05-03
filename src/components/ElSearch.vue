@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref} from "vue";
 import {invoke} from "@tauri-apps/api/core";
-import StockGroupSelect from "./group/StockGroupSelect.vue";
 import StockGroupMange from "./group/StockGroupMange.vue";
 
 const keyWord = ref("")
@@ -47,7 +46,8 @@ const hideDialog = (ok: boolean) => {
   >
     <template #suffix>
       <!--        <inline-svg src="./src/assets/svg/A.svg"></inline-svg>-->
-      <inline-svg src="./src/assets/svg/search.svg" class="min-icon" @click="console.log(1)"></inline-svg>
+<!--      <inline-svg src="./src/assets/svg/search.svg" class="min-icon" @click="console.log(1)"></inline-svg>-->
+      <inline-svg src="../assets/svg/search.svg" class="min-icon" @click="console.log(1)"></inline-svg>
       <!--        <inline-svg :src="require('../assets/A.svg')"></inline-svg>-->
     </template>
     <template #default="{ item }">
@@ -56,7 +56,7 @@ const hideDialog = (ok: boolean) => {
         <div class="tag">{{item.securityTypeName }}</div>
         <label>{{ `${item.shortName}(${item.code})` }}</label>
         <inline-svg
-            src="./src/assets/svg/add.svg"
+            src="../assets/svg/add.svg"
             class="min-icon add"
             @click.left="manageGroup(item.code,item.shortName)"
         ></inline-svg>

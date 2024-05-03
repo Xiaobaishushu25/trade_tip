@@ -3,10 +3,10 @@ import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {watch, ref} from "vue";
 import {invoke} from "@tauri-apps/api/core";
 import {store} from "../store.ts"
-import Search from "./Search.vue";
 import ElSearch from "./ElSearch.vue";
-import {onBeforeRouteLeave, useRouter} from "vue-router";
-// const max_state_name = ref('window-maximize')
+import { useRouter} from "vue-router";
+// import { saveWindowState, StateFlags } from '@tauri-apps/plugin-window-state';
+
 const router = useRouter()
 const max_state_name = ref('maximize')
 const live_name = ref('stop')
@@ -33,6 +33,7 @@ async function changeUpdateState(){
   live_state.value = !live_state.value;
 }
 async function window_minimize(){
+  console.log("窗口是",await WebviewWindow.getCurrent().isResizable());
   await WebviewWindow.getCurrent().minimize()
 }
 function window_maximize(){
@@ -40,7 +41,12 @@ function window_maximize(){
 }
 async function window_close(){
   // await WebviewWindow.getCurrent().hide()
-  await WebviewWindow.getCurrent().close()
+  // 从 ALL 中排除 VISIBLE
+  // const ALL_WITHOUT_VISIBLE = StateFlags.ALL & ~StateFlags.VISIBLE;
+  // await saveWindowState(ALL_WITHOUT_VISIBLE);
+  console.log("退出程序")
+  await invoke('exit_app', {})
+  await WebviewWindow.getCurrent().close();
   // await appWindow.close()
 }
 function back(){
@@ -51,15 +57,20 @@ function back(){
 <template>
   <div  data-tauri-drag-region class="titlebar"  >
 <!--    <Search></Search>-->
+    <img src="../assets/icon.png" width="25" height="25" alt="Logo Image" style="margin-left: 5px;margin-right: 10px">
     <ElSearch></ElSearch>
     <div id="stage-button">
-      <inline-svg :src="`./src/assets/svg/${live_name}.svg`" class="window-button back" @click.left="changeUpdateState"></inline-svg>
-      <inline-svg src="./src/assets/svg/back.svg" class="window-button back" @click.left="back()"></inline-svg>
-      <inline-svg src="./src/assets/svg/minimize.svg" class="window-button min" @click.left="window_minimize"></inline-svg>
-      <inline-svg :src="`./src/assets/svg/${max_state_name}.svg`" :class="`window-button ${max_state_name}`" @click.left="window_maximize" ></inline-svg>
-<!--      <inline-svg src="./src/assets/svg/max.svg" class="window-button max"></inline-svg>-->
-      <!--      <inline-svg src="./src/assets/svg/restore.svg" class="window-button restore"></inline-svg>-->
-      <inline-svg src="./src/assets/svg/close.svg" class="window-button close"  @click.left="window_close"></inline-svg>
+      <inline-svg :src="`../assets/svg/${live_name}.svg`" class="window-button back" @click.left="changeUpdateState"></inline-svg>
+      <inline-svg src="../assets/svg/back.svg" class="window-button back" @click.left="back()"></inline-svg>
+      <inline-svg src="../assets/svg/minimize.svg" class="window-button min" @click.left="window_minimize"></inline-svg>
+      <inline-svg :src="`../assets/svg/${max_state_name}.svg`" :class="`window-button ${max_state_name}`" @click.left="window_maximize" ></inline-svg>
+      <inline-svg src="../assets/svg/close.svg" class="window-button close"  @click.left="window_close"></inline-svg>
+<!--      <inline-svg :src="`./src/assets/svg/${live_name}.svg`" class="window-button back" @click.left="changeUpdateState"></inline-svg>-->
+<!--      <inline-svg src="../assets/svg/back.svg" class="window-button back" @click.left="back()"></inline-svg>-->
+<!--      <inline-svg src="./src/assets/svg/back.svg" class="window-button back" @click.left="back()"></inline-svg>-->
+<!--      <inline-svg src="./src/assets/svg/minimize.svg" class="window-button min" @click.left="window_minimize"></inline-svg>-->
+<!--      <inline-svg :src="`./src/assets/svg/${max_state_name}.svg`" :class="`window-button ${max_state_name}`" @click.left="window_maximize" ></inline-svg>-->
+<!--      <inline-svg src="./src/assets/svg/close.svg" class="window-button close"  @click.left="window_close"></inline-svg>-->
     </div>
   </div>
 </template>

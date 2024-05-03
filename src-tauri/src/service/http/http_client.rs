@@ -30,11 +30,6 @@ impl HttpRequest {
         let result = self.client.get(url).headers(self.header_map.clone()).send().await?;
         Ok(result)
     }
-    pub async fn post(&self,url:&str,json:&serde_json::Value)->AppResult<reqwest::Response> {
-        info!("发起post请求:{}",url);
-        let result = self.client.post(url).headers(self.header_map.clone()).json(json).send().await?;
-        Ok(result)
-    }
     ///注意，这个接口返回的数据只有5、10、20、30日均线的数据。
     /// 注意：获取的数据是按照日期从旧到新排列的
     /// num是一共需要获取的数据条数

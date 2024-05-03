@@ -13,10 +13,12 @@ use std::collections::HashMap;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use log::{error, info};
+use tauri::Manager;
+// use tauri_plugin_window_state::{StateFlags, WindowExt};
 use tokio::task::JoinHandle;
 use crate::app_errors::AppResult;
 use crate::entities::init_db_coon;
-use crate::service::command::tauri_command::{add_stock_info, get_response, query_all_groups, query_groups_by_code, query_stock_info, query_stocks_by_group_name, create_group, update_stock_groups, remove_stock_from_group, update_stock_hold, query_stocks_day_k_limit, query_live_stocks_data,update_live_state,query_graphic_by_code,save_graphic,query_box,query_live_stock_data_by_code};
+use crate::service::command::tauri_command::{add_stock_info, get_response, query_all_groups, query_groups_by_code, query_stock_info, query_stocks_by_group_name, create_group,delete_group, update_stock_groups, remove_stock_from_group, update_stock_hold, query_stocks_day_k_limit, query_live_stocks_data, update_live_state, query_graphic_by_code, save_graphic, query_box, query_live_stock_data_by_code, delete_graphic_by_id, delete_graphic_by_group_id, exit_app, update_groups};
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
 use crate::service::curd::update_all_day_k;
@@ -35,6 +37,7 @@ impl MyState{
         let result = get_close_prices(None).await;
         let close_prices = match result {
             Ok(data) => {
+                info!("初始化缓存成功");
                 data
             }
             Err(e) => {
@@ -81,21 +84,49 @@ pub async fn get_close_prices(single_code:Option<&str>) ->AppResult<HashMap<Stri
 async fn main() {
     init_app().await;
     tokio::spawn(async {
+        info!("update start");
         update().await;
     });
     // init_app().await;
     let state = MyState::new().await;
+    info!("ui start");
+    
     tauri::Builder::default()
         // .manage(MyState{task:Mutex::new(None)})
         .manage(state)
         // .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
-        // .setup(|app|{
-        //     let window = tauri::window::WindowBuilder::new(app, "tool")
-        //         .build()?;
-        //     Ok(())
-        // })
+        // .plugin(tauri_plugin_window_state::Builder::default().build())
+        .setup(|app|{
+            // let window = tauri::window::WindowBuilder::new(app, "tool")
+            //     .build()?;
+            // app.get_window("main").
+            // let main_window = app.get_window("main").unwrap();
+            // let tool_window = app.get_window("tool").unwrap();
+            // let main_window = app.get_webview_window("main").unwrap().get_window();
+            tokio::spawn(async move{
+                // if result.is_err(){
+                //     error!("restore state error:{}",result.err().unwrap().to_string());
+                // };
+                // main_window.show().unwrap();
+                // let mut result = tool_window.restore_state(StateFlags::all());
+                // if result.is_err(){
+                //     error!("restore state error:{}",result.err().unwrap().to_string());
+                // };
+            });
+            // let result = main_window.restore_state(StateFlags::all());
+            // if result.is_err(){
+            //     error!("restore state error:{}",result.err().unwrap().to_string());
+            // }
+            // let main_window = app.get_window("tool").unwrap();
+            // // let main_window = app.get_webview_window("main").unwrap().get_window();
+            // let result = main_window.restore_state(StateFlags::all());
+            // if result.is_err(){
+            //     error!("restore state error:{}",result.err().unwrap().to_string());
+            // }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             get_response,
             add_stock_info,
@@ -104,6 +135,7 @@ async fn main() {
             query_stocks_by_group_name,
             query_groups_by_code,
             create_group,
+            delete_group,
             update_stock_groups,
             remove_stock_from_group,
             update_stock_hold,
@@ -113,10 +145,15 @@ async fn main() {
             update_live_state,
             query_graphic_by_code,
             save_graphic,
-            query_box
+            query_box,
+            delete_graphic_by_id,
+            delete_graphic_by_group_id,
+            update_groups,
+            exit_app
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+    info!("ui end");
 }
 async fn init_app() {
     log4rs::init_file("./config/log4rs.yaml", Default::default()).unwrap();

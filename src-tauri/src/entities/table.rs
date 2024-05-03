@@ -1,10 +1,12 @@
 use crate::app_errors::AppResult;
 use crate::entities::stock_data::{Column, Entity, TableName};
 use crate::entities::{DB, init_db_coon, stock_group, stock_info};
-use log::info;
+use log::{error, info};
 use sea_orm::sea_query::{ColumnDef, TableCreateStatement};
 use sea_orm::{sea_query, ConnectionTrait, DatabaseConnection, EntityName, EntityTrait, ExecResult, Statement, Schema};
-use crate::entities::prelude::{Graphics, GroupStockRs};
+use crate::entities::group_stock_relation::Relation::StockInfos;
+use crate::entities::prelude::{Graphics, GroupStockRs, StockGroups};
+use crate::service::curd::stock_group_curd::StockGroupCurd;
 
 // use std::env;
 // use sea_query::{ColumnDef, Iden, SqliteQueryBuilder, Table, Value};
@@ -127,8 +129,8 @@ async fn create_table<E>(db_connection: &sea_orm::DatabaseConnection, entity: E)
     let schema = Schema::new(backend);
     let execution = db_connection.execute(backend.build(&schema.create_table_from_entity(entity)));
     match execution.await {
-        Ok(_) => println!("Created {}", entity.table_name()),
-        Err(e) => println!("Error: {}", e),
+        Ok(_) => info!("Created {}", entity.table_name()),
+        Err(e) => error!("Error: {}", e),
     }
 }
 ///https://github.com/SeaQL/sea-orm/issues/1399
@@ -165,6 +167,13 @@ where
     //     Ok(_) => println!("Deleted {}", entity.table_name()),
     //     Err(e) => println!("Error: {}", e),
     // }
+}
+pub async fn create_all_need_table(db:&DatabaseConnection){
+    let _ = create_table(db, stock_info::Entity).await;
+    let _ = create_table(db, Graphics).await;
+    let _ = create_table(db, StockGroups).await;
+    let _ = create_table(db, GroupStockRs).await;
+    let _ = StockGroupCurd::insert_init(db).await.unwrap();
 }
 #[tokio::test]
 async fn test_create_table_with_dyn_name() {

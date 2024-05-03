@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import {nextTick, onMounted, ref, watch} from "vue";
-import {StockInfoG, StockLiveData} from "../type.ts";
+import {nextTick, onMounted, ref, watch,onBeforeUnmount,reactive} from "vue";
+import {rowData, StockInfoG, StockLiveData} from "../type.ts";
 import {invoke} from "@tauri-apps/api/core";
 import {listen} from "@tauri-apps/api/event";
 import StockGroupMange from "./group/StockGroupMange.vue";
 import {useRouter} from "vue-router";
 import {store} from "../store.ts";
-import {ElNotification} from "element-plus";
+import {errorNotification, successNotification} from "../utils.ts";
 
 // defineProps<{groupName: string, stocks:StockInfoG[]}>({
 const props = defineProps({
@@ -22,23 +22,28 @@ const props = defineProps({
     type: String,
     required: true
   }
-  // stock_codes: {
-  //   type: Array as PropType<string[]>,
-  //   required: true
-  // }
-  // stocks: {
-  //   type: Array as PropType<StockInfoG[]>,
-  //   required: true
-  // }
 })
-//
+// interface rowData{
+//   code:string,
+//   price:number,
+//   ma:string,
+//   box:string,
+//   change:string,
+//   breathClass:string,
+//   advise:string
+// }
+
 const router = useRouter()
 const table = ref()
-const show = ref(false)
 const StockInfoGs = ref<StockInfoG[]>([]);
 const nowSelectStock = ref<StockInfoG>();
+// const rowDataMap:Map<string,rowData> = new Map();
+const rowDataMap = reactive<Map<string,rowData>>(new Map()); // 使用reactive创建响应式Map
 const tableHeight = ref();
 const showGroupManage = ref(false);
+const contextMenuShow = ref(false)
+
+
 const options = {
   // theme: 'win10 dark',
   name:"",
@@ -47,6 +52,25 @@ const options = {
   x: 500,
   y: 200
 }
+
+watch(()=>store.isBlur,(newValue)=>{
+  if (newValue){
+    contextMenuShow.value = false;
+  }
+});
+watch(
+    () => Array.from(rowDataMap.entries()),
+    (newEntries) => {
+      if (props.activeName===props.groupName){
+        store.rowData.clear(); // 清空旧的Map数据
+        newEntries.forEach(([key, value]) => {
+          store.rowData.set(key, value);
+        });
+      }
+    },
+    { deep: true } // 因为我们关心Map内部的变化
+);
+
 // watch(groupName, (newValue, oldValue) => {
 //   console.log(newValue, oldValue)
 // })
@@ -67,11 +91,13 @@ watch(() => props.stocks_change, (_) => {
 });
 onMounted(() => {
   console.log(props.groupName)
+  calculateTableHeight();
   updateStockInfoG();
   // window.addEventListener('resize',getHeight)
-  window.addEventListener('blur', ()=>{
-    show.value = false;
-  })
+  // window.addEventListener('blur', ()=>{
+  //   show.value = false;
+  // })
+  window.addEventListener('resize', calculateTableHeight);
   // invoke("query_live_stocks_data",{groupName:props.groupName}).catch(err => {
   //   console.log(err);
   // })
@@ -88,10 +114,30 @@ onMounted(() => {
   //   console.log("窗口失去焦点后",show.value)
   // });
 })
+onBeforeUnmount(()=> {
+  window.removeEventListener('resize', calculateTableHeight);
+})
+// beforeDestroy() {
+//   window.removeEventListener('resize', this.calculateTableHeight);
+// },
 //用于更新数据
 function updateStockInfoG() {
   invoke<StockInfoG[]>("query_stocks_by_group_name", {name: props.groupName}).then(res => {
     StockInfoGs.value = res;
+    //这个函数每个tab里的table都会执行，所以要根据是否是当前选中的的tab来更新数据
+    if (props.activeName===props.groupName){
+      store.stockinfoGs = res;
+    }
+    rowDataMap.clear();
+    // store.stockinfoGs.forEach(item => {
+    res.forEach(item => {
+      rowDataMap.set(item.code,{
+        code:item.code, box: "", change: "", ma: "", price: 0.0,
+        breathClass:"", advise: ["normal",""]
+      });
+    });
+    console.log("给全局状态赋值",store.stockinfoGs)
+    // console.log("初始化的",rowDataMap)
   }).catch(err => {
     console.log(err);
   })
@@ -105,13 +151,17 @@ function getColor(percent:number){
     return 'black'; // 黑色
   }
 }
-async function getHeight(){
-  await nextTick();
-  // window.innerHeight 浏览器窗口的可见高度，下面的 220 是除了table最大高度的剩余空间。
-  console.log(1111,window.innerHeight);
-  console.log(tableHeight.value)
-  tableHeight.value = window.innerHeight  - 220;
-  // tableHeight.value = window.innerHeight - table.value.offsetHeight - 220;
+// async function getHeight(){
+//   await nextTick();
+//   // window.innerHeight 浏览器窗口的可见高度，下面的 220 是除了table最大高度的剩余空间。
+//   console.log(1111,window.innerHeight);
+//   console.log(tableHeight.value)
+//   tableHeight.value = window.innerHeight  - 220;
+//   // tableHeight.value = window.innerHeight - table.value.offsetHeight - 220;
+// }
+function calculateTableHeight() {
+  // 计算表格高度，假设您希望表格高度为视口高度减去 100px
+  tableHeight.value = `${window.innerHeight - 100}px`;
 }
 function showContextMenu(row: StockInfoG, _: any, e: MouseEvent) {
   nowSelectStock.value = row;
@@ -121,18 +171,68 @@ function showContextMenu(row: StockInfoG, _: any, e: MouseEvent) {
   options.y = e.y;
   options.code = row.code;
   options.name = row.name;
-  show.value=true
+  contextMenuShow.value=true
 
 }
 // watch(() => show.value, (newValue, oldValue) => {
 //   console.log("show的值变换了"+newValue, oldValue)
 // })
-function updateLiveData(live_data:Record<string, StockLiveData>){
+async function updateLiveData(live_data:Record<string, StockLiveData>){
   //遍历StockInfoGs
   for (let i = 0; i < StockInfoGs.value.length; i++) {
     const element = StockInfoGs.value[i];
-    if (live_data[element.code] != undefined){
-      StockInfoGs.value[i].live_data = live_data[element.code];
+    let code = element.code;
+    if (live_data[code] != undefined){
+      const newPrice = live_data[code].price;
+      const oldPrice = rowDataMap.get(code)!.price;
+      StockInfoGs.value[i].live_data = live_data[code];
+      rowDataMap.get(code)!.price = live_data[code].price;
+      // 根据价格变化设置呼吸灯效果
+      if (newPrice > oldPrice) {
+        await nextTick();
+        rowDataMap.get(code)!.breathClass = 'red-breath';
+        setTimeout(() => {
+          rowDataMap.get(code)!.breathClass = 'no-breath';
+        }, 1000);
+      } else if (newPrice < oldPrice) {
+        await nextTick();
+        rowDataMap.get(code)!.breathClass = 'green-breath';
+        setTimeout(() => {
+          rowDataMap.get(code)!.breathClass = 'no-breath';
+        }, 1000);
+        // 价格降低，显示绿色呼吸灯
+      } else {
+        // 价格未变，不显示呼吸灯
+        // rowDataMap.get(code)!.breathClass = 'green-breath';
+        rowDataMap.get(code)!.breathClass = 'no-breath';
+      }
+    }
+  }
+}
+// function getRowClass(row:StockInfoG){
+//   console.log("get是",rowDataMap.get(row.code)!.breathClass);
+//   return {
+//     // 其他类名...
+//     [rowDataMap.get(row.code)!.breathClass]: true, // 使用方括号语法动态绑定类名
+//   };
+// }
+const getRowClass=({
+  row,
+}:{row:StockInfoG,rowIndex:number})=>{
+  {
+    // 假设rowDataMap是一个响应式引用或全局可访问的变量
+    // 检查rowDataMap是否包含当前行的code
+    // console.log("检查了吗样式",rowDataMap,row.code)
+    if (rowDataMap.has(row.code)) {
+      const breathClass = rowDataMap.get(row.code)!.breathClass; // 使用非空断言，因为我们知道存在该code
+      return {
+        // 其他类名...
+        [breathClass]: true, // 使用方括号语法动态绑定类名
+      };
+    } else {
+      // rowDataMap尚未初始化或当前行的code不存在，返回一个空对象或默认类名
+      console.log("rowDataMap尚未包含", row.code);
+      return {}; // 或者返回一个包含默认类名的对象
     }
   }
 }
@@ -142,7 +242,6 @@ function removeStock(code: string){
       // updateStockInfoG();直接移除就行了，别全部更新了吧
       // StockInfoG.value = StockInfoG.value.filter(item => item.code !== code);
       const index = StockInfoGs.value.findIndex(item => item.code == code);
-      console.log(index)
       if (index !== -1) {
         StockInfoGs.value.splice(index, 1);
       }
@@ -151,15 +250,39 @@ function removeStock(code: string){
     })
   }
 }
+function getAdvise(stock: StockInfoG){
+  let rowData = rowDataMap.get(stock.code);
+  if (rowData!=undefined){
+    if (rowData.ma!="均线空头"&&(rowData.box=="下轨区"||rowData.box=="已突破箱体")){
+      rowDataMap.get(stock.code)!.advise = ["买入","up-tag"];
+      return ["买入","up-tag"]
+    }else if (rowData.ma=="均线空头"&&(rowData.box=="上轨区"||rowData.box=="已跌破箱体")){
+      rowDataMap.get(stock.code)!.advise = ["卖出","down-tag"];
+      return ["卖出","down-tag"]
+    }else {
+      rowDataMap.get(stock.code)!.advise = ["具体分析","normal"];
+      return ["具体分析","normal"]
+    }
+  }
+  // rowDataMap.get(stock.code)?.advise = ["----","normal"];
+  return ["----","normal"];
+}
+const filterAdvise = (value: string, stock: StockInfoG) => {
+  if (value==="买入(未持有)"){
+    return rowDataMap.get(stock.code)!.advise[0]==="买入"&&!stock.hold;
+  }
+  return value===rowDataMap.get(stock.code)!.advise[0];
+}
 function computeBox(stock: StockInfoG){
   let code = stock.code;
   let boxes = store.boxData[code];
   //打印code和对应的boxes
-  // console.log(code,stock.live_data, boxes);
   if (boxes!=undefined&&stock.live_data?.price!=undefined){
-    return comparePriceWithBox(stock.live_data.price, boxes);
+    let box = comparePriceWithBox(stock.live_data.price, boxes);
+    rowDataMap.get(code)!.box = box[0];
+    return box;
   }
-  return "----";
+  return ["----","normal"];
 }
 
 function manageGroup(){
@@ -173,13 +296,8 @@ function clickRow(row: StockInfoG, _: any){
   // store.count = nowSelectStock.value.code
   router.push("/main/detail")
 }
-function openChart(code:string){
-  store.stockinfoG = nowSelectStock.value;
-  router.push("/main/detail")
-}
-function openoldChart(code:string){
-  router.push("/newCandleChart")
-}
+
+
 
 //根据股票code更新是否持有，更新为当前是否持有的反状态
 //如果成功更新成功，更新该股票（当前行）的状态信息，还要通知"持有"分组股票有变化了
@@ -206,23 +324,23 @@ function updateHold(){
     errorNotification(err)
   })
 }
-const successNotification = (content:string) => {
-  ElNotification({
-    title: 'Success',
-    message: content,
-    type: 'success',
-    position: 'bottom-right',
-  })
-}
-const errorNotification = (content:string) => {
-  ElNotification({
-    title: 'Error',
-    message: content,
-    type: 'error',
-    position: 'bottom-right',
-    duration: 0,
-  })
-}
+// const successNotification = (content:string) => {
+//   ElNotification({
+//     title: 'Success',
+//     message: content,
+//     type: 'success',
+//     position: 'bottom-right',
+//   })
+// }
+// const errorNotification = (content:string) => {
+//   ElNotification({
+//     title: 'Error',
+//     message: content,
+//     type: 'error',
+//     position: 'bottom-right',
+//     duration: 0,
+//   })
+// }
 function judgeMaState(stock:StockInfoG){
   if (stock.live_data == undefined){
     return "---";
@@ -231,59 +349,48 @@ function judgeMaState(stock:StockInfoG){
   let ma10 = stock.live_data.ma10;
   let ma20 = stock.live_data.ma20;
   if (ma5 > ma10 && ma10 > ma20) {
-    return ["均线多头","red"];
+    rowDataMap.get(stock.code)!.ma = "均线多头";
+    return ["均线多头","up"];
   } else if (ma20 > ma10 && ma10 > ma5) {
-    return ["均线空头","green"];
+    rowDataMap.get(stock.code)!.ma = "均线空头";
+    return ["均线空头","down"];
   } else {
-    return ["均线缠绕","black"];
+    rowDataMap.get(stock.code)!.ma = "均线缠绕";
+    return ["均线缠绕","normal"];
   }
 }
-function comparePriceWithBox(price: number,boxes:number[]): string {
+function comparePriceWithBox(price: number,boxes:number[]): [string,string] {
   if (price < boxes[0]) {
-    return "已跌破箱体";
+    return ["已跌破箱体","down"];
   } else if (price > boxes[boxes.length - 1]) {
-    return "已突破箱体";
+    return ["已突破箱体","up"];
   }
   for (let i = 0; i < boxes.length - 1; i++) {
     if (price >= boxes[i] && price <= boxes[i + 1]) {
-      // 假设 divideBox 是一个函数，根据价格与支撑位和压力位计算分区信息
-      // 由于您没有提供 divideBox 的实现，这里我们简单地返回价格所在的区间描述
-      // const divideBox = `价格在${boxes[i].toFixed(3)}和${boxes[i + 1].toFixed(3)}之间`;
       // const divideBox = `价格在${boxes[i].toFixed(3)}和${boxes[i + 1].toFixed(3)}之间`;
       return divideBox(price, boxes[i], boxes[i + 1]);
-      // list.push(divideBox);
-      // list.push("支撑位：" + boxes[i].toFixed(3));
-      // list.push("压力位：" + boxes[i + 1].toFixed(3));
-      // return list;
     }
   }
-  // 如果没有找到合适的位置，可以添加一个默认信息或者返回一个空列表
-  // list.push("价格未找到在箱体中的合适位置");
-  // list.push("未知");
-  return "未知";
+  return ["未知","normal"];
 }
-function divideBox(price: number, down: number, up: number): string {
+function divideBox(price: number, down: number, up: number): [string,string] {
   const range = up - down;
   const eachPart = range / 5.0;
 
   const lowerBound = down;
   const middleLowerBound = down + eachPart;
   const middleUpperBound = up - eachPart;
-  // const upperBound = up;
-  //打印下限和上限和中间两个分界线
-  // console.log("现价，下限和上限和中间两个分界线",price,lowerBound,middleLowerBound,middleUpperBound,upperBound);
   if (price >= lowerBound && price <= middleLowerBound) {
-    return "下轨区";
+    return ["下轨区","up"];
   } else if (price > middleLowerBound && price <= middleUpperBound) {
-    return "中轨区";
+    return ["中轨区","normal"];
   } else if (price > middleUpperBound) {
-    return "上轨区";
+    return ["上轨区","down"];
   } else {
-    // 如果价格恰好在中间两个边界上，可以根据需要调整返回的结果
-    // 这里假设它们属于中轨区
-    return "中轨区";
+    return ["中轨区","normal"];
   }
 }
+
 </script>
 
 <template>
@@ -294,6 +401,7 @@ function divideBox(price: number, down: number, up: number): string {
           :data="StockInfoGs"
           style="width: 100%;font-size: 14px"
           :max-height="tableHeight"
+          :row-class-name="getRowClass"
           @row-dblclick="clickRow"
           @row-contextmenu="showContextMenu"
       >
@@ -303,29 +411,48 @@ function divideBox(price: number, down: number, up: number): string {
             <el-text :style="{ color: scope.row.hold ?'orange':'black' }">{{scope.row.name}}</el-text>
           </template>
         </el-table-column>
-        <el-table-column prop="live_data.price" label="现价" >
+        <el-table-column prop="live_data.price" label="现价" sortable>
           <template #default="scope">
             <el-text :style="{color:getColor(scope.row.live_data?.percent),fontSize:'15px'}">{{scope.row.live_data?.price}}</el-text>
           </template>
         </el-table-column>
-        <el-table-column prop="live_data.percent" label="涨跌%" >
+        <el-table-column prop="live_data.percent" label="涨跌%" sortable >
           <template #default="scope">
             <el-text :style="{color:getColor(scope.row.live_data?.percent),fontSize:'15px',fontWeight:'bold'}">{{scope.row.live_data?.percent}}%</el-text>
           </template>
         </el-table-column>
         <el-table-column prop="price" label="均线状态">
           <template #default="scope">
-            <el-text :style="{color:judgeMaState(scope.row)[1],fontSize:'15px',fontWeight:'bold'}" >{{judgeMaState(scope.row)[0]}}</el-text>
+<!--            <el-text :style="{color:judgeMaState(scope.row)[1],fontSize:'15px',fontWeight:'bold'}" >{{judgeMaState(scope.row)[0]}}</el-text>-->
+            <el-text :class="judgeMaState(scope.row)[1]" >{{judgeMaState(scope.row)[0]}}</el-text>
           </template>
         </el-table-column>
         <el-table-column prop="box" label="箱体">
           <template #default="scope">
-            <el-text style="cursor: pointer" @click="openChart(scope.row.code)" >{{computeBox(scope.row)}}</el-text>
+            <el-text :class="computeBox(scope.row)[1]" >{{computeBox(scope.row)[0]}}</el-text>
+          </template>
+        </el-table-column>
+        <el-table-column
+            prop="box"
+            label="操作建议"
+            :filters="[
+        { text: '买入(未持有)', value: '买入(未持有)' },
+        { text: '买入', value: '买入' },
+        { text: '卖出', value: '卖出' },
+      ]"
+            :filter-method="filterAdvise"
+        >
+          <template #default="scope">
+<!--            <div v-let="{ text, styleClass } = getAdvise(scope.row)">-->
+<!--              <el-text :class="styleClass" >{{text}}</el-text>-->
+<!--            </div>-->
+<!--            <el-text :class="getAdvise(scope.row)[1]" >{{getAdvise(scope.row)[0]}}</el-text>-->
+            <el-tag :class="getAdvise(scope.row)[1]" >{{getAdvise(scope.row)[0]}}</el-tag>
           </template>
         </el-table-column>
       </el-table>
     <context-menu
-        v-model:show="show"
+        v-model:show="contextMenuShow"
         :options="options"
     >
       <context-menu-item label="置顶" @click="" />
@@ -333,7 +460,6 @@ function divideBox(price: number, down: number, up: number): string {
       <context-menu-item label="提醒" @click="removeStock(options.code)" />
       <context-menu-sperator />
       <context-menu-item label="管理分组" @click="manageGroup()" />
-      <context-menu-item label="打开K线图" @click="openoldChart(options.code)" />
 <!--      <context-menu-group label="Menu with child">-->
 <!--        <context-menu-item label="删除" @click="onMenuClick(2)" />-->
 <!--        <context-menu-item label="Item2" @click="onMenuClick(3)" />-->
@@ -344,8 +470,59 @@ function divideBox(price: number, down: number, up: number): string {
   <StockGroupMange :name="options.name" :code="options.code" :show-dialog="showGroupManage"></StockGroupMange>
 </template>
 
-<style scoped>
+<style >
 .table-container{
   min-height: calc(100vh - 100px);
+  max-height: calc(100vh - 100px);
+}
+.up{
+  color: red;
+  font-weight: bold;
+}
+.down{
+  color: green;
+  font-weight: bold;
+}
+.normal{
+  color: #000;
+}
+.up-tag{
+  color: red;
+  font-weight: bold;
+  background-color: rgba(255, 0, 0, 0.2);
+}
+.down-tag{
+  color: green;
+  font-weight: bold;
+  background-color: rgba(0, 128, 0, 0.2);
+}
+/* 红色呼吸灯效果 */
+@keyframes redBreath {
+  0% { background-color: rgba(255, 0, 0, 0.2); }
+  50% { background-color: rgba(255, 0, 0, 0.3); }
+  100% { background-color: rgba(255, 0, 0, 0.1); }
+}
+
+/* 绿色呼吸灯效果 */
+@keyframes greenBreath {
+  0% { background-color: rgba(0, 128, 0, 0.2); }
+  50% { background-color: rgba(0, 128, 0, 0.3); }
+  100% { background-color: rgba(0, 128, 0, 0.1); }
+}
+
+/* 初始状态不显示呼吸灯 */
+.no-breath {
+  background-color: inherit;
+  animation: none;
+}
+
+/* 显示红色呼吸灯 */
+.red-breath {
+  animation: redBreath 1s infinite;
+}
+
+/* 显示绿色呼吸灯 */
+.green-breath {
+  animation: greenBreath 1s infinite;
 }
 </style>

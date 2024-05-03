@@ -28,10 +28,10 @@ const hideDialog = (ok:boolean) => {
   // emit('hideDialog');
   if (ok) {
     //update_stock_groups函数要求is_new==true和group_names长度为0不同时出现
-    console.log(isNew)
-    console.log(selectGroups.value)
+    // console.log(isNew)
+    // console.log(selectGroups.value)
     if (!(isNew&&selectGroups.value.length==0)){
-      invoke("update_stock_groups", {isNew:isNew,code: props.code,name: props.name, groupNames: selectGroups.value}).then((res) => {
+      invoke("update_stock_groups", {isNew:isNew,code: props.code,name: props.name, groupNames: selectGroups.value}).then(() => {
         const changes = findChangedStrings(initSelectGroups.value,selectGroups.value)
         changes.forEach((change) => {
           store.stockGroups.forEach((item) => {
@@ -170,7 +170,7 @@ const errorNotification = (content:string) => {
 
 <template>
   <div >
-    <el-row justify="start" style="font-weight: bold;font-size: 15px">
+    <el-row justify="start" style="font-weight: bold;font-size: 15px;margin-left: 15px">
       选择自选分组
     </el-row>
     <el-scrollbar ref="scrollbarRef" max-height="200px" style="display: flex;align-items: center; justify-content: center;" >
@@ -189,7 +189,8 @@ const errorNotification = (content:string) => {
       </el-checkbox-group>
     </el-scrollbar>
     <div class="row" @click.left="showInput">
-      <inline-svg src="./src/assets/svg/add.svg" class="min-icon"></inline-svg>
+<!--      <inline-svg src="./src/assets/svg/add.svg" class="min-icon"></inline-svg>-->
+      <inline-svg src="../assets/svg/add.svg" class="min-icon"></inline-svg>
       <el-input
           v-model="newName"
           v-if="isEditing"
