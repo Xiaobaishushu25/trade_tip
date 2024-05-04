@@ -61,11 +61,13 @@ watch(()=>store.isBlur,(newValue)=>{
 watch(
     () => Array.from(rowDataMap.entries()),
     (newEntries) => {
+      console.log("rowdatamaopchange了",props.activeName,props.groupName)
       if (props.activeName===props.groupName){
         store.rowData.clear(); // 清空旧的Map数据
         newEntries.forEach(([key, value]) => {
           store.rowData.set(key, value);
         });
+        console.log("此时的rowdatamap",store.rowData)
       }
     },
     { deep: true } // 因为我们关心Map内部的变化
@@ -186,6 +188,9 @@ async function updateLiveData(live_data:Record<string, StockLiveData>){
       const newPrice = live_data[code].price;
       const oldPrice = rowDataMap.get(code)!.price;
       StockInfoGs.value[i].live_data = live_data[code];
+      if (store.stockinfoG?.code==code){ //为了在细节页面能够看见实时消息，需要更新全局状态的当前股票信息
+        store.stockinfoG.live_data = live_data[code];
+      }
       rowDataMap.get(code)!.price = live_data[code].price;
       // 根据价格变化设置呼吸灯效果
       if (newPrice > oldPrice) {

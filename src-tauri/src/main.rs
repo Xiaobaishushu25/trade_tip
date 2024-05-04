@@ -99,38 +99,25 @@ async fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
-        .setup(|app|{
-            // let window = tauri::window::WindowBuilder::new(app, "tool")
-            //     .build()?;
-            // app.get_window("main").
-            // let main_window = app.get_window("main").unwrap();
-            // let tool_window = app.get_window("tool").unwrap();
-            info!("{:?}",app.app_handle().path().app_config_dir().unwrap()); //"C:\\Users\\Xbss\\AppData\\Roaming\\com.xbss.trade-tip"
-            let main_window = app.get_webview_window("main").unwrap();
-            let tool_window = app.get_webview_window("tool").unwrap();
-            tokio::spawn(async move{
-                let mut result = main_window.restore_state(StateFlags::all());
-                if result.is_err(){
-                    error!("restore main window state error:{}",result.err().unwrap().to_string());
-                };
-                main_window.show().unwrap();
-                 result = tool_window.restore_state(StateFlags::all());
-                if result.is_err(){
-                    error!("restore tool window state error:{}",result.err().unwrap().to_string());
-                };
-            });
-            // let result = main_window.restore_state(StateFlags::all());
-            // if result.is_err(){
-            //     error!("restore state error:{}",result.err().unwrap().to_string());
-            // }
-            // let main_window = app.get_window("tool").unwrap();
-            // // let main_window = app.get_webview_window("main").unwrap().get_window();
-            // let result = main_window.restore_state(StateFlags::all());
-            // if result.is_err(){
-            //     error!("restore state error:{}",result.err().unwrap().to_string());
-            // }
-            Ok(())
-        })
+        // .setup(|app|{
+        //     info!("{:?}",app.app_handle().path().app_config_dir().unwrap()); //"C:\\Users\\Xbss\\AppData\\Roaming\\com.xbss.trade-tip"
+        //     let main_window = app.get_webview_window("main").unwrap();
+        //     // main_window.as_ref().window().restore_state(StateFlags::all())
+        //     let tool_window = app.get_webview_window("tool").unwrap();
+        //     tokio::spawn(async move{
+        //         // let mut result = main_window.restore_state(StateFlags::all());
+        //         // info!("restore main window state result:{:?}",result);
+        //         // if result.is_err(){
+        //         //     error!("restore main window state error:{}",result.err().unwrap().to_string());
+        //         // };
+        //         main_window.show().unwrap();
+        //         //  result = tool_window.restore_state(StateFlags::all());
+        //         // if result.is_err(){
+        //         //     error!("restore tool window state error:{}",result.err().unwrap().to_string());
+        //         // };
+        //     });
+        //     Ok(())
+        // })
         .invoke_handler(tauri::generate_handler![
             get_response,
             add_stock_info,

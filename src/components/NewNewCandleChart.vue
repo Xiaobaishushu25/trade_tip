@@ -368,9 +368,8 @@ function handleNewGraphicData(graphics: Graphic[]=newGraphicData){
   newGraphicData = [];
 }
 async function updateChart(){
-  await clear_all();
+  clear_all();
   await query_stocks_day_k_limit();
-  // await query_least_stock_data();
   await query_graphic();
 }
 function updateLiveData(live_data:Record<string, StockLiveData>){
@@ -567,32 +566,14 @@ function updateLineOption(){
   })
 }
 //本来是想仅清除graphic,但是直接全部清除更简单，而且避免了k线图残留闪烁的问题（当切换k线图时，会从上一个直接绘制出新的，现在是由空白绘制新的）
-async function clear_all(){
+// async function clear_all(){
+function clear_all(){
   // groupMap.clear();
   myChart.clear();
+  myChart.getZr().clear();
   chartIsInit = false;
-  console.log("清除全部数据")
-  // myChart.setOption({ //本来想把这个封装到updateLineOption里面的，发现默认值给action是merge还是replace都不行。
-  //   //function updateLineOption(action: any='replace或者merge')无法更新位置
-  //   graphic: lineData.value.map(function (item) {
-  //     let startPixel = myChart.convertToPixel({seriesIndex: 0}, item.start);
-  //     if (item.graphic_type==="line"){
-  //       let endPixel = myChart.convertToPixel({seriesIndex: 0}, item.end);
-  //       console.log("清除线",startPixel)
-  //       return {
-  //         id:item.id,
-  //         type: 'line',
-  //         $action: 'remove',
-  //       }
-  //     }else if(item.graphic_type==="text"){
-  //       return {
-  //         type:"text",
-  //         id: item.id,
-  //         $action: 'remove',
-  //       }
-  //     }
-  //   })
-  // });
+  console.log("清除全部数据");
+  rawData.value=[];
   graphicData.value.length = 0;
 }
 async function query_graphic(){
@@ -613,6 +594,7 @@ async function query_stocks_day_k_limit(){
     const data = await invoke<StockData[]>('query_stocks_day_k_limit', { code: code }); // 使用 await 等待 invoke 完成
     if (data[0].date!=nowDate){
       const liveData = await invoke<StockLiveData>('query_live_stock_data_by_code', { code: code }); // 使用 await 等待 invoke 完成
+      store.stockinfoG.live_data=liveData;
       const leastData = {
         date:nowDate,
         open:liveData.open,
@@ -629,8 +611,10 @@ async function query_stocks_day_k_limit(){
     }
     console.log("查到了K线数据",data);
     rawData.value = data.reverse(); // 处理查询到的数据
+    myChart.clear();
     myChart.setOption(init_option(),true);
     myChart.resize();
+    console.log("现在的配置是",myChart.getOption());
     chartIsInit = true;
     return;
     // myChart.hideLoading();
@@ -727,6 +711,7 @@ async function scrollEvent(deltaY:number){
     save_graphic();
     code = store.stockinfoG!.code;
     // myChart.showLoading();
+    myChart.clear();
     await updateChart();
   } else {
     console.log('stockinfoG不在stockinfoGs数组中',code,store.stockinfoGs);
@@ -893,6 +878,7 @@ function get_line(start:number[],end:number[]){
 }
 function init_option(){
   const data = handleRawData(rawData.value);
+  console.log("处理后的数据是",data)
   return {
     animation: false,
     legend: {
