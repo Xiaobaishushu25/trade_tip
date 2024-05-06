@@ -23,15 +23,7 @@ const props = defineProps({
     required: true
   }
 })
-// interface rowData{
-//   code:string,
-//   price:number,
-//   ma:string,
-//   box:string,
-//   change:string,
-//   breathClass:string,
-//   advise:string
-// }
+
 
 const router = useRouter()
 const table = ref()
@@ -134,7 +126,7 @@ function updateStockInfoG() {
     // store.stockinfoGs.forEach(item => {
     res.forEach(item => {
       rowDataMap.set(item.code,{
-        code:item.code, box: "", change: "", ma: "", price: 0.0,
+        code:item.code, box: ["",undefined], change: "", ma: "", price: 0.0,
         breathClass:"", advise: ["normal",""]
       });
     });
@@ -256,12 +248,22 @@ function removeStock(code: string){
   }
 }
 function getAdvise(stock: StockInfoG){
+  console.log("获取建议");
   let rowData = rowDataMap.get(stock.code);
   if (rowData!=undefined){
-    if (rowData.ma!="均线空头"&&(rowData.box=="下轨区"||rowData.box=="已突破箱体")){
+    console.log("获取建议",rowData);
+    let box = rowData.box[0];
+    if (rowData.ma!="均线空头"&&(box=="下轨区"||box=="已突破箱体")){
+      if (box==="已突破箱体"){
+        //计算现价和箱体之间的差值，如果差值大于5%，则认为已突破箱体很多，持有就好。
+        if ((stock.live_data!.price-rowData.box[1])>0.05*rowData.box[1]){
+          rowDataMap.get(stock.code)!.advise = ["积极持有","up-tag"];
+          return ["积极持有","up-tag"]
+        }
+      }
       rowDataMap.get(stock.code)!.advise = ["买入","up-tag"];
       return ["买入","up-tag"]
-    }else if (rowData.ma=="均线空头"&&(rowData.box=="上轨区"||rowData.box=="已跌破箱体")){
+    }else if (rowData.ma=="均线空头"&&(box=="上轨区"||box=="已跌破箱体")){
       rowDataMap.get(stock.code)!.advise = ["卖出","down-tag"];
       return ["卖出","down-tag"]
     }else {
@@ -284,7 +286,7 @@ function computeBox(stock: StockInfoG){
   //打印code和对应的boxes
   if (boxes!=undefined&&stock.live_data?.price!=undefined){
     let box = comparePriceWithBox(stock.live_data.price, boxes);
-    rowDataMap.get(code)!.box = box[0];
+    rowDataMap.get(code)!.box = [box[0],box[2]];
     return box;
   }
   return ["----","normal"];
@@ -364,11 +366,11 @@ function judgeMaState(stock:StockInfoG){
     return ["均线缠绕","normal"];
   }
 }
-function comparePriceWithBox(price: number,boxes:number[]): [string,string] {
+function comparePriceWithBox(price: number,boxes:number[]): [string,string,number|undefined] {
   if (price < boxes[0]) {
-    return ["已跌破箱体","down"];
+    return ["已跌破箱体","down",undefined];
   } else if (price > boxes[boxes.length - 1]) {
-    return ["已突破箱体","up"];
+    return ["已突破箱体","up",boxes[boxes.length - 1]];
   }
   for (let i = 0; i < boxes.length - 1; i++) {
     if (price >= boxes[i] && price <= boxes[i + 1]) {
@@ -376,9 +378,9 @@ function comparePriceWithBox(price: number,boxes:number[]): [string,string] {
       return divideBox(price, boxes[i], boxes[i + 1]);
     }
   }
-  return ["未知","normal"];
+  return ["未知","normal",undefined];
 }
-function divideBox(price: number, down: number, up: number): [string,string] {
+function divideBox(price: number, down: number, up: number): [string,string,undefined] {
   const range = up - down;
   const eachPart = range / 5.0;
 
@@ -386,13 +388,13 @@ function divideBox(price: number, down: number, up: number): [string,string] {
   const middleLowerBound = down + eachPart;
   const middleUpperBound = up - eachPart;
   if (price >= lowerBound && price <= middleLowerBound) {
-    return ["下轨区","up"];
+    return ["下轨区","up",undefined];
   } else if (price > middleLowerBound && price <= middleUpperBound) {
-    return ["中轨区","normal"];
+    return ["中轨区","normal",undefined];
   } else if (price > middleUpperBound) {
-    return ["上轨区","down"];
+    return ["上轨区","down",undefined];
   } else {
-    return ["中轨区","normal"];
+    return ["中轨区","normal",undefined];
   }
 }
 

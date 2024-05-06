@@ -26,7 +26,8 @@ interface rowData{
     code:string,
     price:number,
     ma:string,
-    box:string,
+    // box:string,
+    box:[string,number|undefined]
     change:string,
     breathClass:string,
     advise:string[]
