@@ -22,11 +22,20 @@ interface StockLiveData {
     ma30: number;
     ma60: number;
 }
+// interface rowData{
+//     code:string,
+//     price:number,
+//     ma:string,//["均线状态",""up""]
+//     box:string,
+//     change:string,
+//     breathClass:string,
+//     advise:string[]
+// }
 interface rowData{
     code:string,
     price:number,
-    ma:string,
-    box:string,
+    ma:[string,string],//["均线状态",""up""]
+    box:[string,string,number|undefined],//["已跌破箱体","down","1.4|undefined"]
     change:string,
     breathClass:string,
     advise:string[]
@@ -39,6 +48,7 @@ interface StockInfoG {
     live_data: StockLiveData;
     box?: string; // Optional field in TypeScript corresponds to Option<String> in Rust
     hold: boolean;
+    rowData:rowData
 }
 interface StockData {
     // 在TypeScript中，没有直接的默认字段值或属性重命名特性，

@@ -119,20 +119,20 @@ function remove(name:string){
 function judgeTab(activeName:string){
   return activeName != '设置';
 }
-async function native(e){
-  console.log("右键事件",e);
-  let menus = await menu.Menu.new({items:[
-      {text:"刷新"},
-      {text:"刷新2"},
-      {text:"刷新3"},
-      {text:"刷新4"},
-      {text:"刷新5"},
-      {text:"刷新6"},
-      {text:"刷新7"},
-
-      {text:"添加分组",action:() => {console.log("点击了分组")}}]});
-  await menus.popup()
-}
+// async function native(e){
+//   console.log("右键事件",e);
+//   let menus = await menu.Menu.new({items:[
+//       {text:"刷新"},
+//       {text:"刷新2"},
+//       {text:"刷新3"},
+//       {text:"刷新4"},
+//       {text:"刷新5"},
+//       {text:"刷新6"},
+//       {text:"刷新7"},
+//
+//       {text:"添加分组",action:() => {console.log("点击了分组")}}]});
+//   await menus.popup()
+// }
 // function handleClick(tab, event:MouseEvent){
 //   console.log(tab, event);
 // }
@@ -140,16 +140,16 @@ async function native(e){
 
 <template>
   <div class="tab-container">
-    <el-tabs v-model="activeName"  tab-position="bottom" :before-leave="judgeTab" @contextmenu="native" >
+    <el-tabs v-model="activeName"  tab-position="bottom" :before-leave="judgeTab"  >
       <el-tab-pane
           v-for="(group, index) in store.stockGroups"
           :key="index"
           :label="`${group.name}`"
           :name="`${group.name}`"
           class="tab-pane"
-          @contextmenu="native"
       >
-        <StockTable :stocks_change="group.stocks_change" :group-name="group.name" :active-name="activeName"></StockTable>
+<!--        <StockTable :stocks_change="group.stocks_change" :group-name="group.name" :active-name="activeName"></StockTable>-->
+        <StockTable2 :stocks_change="group.stocks_change" :group-name="group.name" :active-name="activeName"></StockTable2>
       </el-tab-pane>
       <el-tab-pane name="设置">
         <template #label>

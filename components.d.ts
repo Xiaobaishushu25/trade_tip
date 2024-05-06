@@ -41,6 +41,7 @@ declare module 'vue' {
     StockGroupMange: typeof import('./src/components/group/StockGroupMange.vue')['default']
     StockGroupSelect: typeof import('./src/components/group/StockGroupSelect.vue')['default']
     StockTable: typeof import('./src/components/StockTable.vue')['default']
+    StockTable2: typeof import('./src/components/StockTable2.vue')['default']
     Tool: typeof import('./src/components/Tool.vue')['default']
   }
 }
