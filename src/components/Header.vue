@@ -42,9 +42,9 @@ function window_maximize(){
 }
 async function window_close(){
   // await WebviewWindow.getCurrent().hide()
-  const ALL_WITHOUT_VISIBLE = StateFlags.ALL & ~StateFlags.VISIBLE;
+  // const ALL_WITHOUT_VISIBLE = StateFlags.ALL & ~StateFlags.VISIBLE;
   // await saveWindowState(ALL_WITHOUT_VISIBLE);
-  await saveWindowState(StateFlags.ALL);
+  // await saveWindowState(StateFlags.ALL);
   await invoke('exit_app', {})
   await WebviewWindow.getCurrent().close();
 }
@@ -56,7 +56,7 @@ function back(){
 <template>
   <div  data-tauri-drag-region class="titlebar"  >
 <!--    <Search></Search>-->
-    <img src="../assets/icon.png" width="25" height="25" alt="Logo Image" style="margin-left: 5px;margin-right: 10px">
+    <img src="../assets/icon.png" width="25" height="25" alt="Logo Image" style="margin-left: 5px;margin-right: 10px;user-select: none">
     <ElSearch></ElSearch>
     <div id="stage-button">
       <inline-svg :src="`../assets/svg/${live_name}.svg`" class="window-button back" @click.left="changeUpdateState"></inline-svg>

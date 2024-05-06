@@ -23,6 +23,8 @@
     "image:default",
     "resources:default",
     "menu:default",
+    "menu:allow-new",
+    "menu:allow-popup",
     "tray:default",
     "shell:allow-open",
     "fs:allow-read-file",

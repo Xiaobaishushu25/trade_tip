@@ -8,6 +8,8 @@ import {VueDraggable} from "vue-draggable-plus";
 import InlineSvg from "vue-inline-svg";
 import {listen} from "@tauri-apps/api/event";
 import {successNotification} from "../utils.ts";
+import {menu} from "@tauri-apps/api";
+import {MenuItemOptions} from "@tauri-apps/api/menu/menuItem";
 
 const activeName = ref('')
 const dialogVisible = ref(false)
@@ -35,8 +37,10 @@ onMounted(async () => {
 //   // ... 类似的逻辑，但是你可能需要直接从 store 中解构出 stockGroups
 // })
 const stockGroupNames = ref<StockGroup[]>()
-watch(() => store.stockGroups, () => {
-  stockGroupNames.value = store.stockGroups.map(group => ({...group}))
+// watch(()=>store.stockGroups, () => {
+watch(()=>store.stockGroups.length, () => { //监听长度变化比深度监听性能更好吧？
+  stockGroupNames.value = store.stockGroups.map(group => ({...group}));
+// },{immediate:true,deep:true})
 },{immediate:true})
 function query_all_groups(oldActiveName:string|null=null){
   invoke<StockGroup[]>("query_all_groups",{}).then(res => {
@@ -115,6 +119,20 @@ function remove(name:string){
 function judgeTab(activeName:string){
   return activeName != '设置';
 }
+async function native(e){
+  console.log("右键事件",e);
+  let menus = await menu.Menu.new({items:[
+      {text:"刷新"},
+      {text:"刷新2"},
+      {text:"刷新3"},
+      {text:"刷新4"},
+      {text:"刷新5"},
+      {text:"刷新6"},
+      {text:"刷新7"},
+
+      {text:"添加分组",action:() => {console.log("点击了分组")}}]});
+  await menus.popup()
+}
 // function handleClick(tab, event:MouseEvent){
 //   console.log(tab, event);
 // }
@@ -122,13 +140,14 @@ function judgeTab(activeName:string){
 
 <template>
   <div class="tab-container">
-    <el-tabs v-model="activeName"  tab-position="bottom" :before-leave="judgeTab" >
+    <el-tabs v-model="activeName"  tab-position="bottom" :before-leave="judgeTab" @contextmenu="native" >
       <el-tab-pane
           v-for="(group, index) in store.stockGroups"
           :key="index"
           :label="`${group.name}`"
           :name="`${group.name}`"
           class="tab-pane"
+          @contextmenu="native"
       >
         <StockTable :stocks_change="group.stocks_change" :group-name="group.name" :active-name="activeName"></StockTable>
       </el-tab-pane>
@@ -140,7 +159,7 @@ function judgeTab(activeName:string){
       </el-tab-pane>
     </el-tabs>
   </div>
-  <el-dialog v-model="dialogVisible" :show-close="false" draggable="true" width="250" align-center style="padding: 0">
+  <el-dialog v-model="dialogVisible" :show-close="false" :draggable="true" width="250" align-center style="padding: 0">
     <template #header="{ }">
       <div class="my-header">
         <label style="font-size: 14px;margin-left: 15px;font-family:sans-serif">分组管理</label>
