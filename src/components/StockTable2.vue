@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {nextTick, onMounted, ref,Ref, watch,onBeforeUnmount,reactive} from "vue";
-import {rowData, StockInfoG, StockLiveData} from "../type.ts";
+import {RowData, StockInfoG, StockLiveData} from "../type.ts";
 import {invoke} from "@tauri-apps/api/core";
 import {listen} from "@tauri-apps/api/event";
 import StockGroupMange from "./group/StockGroupMange.vue";
@@ -69,7 +69,6 @@ onMounted(() => {
   window.addEventListener('resize', calculateTableHeight);
   listen("live_stock_data", ({payload }) => {
     if (props.activeName == props.groupName){
-      console.log("收到实时数据",payload);
       updateLiveData(payload);
     }
   })
@@ -188,6 +187,78 @@ function removeStock(code: string){
     })
   }
 }
+
+function manageGroup(){
+  console.log("展示管理分组")
+  showGroupManage.value = !showGroupManage.value;
+}
+function clickRow(row: StockInfoG, _: any){
+  nowSelectStock.value = row;
+  store.stockinfoG = nowSelectStock;
+  // store.count = nowSelectStock.value.code
+  router.push("/main/detail")
+}
+
+//根据股票code更新是否持有，更新为当前是否持有的反状态
+//如果成功更新成功，更新该股票（当前行）的状态信息，还要通知"持有"分组股票有变化了
+// 同时判断是否是持有标签页，如果是，要移除
+function updateHold(){
+  let code = nowSelectStock.value!.code;
+  invoke("update_stock_hold", {code: code,hold: !nowSelectStock.value!.hold}).then(_ => {
+    successNotification("更新成功");
+    store.stockGroups.forEach((item) => {
+      if (item.name=="持有"){
+        item.stocks_change = !item.stocks_change
+      }
+    })
+    const index = StockInfoGs.value.findIndex(item => item.code === code);
+    if (index !== -1) {
+      if (props.groupName=="持有"){
+        StockInfoGs.value.splice(index, 1);
+      }else {
+        StockInfoGs.value[index].hold = !StockInfoGs.value[index].hold;
+      }
+    }
+  }).catch(err => {
+    console.log(err);
+    errorNotification(err)
+  })
+}
+// const successNotification = (content:string) => {
+//   ElNotification({
+//     title: 'Success',
+//     message: content,
+//     type: 'success',
+//     position: 'bottom-right',
+//   })
+// }
+// const errorNotification = (content:string) => {
+//   ElNotification({
+//     title: 'Error',
+//     message: content,
+//     type: 'error',
+//     position: 'bottom-right',
+//     duration: 0,
+//   })
+// }
+function judgeMaState(stock:StockInfoG){
+  if (stock.live_data == undefined){
+    return ["---","normal"];
+  }
+  let ma5 = stock.live_data.ma5;
+  let ma10 = stock.live_data.ma10;
+  let ma20 = stock.live_data.ma20;
+  if (ma5 > ma10 && ma10 > ma20) {
+    // rowDataMap.get(stock.code)!.ma = "均线多头";
+    return ["均线多头","up"];
+  } else if (ma20 > ma10 && ma10 > ma5) {
+    // rowDataMap.get(stock.code)!.ma = "均线空头";
+    return ["均线空头","down"];
+  } else {
+    // rowDataMap.get(stock.code)!.ma = "均线缠绕";
+    return ["均线缠绕","normal"];
+  }
+}
 function getAdvise(stock: StockInfoG){
   // let rowData = rowDataMap.get(stock.code);
   let rowData = stock.rowData;
@@ -262,78 +333,6 @@ function computeBox(stock: StockInfoG){
   }
   return ["----","normal",undefined];
 }
-
-function manageGroup(){
-  console.log("展示管理分组")
-  showGroupManage.value = !showGroupManage.value;
-}
-function clickRow(row: StockInfoG, _: any){
-  nowSelectStock.value = row;
-  store.stockinfoG = nowSelectStock;
-  // store.count = nowSelectStock.value.code
-  router.push("/main/detail")
-}
-
-//根据股票code更新是否持有，更新为当前是否持有的反状态
-//如果成功更新成功，更新该股票（当前行）的状态信息，还要通知"持有"分组股票有变化了
-// 同时判断是否是持有标签页，如果是，要移除
-function updateHold(){
-  let code = nowSelectStock.value!.code;
-  invoke("update_stock_hold", {code: code,hold: !nowSelectStock.value!.hold}).then(_ => {
-    successNotification("更新成功");
-    store.stockGroups.forEach((item) => {
-      if (item.name=="持有"){
-        item.stocks_change = !item.stocks_change
-      }
-    })
-    const index = StockInfoGs.value.findIndex(item => item.code === code);
-    if (index !== -1) {
-      if (props.groupName=="持有"){
-        StockInfoGs.value.splice(index, 1);
-      }else {
-        StockInfoGs.value[index].hold = !StockInfoGs.value[index].hold;
-      }
-    }
-  }).catch(err => {
-    console.log(err);
-    errorNotification(err)
-  })
-}
-// const successNotification = (content:string) => {
-//   ElNotification({
-//     title: 'Success',
-//     message: content,
-//     type: 'success',
-//     position: 'bottom-right',
-//   })
-// }
-// const errorNotification = (content:string) => {
-//   ElNotification({
-//     title: 'Error',
-//     message: content,
-//     type: 'error',
-//     position: 'bottom-right',
-//     duration: 0,
-//   })
-// }
-function judgeMaState(stock:StockInfoG){
-  if (stock.live_data == undefined){
-    return ["---","normal"];
-  }
-  let ma5 = stock.live_data.ma5;
-  let ma10 = stock.live_data.ma10;
-  let ma20 = stock.live_data.ma20;
-  if (ma5 > ma10 && ma10 > ma20) {
-    // rowDataMap.get(stock.code)!.ma = "均线多头";
-    return ["均线多头","up"];
-  } else if (ma20 > ma10 && ma10 > ma5) {
-    // rowDataMap.get(stock.code)!.ma = "均线空头";
-    return ["均线空头","down"];
-  } else {
-    // rowDataMap.get(stock.code)!.ma = "均线缠绕";
-    return ["均线缠绕","normal"];
-  }
-}
 function comparePriceWithBox(price: number,boxes:number[]): [string,string,number|undefined] {
   if (price < boxes[0]) {
     return ["已跌破箱体","down",undefined];
@@ -397,15 +396,12 @@ function divideBox(price: number, down: number, up: number): [string,string,unde
         </el-table-column>
         <el-table-column prop="price" label="均线状态">
           <template #default="scope">
-<!--            <el-text :style="{color:judgeMaState(scope.row)[1],fontSize:'15px',fontWeight:'bold'}" >{{judgeMaState(scope.row)[0]}}</el-text>-->
-<!--            <el-text :class="judgeMaState(scope.row)[1]" >{{judgeMaState(scope.row)[0]}}</el-text>-->
 <!--            <el-text :class="rowDataMap.get(scope.row.code).value[1]" >{{rowDataMap.get(scope.row.code).value[0]}}</el-text>-->
             <el-text :class="scope.row.rowData?.ma?.[1]" >{{scope.row.rowData?.ma?.[0]}}</el-text>
           </template>
         </el-table-column>
         <el-table-column prop="box" label="箱体">
           <template #default="scope">
-<!--            <el-text :class="computeBox(scope.row)[1]" >{{computeBox(scope.row)[0]}}</el-text>-->
 <!--            <el-text :class="computeBox(scope.row)[1]" >{{computeBox(scope.row)[0]}}</el-text>-->
             <el-text :class="scope.row.rowData?.box?.[1]" >{{scope.row.rowData?.box?.[0]}}</el-text>
           </template>
@@ -421,9 +417,6 @@ function divideBox(price: number, down: number, up: number): [string,string,unde
             :filter-method="filterAdvise"
         >
           <template #default="scope">
-<!--            <div v-let="{ text, styleClass } = getAdvise(scope.row)">-->
-<!--              <el-text :class="styleClass" >{{text}}</el-text>-->
-<!--            </div>-->
 <!--            <el-text :class="getAdvise(scope.row)[1]" >{{getAdvise(scope.row)[0]}}</el-text>-->
             <el-tag :class="scope.row.rowData?.advise?.[1]" >{{scope.row.rowData?.advise?.[0]}}</el-tag>
 <!--            <el-tag :class="getAdvise(scope.row)[1]" >{{getAdvise(scope.row)[0]}}</el-tag>-->
@@ -436,10 +429,9 @@ function divideBox(price: number, down: number, up: number): [string,string,unde
     >
       <context-menu-item label="置顶" @click="" />
       <context-menu-item :label="nowSelectStock?.hold?'清仓':'持有'"  @click="updateHold()" />
-      <context-menu-item label="移除" @click="removeStock(options.code)" />
+      <context-menu-item label="从当前分组移除" @click="removeStock(options.code)" />
       <context-menu-sperator />
       <context-menu-item label="管理分组" @click="manageGroup()" />
-<!--      <context-menu-group label="Menu with child">-->
 <!--        <context-menu-item label="删除" @click="onMenuClick(2)" />-->
 <!--        <context-menu-item label="Item2" @click="onMenuClick(3)" />-->
 <!--      </context-menu-group>-->

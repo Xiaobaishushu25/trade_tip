@@ -1,6 +1,6 @@
 // store.js
 import { reactive } from 'vue'
-import {rowData, StockGroup, StockInfoG} from "./type.ts";
+import {RowData, StockGroup, StockInfoG} from "./type.ts";
 
 // export const store:{stockInfo:StockInfo[],
 //     stockGroups:StockGroup[],
@@ -22,7 +22,7 @@ export const store:{
     stockinfoGs:StockInfoG[],
     boxData:Record<string, number[]>,
     isBlur:boolean,
-    rowData:Map<string,rowData>
+    rowData:Map<string,RowData>
 } = reactive({
     activeGroup:"",//当前选择的分组
     stockGroups:[],//当前所有的分组
