@@ -10,28 +10,28 @@ function getColor(percent:number){
     return 'black'; // 黑色
   }
 }
-function getMaClass(ma:string){
-  switch (ma) {
-    case '均线多头':
-      return 'up-tag';
-    case '均线空头':
-      return 'down-tag';
-    default:
-      return 'normal';
-  }
-}
-function getBoxClass(box: string) {
-  switch (box) {
-    case '已跌破箱体':
-    case '上轨区':
-      return 'down-tag';
-    case '已突破箱体':
-    case '下轨区':
-      return 'up-tag';
-    default:
-      return 'normal';
-  }
-}
+// function getMaClass(ma:string){
+//   switch (ma) {
+//     case '均线多头':
+//       return 'up-tag';
+//     case '均线空头':
+//       return 'down-tag';
+//     default:
+//       return 'normal';
+//   }
+// }
+// function getBoxClass(box: string) {
+//   switch (box) {
+//     case '已跌破箱体':
+//     case '上轨区':
+//       return 'down-tag';
+//     case '已突破箱体':
+//     case '下轨区':
+//       return 'up-tag';
+//     default:
+//       return 'normal';
+//   }
+// }
 // const stockInfoG = store.stockinfoG
 </script>
 
@@ -67,11 +67,11 @@ function getBoxClass(box: string) {
     </div>
     <el-divider />
     <div class="row" style="gap: 10px">
-      <el-tag :class="getMaClass(store.rowData.get(store.stockinfoG!.code)?.ma)">{{store.rowData.get(store.stockinfoG!.code)?.ma}} </el-tag>
-      <el-tag :class="getBoxClass(store.rowData.get(store.stockinfoG!.code)?.box)">{{store.rowData.get(store.stockinfoG!.code)?.box}} </el-tag>
+      <el-tag :class="store.stockinfoG?.rowData?.ma[1]">{{store.stockinfoG?.rowData?.ma[0]}} </el-tag>
+      <el-tag :class="store.stockinfoG?.rowData?.box[1]">{{store.stockinfoG?.rowData?.box[0]}} </el-tag>
     </div>
     <el-divider />
-    <el-tag :class="store.rowData.get(store.stockinfoG!.code)?.advise[1]" style="align-items: center;font-size: 18px">{{store.rowData.get(store.stockinfoG!.code)?.advise[0]}} </el-tag>
+    <el-tag :class="store.stockinfoG?.rowData?.advise[1]" style="align-items: center;font-size: 18px">{{store.stockinfoG?.rowData?.advise[0]}} </el-tag>
 
 <!--    <label>{{store.stockinfoG}}</label>-->
   </div>

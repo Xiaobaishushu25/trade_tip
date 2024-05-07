@@ -1,12 +1,12 @@
-interface StockInfo {
-    code: string;
-    index: number;
-    name: string;
-    price: number;
-    change_percent: number;
-    box?: string; // Optional field in TypeScript corresponds to Option<String> in Rust
-    hold: boolean;
-}
+// interface StockInfo {
+//     code: string;
+//     index: number;
+//     name: string;
+//     price: number;
+//     change_percent: number;
+//     box?: string; // Optional field in TypeScript corresponds to Option<String> in Rust
+//     hold: boolean;
+// }
 interface StockLiveData {
     code: string;
     price: number;
@@ -22,15 +22,23 @@ interface StockLiveData {
     ma30: number;
     ma60: number;
 }
-interface rowData{
+// interface rowData{
+//     code:string,
+//     price:number,
+//     ma:string,//["均线状态",""up""]
+//     box:string,
+//     change:string,
+//     breathClass:string,
+//     advise:string[]
+// }
+interface RowData {
     code:string,
-    price:number,
-    ma:string,
-    // box:string,
-    box:[string,number|undefined]
+    price:number, //存老价格，用于和最新价格比较设定每行的css样式
+    ma:[string,string],//["均线缠绕",""up""]
+    box:[string,string,number|undefined],//["已跌破箱体","down","1.4|undefined"]
     change:string,
-    breathClass:string,
-    advise:string[]
+    breathClass:string,//每一行的呼吸样式
+    advise:string[]//["买入",""up-tag"]
 }
 interface StockInfoG {
     index: number;
@@ -40,6 +48,7 @@ interface StockInfoG {
     live_data: StockLiveData;
     box?: string; // Optional field in TypeScript corresponds to Option<String> in Rust
     hold: boolean;
+    rowData:RowData
 }
 interface StockData {
     // 在TypeScript中，没有直接的默认字段值或属性重命名特性，
@@ -90,4 +99,4 @@ interface Style {
     line_width?: number; // 线专用，使用number类型对应f64，?表示可选
 }
 export { PaintState }; // 导出枚举值
-export type { StockInfo,StockLiveData,StockGroup,StockInfoG,StockData,Graphic,rowData };
+export type { StockLiveData,StockGroup,StockInfoG,StockData,Graphic,RowData };

@@ -11,6 +11,7 @@ declare module 'vue' {
     CandleChartNewNew: typeof import('./src/components/CandleChartNewNew.vue')['default']
     DataDetail: typeof import('./src/components/StockData/DataDetail.vue')['default']
     Detail: typeof import('./src/components/StockData/Detail.vue')['default']
+    DragTest: typeof import('./src/components/DragTest.vue')['default']
     ElAutocomplete: typeof import('element-plus/es')['ElAutocomplete']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCheckbox: typeof import('element-plus/es')['ElCheckbox']
@@ -40,6 +41,7 @@ declare module 'vue' {
     StockGroupMange: typeof import('./src/components/group/StockGroupMange.vue')['default']
     StockGroupSelect: typeof import('./src/components/group/StockGroupSelect.vue')['default']
     StockTable: typeof import('./src/components/StockTable.vue')['default']
+    StockTable2: typeof import('./src/components/StockTable2.vue')['default']
     Tool: typeof import('./src/components/Tool.vue')['default']
   }
 }
