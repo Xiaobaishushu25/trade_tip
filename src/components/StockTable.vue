@@ -53,7 +53,7 @@ watch(()=>store.isBlur,(newValue)=>{
 watch(
     () => Array.from(rowDataMap.entries()),
     (newEntries) => {
-      console.log("rowdatamaopchange了",props.activeName,props.groupName)
+      console.log("rowdatamaopchange了",rowDataMap)
       if (props.activeName===props.groupName){
         store.rowData.clear(); // 清空旧的Map数据
         newEntries.forEach(([key, value]) => {
@@ -64,7 +64,6 @@ watch(
     },
     { deep: true } // 因为我们关心Map内部的变化
 );
-
 // watch(groupName, (newValue, oldValue) => {
 //   console.log(newValue, oldValue)
 // })
@@ -127,7 +126,8 @@ function updateStockInfoG() {
     res.forEach(item => {
       rowDataMap.set(item.code,{
         code:item.code, box: ["",undefined], change: "", ma: "", price: 0.0,
-        breathClass:"", advise: ["normal",""]
+        // code:item.code, box: "", change: "", ma: "", price: 0.0,
+        breathClass:"", advise: ["",""]
       });
     });
     console.log("给全局状态赋值",store.stockinfoGs)
@@ -172,36 +172,39 @@ function showContextMenu(row: StockInfoG, _: any, e: MouseEvent) {
 //   console.log("show的值变换了"+newValue, oldValue)
 // })
 async function updateLiveData(live_data:Record<string, StockLiveData>){
-  //遍历StockInfoGs
-  for (let i = 0; i < StockInfoGs.value.length; i++) {
-    const element = StockInfoGs.value[i];
-    let code = element.code;
-    if (live_data[code] != undefined){
-      const newPrice = live_data[code].price;
-      const oldPrice = rowDataMap.get(code)!.price;
-      StockInfoGs.value[i].live_data = live_data[code];
-      if (store.stockinfoG?.code==code){ //为了在细节页面能够看见实时消息，需要更新全局状态的当前股票信息
-        store.stockinfoG.live_data = live_data[code];
-      }
-      rowDataMap.get(code)!.price = live_data[code].price;
-      // 根据价格变化设置呼吸灯效果
-      if (newPrice > oldPrice) {
-        await nextTick();
-        rowDataMap.get(code)!.breathClass = 'red-breath';
-        setTimeout(() => {
+  console.log("收到实时数据",live_data);
+  if (props.activeName === props.groupName){
+    //遍历StockInfoGs
+    for (let i = 0; i < StockInfoGs.value.length; i++) {
+      const element = StockInfoGs.value[i];
+      let code = element.code;
+      if (live_data[code] != undefined){
+        const newPrice = live_data[code].price;
+        const oldPrice = rowDataMap.get(code)!.price;
+        StockInfoGs.value[i].live_data = live_data[code];
+        if (store.stockinfoG?.code==code){ //为了在细节页面能够看见实时消息，需要更新全局状态的当前股票信息
+          store.stockinfoG.live_data = live_data[code];
+        }
+        rowDataMap.get(code)!.price = live_data[code].price;
+        // 根据价格变化设置呼吸灯效果
+        if (newPrice > oldPrice) {
+          await nextTick();
+          rowDataMap.get(code)!.breathClass = 'red-breath';
+          setTimeout(() => {
+            rowDataMap.get(code)!.breathClass = 'no-breath';
+          }, 1000);
+        } else if (newPrice < oldPrice) {
+          await nextTick();
+          rowDataMap.get(code)!.breathClass = 'green-breath';
+          setTimeout(() => {
+            rowDataMap.get(code)!.breathClass = 'no-breath';
+          }, 1000);
+          // 价格降低，显示绿色呼吸灯
+        } else {
+          // 价格未变，不显示呼吸灯
+          // rowDataMap.get(code)!.breathClass = 'green-breath';
           rowDataMap.get(code)!.breathClass = 'no-breath';
-        }, 1000);
-      } else if (newPrice < oldPrice) {
-        await nextTick();
-        rowDataMap.get(code)!.breathClass = 'green-breath';
-        setTimeout(() => {
-          rowDataMap.get(code)!.breathClass = 'no-breath';
-        }, 1000);
-        // 价格降低，显示绿色呼吸灯
-      } else {
-        // 价格未变，不显示呼吸灯
-        // rowDataMap.get(code)!.breathClass = 'green-breath';
-        rowDataMap.get(code)!.breathClass = 'no-breath';
+        }
       }
     }
   }
@@ -247,33 +250,70 @@ function removeStock(code: string){
     })
   }
 }
-function getAdvise(stock: StockInfoG){
-  console.log("获取建议");
+// function getAdvise(stock: StockInfoG){
+//   let rowData = rowDataMap.get(stock.code);
+//   if (rowData!=undefined){
+//     if (rowData.ma!="均线空头"&&(rowData.box=="下轨区"||rowData.box=="已突破箱体")){
+//       rowDataMap.get(stock.code)!.advise = ["买入","up-tag"];
+//       return ["买入","up-tag"]
+//     }else if (rowData.ma=="均线空头"&&(rowData.box=="上轨区"||rowData.box=="已跌破箱体")){
+//       rowDataMap.get(stock.code)!.advise = ["卖出","down-tag"];
+//       return ["卖出","down-tag"]
+//     }else {
+//       rowDataMap.get(stock.code)!.advise = ["具体分析","normal"];
+//       return ["具体分析","normal"]
+//     }
+//   }
+//   // rowDataMap.get(stock.code)?.advise = ["----","normal"];
+//   return ["----","normal"];
+// }
+async function getAdvise(stock: StockInfoG){
   let rowData = rowDataMap.get(stock.code);
-  if (rowData!=undefined){
-    console.log("获取建议",rowData);
-    let box = rowData.box[0];
-    if (rowData.ma!="均线空头"&&(box=="下轨区"||box=="已突破箱体")){
-      if (box==="已突破箱体"){
-        //计算现价和箱体之间的差值，如果差值大于5%，则认为已突破箱体很多，持有就好。
-        if ((stock.live_data!.price-rowData.box[1])>0.05*rowData.box[1]){
-          rowDataMap.get(stock.code)!.advise = ["积极持有","up-tag"];
-          return ["积极持有","up-tag"]
-        }
+  if (props.activeName==props.groupName){
+    if (rowData!=undefined){
+      await nextTick();
+      console.log("获取建议",rowData.ma,rowData.box);
+      if (rowData.ma!="均线空头"&&(rowData.box[0]=="下轨区"||rowData.box[0]=="已突破箱体")){
+        rowDataMap.get(stock.code)!.advise = ["买入","up-tag"];
+        return ["买入","up-tag"];
+      }else if (rowData.ma=="均线空头"&&(rowData.box[0]=="上轨区"||rowData.box[0]=="已跌破箱体")){
+        rowDataMap.get(stock.code)!.advise = ["卖出","down-tag"];
+        return ["卖出","down-tag"];
+      }else {
+        rowDataMap.get(stock.code)!.advise = ["具体分析","normal"];
+        return ["具体分析","normal"];
       }
-      rowDataMap.get(stock.code)!.advise = ["买入","up-tag"];
-      return ["买入","up-tag"]
-    }else if (rowData.ma=="均线空头"&&(box=="上轨区"||box=="已跌破箱体")){
-      rowDataMap.get(stock.code)!.advise = ["卖出","down-tag"];
-      return ["卖出","down-tag"]
-    }else {
-      rowDataMap.get(stock.code)!.advise = ["具体分析","normal"];
-      return ["具体分析","normal"]
     }
   }
   // rowDataMap.get(stock.code)?.advise = ["----","normal"];
   return ["----","normal"];
 }
+// function getAdvise(stock: StockInfoG){
+//   let rowData = rowDataMap.get(stock.code);
+//   if (rowData!=undefined){
+//     console.log("获取建议")
+//     // let box = rowData.box[0];
+//     if (rowData.ma!="均线空头"&&(rowData.box[0]=="下轨区"||rowData.box[0]=="已突破箱体")){
+//       // if (box==="已突破箱体"){
+//       //   //计算现价和箱体之间的差值，如果差值大于5%，则认为已突破箱体很多，持有就好。
+//       //   if ((stock.live_data!.price-rowData.box[1])>0.05*rowData.box[1]){
+//       //     rowDataMap.get(stock.code)!.advise = ["积极持有","up-tag"];
+//       //     return ["积极持有","up-tag"]
+//       //   }
+//       // }
+//       rowDataMap.get(stock.code)!.advise = ["买入","up-tag"];
+//       return ["买入","up-tag"]
+//     }else if (rowData.ma=="均线空头"&&(rowData.box[0]=="上轨区"||rowData.box[0]=="已跌破箱体")){
+//       rowDataMap.get(stock.code)!.advise = ["卖出","down-tag"];
+//       return ["卖出","down-tag"]
+//     }else {
+//       rowDataMap.get(stock.code)!.advise = ["具体分析","normal"];
+//       return ["具体分析","normal"]
+//     }
+//   }
+//   // rowDataMap.get(stock.code)?.advise = ["----","normal"];
+//   return ["----","normal"];
+// }
 const filterAdvise = (value: string, stock: StockInfoG) => {
   if (value==="买入(未持有)"){
     return rowDataMap.get(stock.code)!.advise[0]==="买入"&&!stock.hold;
@@ -286,7 +326,11 @@ function computeBox(stock: StockInfoG){
   //打印code和对应的boxes
   if (boxes!=undefined&&stock.live_data?.price!=undefined){
     let box = comparePriceWithBox(stock.live_data.price, boxes);
+    // console.log("计算箱体",code,box);
     rowDataMap.get(code)!.box = [box[0],box[2]];
+    console.log("计算箱体",code,rowDataMap.get(code));
+    // rowDataMap.get(code)!.advise = ["买入","up-tag"];
+    // rowDataMap.get(code)!.box = box[0];
     return box;
   }
   return ["----","normal"];
@@ -349,8 +393,9 @@ function updateHold(){
 //   })
 // }
 function judgeMaState(stock:StockInfoG){
+  console.log("判断均线状态")
   if (stock.live_data == undefined){
-    return "---";
+    return ["---","normal"];
   }
   let ma5 = stock.live_data.ma5;
   let ma10 = stock.live_data.ma10;
@@ -440,7 +485,6 @@ function divideBox(price: number, down: number, up: number): [string,string,unde
           </template>
         </el-table-column>
         <el-table-column
-            prop="box"
             label="操作建议"
             :filters="[
         { text: '买入(未持有)', value: '买入(未持有)' },
@@ -454,6 +498,7 @@ function divideBox(price: number, down: number, up: number): [string,string,unde
 <!--              <el-text :class="styleClass" >{{text}}</el-text>-->
 <!--            </div>-->
 <!--            <el-text :class="getAdvise(scope.row)[1]" >{{getAdvise(scope.row)[0]}}</el-text>-->
+<!--            <el-tag  >测试</el-tag>-->
             <el-tag :class="getAdvise(scope.row)[1]" >{{getAdvise(scope.row)[0]}}</el-tag>
           </template>
         </el-table-column>
