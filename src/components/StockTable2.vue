@@ -23,22 +23,11 @@ const props = defineProps({
     required: true
   }
 })
-// interface rowData{
-//   code:string,
-//   price:number,
-//   ma:string,
-//   box:string,
-//   change:string,
-//   breathClass:string,
-//   advise:string
-// }
 
 const router = useRouter()
 const table = ref()
 const StockInfoGs = ref<StockInfoG[]>([]);
 const nowSelectStock = ref<StockInfoG>();
-const rowDataMap:Map<string,Ref<rowData>> = new Map();
-// const rowDataMap = reactive<Map<string,rowData>>(new Map()); // 使用reactive创建响应式Map
 const tableHeight = ref();
 const showGroupManage = ref(false);
 const contextMenuShow = ref(false)
@@ -58,24 +47,6 @@ watch(()=>store.isBlur,(newValue)=>{
     contextMenuShow.value = false;
   }
 });
-// watch(
-//     () => Array.from(rowDataMap.entries()),
-//     (newEntries) => {
-//       console.log("rowdatamaopchange了",props.activeName,props.groupName,rowDataMap)
-//       if (props.activeName===props.groupName){
-//         store.rowData.clear(); // 清空旧的Map数据
-//         newEntries.forEach(([key, value]) => {
-//           store.rowData.set(key, value);
-//         });
-//         console.log("此时的rowdatamap",store.rowData,rowDataMap)
-//       }
-//     },
-//     { deep: true } // 因为我们关心Map内部的变化
-// );
-
-// watch(groupName, (newValue, oldValue) => {
-//   console.log(newValue, oldValue)
-// })
 
 // watch(() => props.groupName, (newValue, oldValue) => {
 //   console.log('groupName changed:', newValue, oldValue);
@@ -95,33 +66,17 @@ onMounted(() => {
   console.log(props.groupName)
   calculateTableHeight();
   updateStockInfoG();
-  // window.addEventListener('resize',getHeight)
-  // window.addEventListener('blur', ()=>{
-  //   show.value = false;
-  // })
   window.addEventListener('resize', calculateTableHeight);
-  // invoke("query_live_stocks_data",{groupName:props.groupName}).catch(err => {
-  //   console.log(err);
-  // })
   listen("live_stock_data", ({payload }) => {
     if (props.activeName == props.groupName){
       console.log("收到实时数据",payload);
       updateLiveData(payload);
     }
   })
-  // webviewWindow.getCurrent().listen("WINDOW_BLUR", ({ event, payload }) => {
-  // webviewWindow.getCurrent().listen(TauriEvent.WINDOW_BLUR, ({ event, payload }) => {
-  //   console.log(event,payload)
-  //   console.log("窗口失去焦点前",show.value)
-  //   console.log("窗口失去焦点后",show.value)
-  // });
 })
 onBeforeUnmount(()=> {
   window.removeEventListener('resize', calculateTableHeight);
 })
-// beforeDestroy() {
-//   window.removeEventListener('resize', this.calculateTableHeight);
-// },
 //用于更新数据
 function updateStockInfoG() {
   invoke<StockInfoG[]>("query_stocks_by_group_name", {name: props.groupName}).then(res => {
@@ -130,17 +85,12 @@ function updateStockInfoG() {
     if (props.activeName===props.groupName){
       store.stockinfoGs = res;
     }
-    rowDataMap.clear();
-    // store.stockinfoGs.forEach(item => {
-    res.forEach(item => {
-      rowDataMap.set(item.code,ref({
-        code:item.code, box: ["","",undefined], change: "", ma: ["","normal"], price: 0.0,
-        breathClass:"", advise: ["normal",""]
-      }));
-      console.log("初始化中的",rowDataMap)
-
-    });
-    console.log("初始化完成的",rowDataMap)
+    StockInfoGs.value.forEach(item => {
+      item.rowData = ref({
+        code:item.code, box: ["","",undefined], change: "", ma: ["均线--","normal"], price: 0.0,
+        breathClass:"", advise: ["具体分析","normal"]
+      })
+    })
   }).catch(err => {
     console.log(err);
   })
@@ -154,22 +104,12 @@ function getColor(percent:number){
     return 'black'; // 黑色
   }
 }
-// async function getHeight(){
-//   await nextTick();
-//   // window.innerHeight 浏览器窗口的可见高度，下面的 220 是除了table最大高度的剩余空间。
-//   console.log(1111,window.innerHeight);
-//   console.log(tableHeight.value)
-//   tableHeight.value = window.innerHeight  - 220;
-//   // tableHeight.value = window.innerHeight - table.value.offsetHeight - 220;
-// }
 function calculateTableHeight() {
   // 计算表格高度，假设您希望表格高度为视口高度减去 100px
   tableHeight.value = `${window.innerHeight - 100}px`;
 }
 function showContextMenu(row: StockInfoG, _: any, e: MouseEvent) {
   nowSelectStock.value = row;
-  // console.log("当前选择的股票de value",nowSelectStock.value)
-  // console.log(row, column, e,show.value)
   options.x = e.x;
   options.y = e.y;
   options.code = row.code;
@@ -177,28 +117,25 @@ function showContextMenu(row: StockInfoG, _: any, e: MouseEvent) {
   contextMenuShow.value=true
 
 }
-// watch(() => show.value, (newValue, oldValue) => {
-//   console.log("show的值变换了"+newValue, oldValue)
-// })
 async function updateLiveData(live_data:Record<string, StockLiveData>){
   //遍历StockInfoGs
   if (props.activeName===props.groupName){
     for (let i = 0; i < StockInfoGs.value.length; i++) {
       let stock = StockInfoGs.value[i];
-      const element = stock;
-      let code = element.code;
+      let code = stock.code;
       if (live_data[code] != undefined){
+        let rowData = stock.rowData;
         const newPrice = live_data[code].price;
-        let rowData = rowDataMap.get(code)!.value;
-        const oldPrice = rowData.price;
+        const oldPrice = rowData?.price ?? 0;
         stock.live_data = live_data[code];
-        if (store.stockinfoG?.code==code){ //为了在细节页面能够看见实时消息，需要更新全局状态的当前股票信息
-          store.stockinfoG.live_data = live_data[code];
-        }
         rowData.price = live_data[code].price;
         rowData.ma = judgeMaState(stock);
         rowData.box = computeBox(stock);
-        stock.rowData = rowData;
+        rowData.advise = getAdvise(stock);
+        if (store.stockinfoG?.code==code){ //为了在细节页面能够看见实时消息，需要更新全局状态的当前股票信息
+          store.stockinfoG.live_data = live_data[code];
+          store.stockinfoG.rowData = rowData;
+        }
         // 根据价格变化设置呼吸灯效果
         if (newPrice > oldPrice) {
           await nextTick();
@@ -222,33 +159,21 @@ async function updateLiveData(live_data:Record<string, StockLiveData>){
     }
   }
 }
-// function getRowClass(row:StockInfoG){
-//   console.log("get是",rowDataMap.get(row.code)!.breathClass);
-//   return {
-//     // 其他类名...
-//     [rowDataMap.get(row.code)!.breathClass]: true, // 使用方括号语法动态绑定类名
-//   };
-// }
-// const getRowClass=({
-//   row,
-// }:{row:StockInfoG,rowIndex:number})=>{
-//   {
-//     // 假设rowDataMap是一个响应式引用或全局可访问的变量
-//     // 检查rowDataMap是否包含当前行的code
-//     console.log("检查了吗样式",rowDataMap,row.code)
-//     if (rowDataMap.has(row.code)) {
-//       const breathClass = rowDataMap.get(row.code)!.breathClass; // 使用非空断言，因为我们知道存在该code
-//       return {
-//         // 其他类名...
-//         [breathClass]: true, // 使用方括号语法动态绑定类名
-//       };
-//     } else {
-//       // rowDataMap尚未初始化或当前行的code不存在，返回一个空对象或默认类名
-//       console.log("rowDataMap尚未包含", row.code);
-//       return {}; // 或者返回一个包含默认类名的对象
-//     }
-//   }
-// }
+const getRowClass=({
+  row,
+}:{row:StockInfoG,rowIndex:number})=>{
+  {
+    if (row.rowData.breathClass) {
+      const breathClass = row.rowData.breathClass; // 使用非空断言，因为我们知道存在该code
+      return {
+        // 其他类名...
+        [breathClass]: true, // 使用方括号语法动态绑定类名
+      };
+    } else {
+      return {}; // 或者返回一个包含默认类名的对象
+    }
+  }
+}
 function removeStock(code: string){
   if (code.length > 0){
     invoke("remove_stock_from_group", {code: code,groupName: props.groupName}).then(_ => {
@@ -265,31 +190,66 @@ function removeStock(code: string){
 }
 function getAdvise(stock: StockInfoG){
   // let rowData = rowDataMap.get(stock.code);
-  // if (rowData!=undefined){
-  //   console.log("rowData.ma:", rowData.ma);
-  //   if (rowData.ma === ""){
-  //     console.log("kong",stock.code,rowData,rowData.ma,rowDataMap)
-  //   }
-  //   console.log("获取建议",rowData.ma,rowData.box);
-  //   if (rowData.ma!="均线空头"&&(rowData.box=="下轨区"||rowData.box=="已突破箱体")){
-  //     rowDataMap.get(stock.code)!.advise = ["买入","up-tag"];
-  //     return ["买入","up-tag"]
-  //   }else if (rowData.ma=="均线空头"&&(rowData.box=="上轨区"||rowData.box=="已跌破箱体")){
-  //     rowDataMap.get(stock.code)!.advise = ["卖出","down-tag"];
-  //     return ["卖出","down-tag"]
-  //   }else {
-  //     rowDataMap.get(stock.code)!.advise = ["具体分析","normal"];
-  //     return ["具体分析","normal"]
-  //   }
-  // }
-  // rowDataMap.get(stock.code)?.advise = ["----","normal"];
-  return ["----","normal"];
+  let rowData = stock.rowData;
+  if (rowData!=undefined){
+    let box = rowData.box[0];
+    if (rowData.ma[0]=="均线多头"){
+      if (box=="已突破箱体"){
+        if ((stock.live_data.price-rowData.box[2])>0.05*rowData.box[2]){
+          // rowData.advise = ["积极持有","up-tag"];
+          return ["积极持有","up-tag"];
+        }else {
+          // rowData.advise = ["买入","up-tag"];
+          return ["买入","up-tag"];
+        }
+      }else if (box=="下轨区"){
+        // rowData.advise = ["买入","up-tag"];
+        return ["买入","up-tag"];
+      }else if(box=="中轨区"){
+        // rowData.advise = ["积极持有","up-tag"];
+        return ["积极持有","up-tag"];
+      }else if(box=="上轨区"){
+        // rowData.advise = ["谨慎持有","normal-tag"];
+        return ["谨慎持有","normal-tag"];
+      } else {
+        // rowData.advise = ["具体分析","normal"];
+        return ["具体分析","normal"];
+      }
+    }else if (rowData.ma[0]=="均线空头"){
+      if (box=="下轨区"||box=="已突破箱体"){
+        // rowData.advise = ["谨慎买入","normal-tag"];
+        return ["谨慎买入","normal-tag"];
+      }else {
+        // rowData.advise = ["卖出","down-tag"];
+        return ["卖出","down-tag"];
+      }
+    }else if (rowData.ma[0]=="均线缠绕"){
+      if (box=="下轨区"){
+        // rowData.advise = ["买入","up-tag"];
+        return ["买入","up-tag"];
+      }else if (box=="已突破箱体"){
+        if ((stock.live_data.price-rowData.box[2])>0.05*rowData.box[2]){
+          // rowData.advise = ["积极持有","up-tag"];
+          return ["积极持有","up-tag"];
+        }
+        // rowData.advise = ["买入","up-tag"];
+        return ["买入","up-tag"];
+      }
+      else if (box=="上轨区"){
+        // rowData.advise = ["谨慎卖出","normal"];
+        return ["谨慎卖出","normal"];
+      }else {
+        // rowData.advise = ["具体分析","normal"];
+        return ["具体分析","normal"];
+      }
+    }
+  }
 }
 const filterAdvise = (value: string, stock: StockInfoG) => {
-  // if (value==="买入(未持有)"){
-  //   return rowDataMap.get(stock.code)!.advise[0]==="买入"&&!stock.hold;
-  // }
-  // return value===rowDataMap.get(stock.code)!.advise[0];
+  if (value==="买入(未持有)"){
+    return stock.rowData?.advise[0]==="买入"&&!stock.hold;
+  }
+  return value===stock.rowData?.advise[0];
 }
 function computeBox(stock: StockInfoG){
   let code = stock.code;
@@ -306,7 +266,6 @@ function computeBox(stock: StockInfoG){
 function manageGroup(){
   console.log("展示管理分组")
   showGroupManage.value = !showGroupManage.value;
-  // showGroupManage.value = false;
 }
 function clickRow(row: StockInfoG, _: any){
   nowSelectStock.value = row;
@@ -314,8 +273,6 @@ function clickRow(row: StockInfoG, _: any){
   // store.count = nowSelectStock.value.code
   router.push("/main/detail")
 }
-
-
 
 //根据股票code更新是否持有，更新为当前是否持有的反状态
 //如果成功更新成功，更新该股票（当前行）的状态信息，还要通知"持有"分组股票有变化了
@@ -359,11 +316,7 @@ function updateHold(){
 //     duration: 0,
 //   })
 // }
-let i= 0
 function judgeMaState(stock:StockInfoG){
-  // console.log("判断均线状态",i,stock.code,stock.live_data,rowDataMap);
-  console.log("判断均线状态",props.activeName,props.groupName,i,StockInfoGs);
-  i++;
   if (stock.live_data == undefined){
     return ["---","normal"];
   }
@@ -422,6 +375,7 @@ function divideBox(price: number, down: number, up: number): [string,string,unde
           :data="StockInfoGs"
           style="width: 100%;font-size: 14px"
           :max-height="tableHeight"
+          :row-class-name="getRowClass"
           @row-dblclick="clickRow"
           @row-contextmenu="showContextMenu"
       >
@@ -446,14 +400,14 @@ function divideBox(price: number, down: number, up: number): [string,string,unde
 <!--            <el-text :style="{color:judgeMaState(scope.row)[1],fontSize:'15px',fontWeight:'bold'}" >{{judgeMaState(scope.row)[0]}}</el-text>-->
 <!--            <el-text :class="judgeMaState(scope.row)[1]" >{{judgeMaState(scope.row)[0]}}</el-text>-->
 <!--            <el-text :class="rowDataMap.get(scope.row.code).value[1]" >{{rowDataMap.get(scope.row.code).value[0]}}</el-text>-->
-            <el-text :class="scope.row.rowData.ma?.[1]" >{{scope.row.rowData.ma?.[0]}}</el-text>
+            <el-text :class="scope.row.rowData?.ma?.[1]" >{{scope.row.rowData?.ma?.[0]}}</el-text>
           </template>
         </el-table-column>
         <el-table-column prop="box" label="箱体">
           <template #default="scope">
 <!--            <el-text :class="computeBox(scope.row)[1]" >{{computeBox(scope.row)[0]}}</el-text>-->
 <!--            <el-text :class="computeBox(scope.row)[1]" >{{computeBox(scope.row)[0]}}</el-text>-->
-            "线体"
+            <el-text :class="scope.row.rowData?.box?.[1]" >{{scope.row.rowData?.box?.[0]}}</el-text>
           </template>
         </el-table-column>
         <el-table-column
@@ -471,8 +425,8 @@ function divideBox(price: number, down: number, up: number): [string,string,unde
 <!--              <el-text :class="styleClass" >{{text}}</el-text>-->
 <!--            </div>-->
 <!--            <el-text :class="getAdvise(scope.row)[1]" >{{getAdvise(scope.row)[0]}}</el-text>-->
+            <el-tag :class="scope.row.rowData?.advise?.[1]" >{{scope.row.rowData?.advise?.[0]}}</el-tag>
 <!--            <el-tag :class="getAdvise(scope.row)[1]" >{{getAdvise(scope.row)[0]}}</el-tag>-->
-            <el-tag>测试</el-tag>
           </template>
         </el-table-column>
       </el-table>

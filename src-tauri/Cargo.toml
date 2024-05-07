@@ -1,6 +1,6 @@
 [package]
 name = "trade_tip"
-version = "0.0.3"
+version = "0.0.4"
 description = "金融助手"
 authors = ["you"]
 edition = "2021"
