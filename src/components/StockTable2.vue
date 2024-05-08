@@ -156,6 +156,8 @@ async function updateLiveData(live_data:Record<string, StockLiveData>){
         }
       }
     }
+    //因为已经限定了当前tab就是选中的tab，所以这里同步更新全局状态的StockInfoGs，不然详情页拿不到数据
+    store.stockinfoGs = StockInfoGs.value;
   }
 }
 const getRowClass=({
