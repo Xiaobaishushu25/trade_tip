@@ -30,6 +30,7 @@ declare module 'vue' {
     ElTabs: typeof import('element-plus/es')['ElTabs']
     ElTag: typeof import('element-plus/es')['ElTag']
     ElText: typeof import('element-plus/es')['ElText']
+    ElTooltip: typeof import('element-plus/es')['ElTooltip']
     GroupTab: typeof import('./src/components/GroupTab.vue')['default']
     Header: typeof import('./src/components/Header.vue')['default']
     MainLayout: typeof import('./src/components/MainLayout.vue')['default']

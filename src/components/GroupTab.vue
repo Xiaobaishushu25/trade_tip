@@ -153,31 +153,33 @@ function judgeTab(activeName:string){
       </el-tab-pane>
       <el-tab-pane name="设置">
         <template #label>
-<!--          <inline-svg src="./src/assets/svg/menu.svg" class="min-icon" @click="dialogVisible = true"></inline-svg>-->
-          <inline-svg src="../assets/svg/menu.svg" class="min-icon" @click="dialogVisible = true"></inline-svg>
+          <el-tooltip content="分组管理" placement="bottom" effect="light" :show-arrow="false">
+            <inline-svg src="../assets/svg/menu.svg" class="min-icon" @click="dialogVisible = true"></inline-svg>
+          </el-tooltip>
         </template>
+<!--        <el-tooltip content="分组管理" placement="bottom" effect="light" :show-arrow="false">-->
+<!--          <template #label>-->
+<!--            &lt;!&ndash;          <inline-svg src="./src/assets/svg/menu.svg" class="min-icon" @click="dialogVisible = true"></inline-svg>&ndash;&gt;-->
+<!--            <inline-svg src="../assets/svg/menu.svg" class="min-icon" @click="dialogVisible = true"></inline-svg>-->
+<!--          </template>-->
+<!--        </el-tooltip>-->
       </el-tab-pane>
     </el-tabs>
   </div>
   <el-dialog v-model="dialogVisible" :show-close="false" :draggable="true" width="250" align-center style="padding: 0">
     <template #header="{ }">
       <div class="my-header">
-        <label style="font-size: 14px;margin-left: 15px;font-family:sans-serif">分组管理</label>
+        <label style="font-size: 14px;margin-left: 15px;font-family:sans-serif">分组管理(可拖拽排序)</label>
 <!--        <inline-svg src="./src/assets/svg/close.svg" class="small-close"  @click.left="dialogVisible=false"></inline-svg>-->
         <inline-svg src="../assets/svg/close.svg" class="small-close"  @click.left="dialogVisible=false"></inline-svg>
       </div>
     </template>
     <el-scrollbar ref="scrollbarRef" max-height="200px" style="display: flex;align-items: center; justify-content: center;" >
-<!--      <VueDraggable ref="el" v-model="store.stockGroups" class="group-column">-->
       <VueDraggable ref="el" v-model="stockGroupNames" class="group-column">
-<!--        <div v-for="item in store.stockGroups" :key="item.index" style="cursor: move">-->
         <div v-for="item in stockGroupNames" :key="item.index" style="cursor: move">
-<!--          <div class="container" @click="isButtonVisible = false" v-bind:class="{ animate: isButtonVisible }">-->
           <div class="container" @click="buttonVisibilities[item.index] = false" v-bind:class="{ animate: buttonVisibilities[item.index] }">
             {{ item.name }}
-<!--            <svg t="1707745507392" class="icon spot" @click.stop="isButtonVisible = !isButtonVisible" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="12062" width="24" height="24"><path d="M510.653 931.287z m0 92.713a92.708 92.708 0 1 0 0-185.426 92.713 92.713 0 0 0 0 185.426M512 512z m0 92.713a92.718 92.718 0 1 0 0-185.431 92.718 92.718 0 0 0 0 185.431m1.347-512z m0 92.713c51.205 0 92.713-41.508 92.713-92.713C606.06 41.508 564.552 0 513.347 0s-92.719 41.508-92.719 92.713c0 51.205 41.513 92.713 92.719 92.713" p-id="12063"></path></svg>-->
             <svg t="1707745507392" class="icon spot"  @click.stop="buttonVisibilities[item.index] = !buttonVisibilities[item.index]"     viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="12062" width="24" height="24"><path d="M510.653 931.287z m0 92.713a92.708 92.708 0 1 0 0-185.426 92.713 92.713 0 0 0 0 185.426M512 512z m0 92.713a92.718 92.718 0 1 0 0-185.431 92.718 92.718 0 0 0 0 185.431m1.347-512z m0 92.713c51.205 0 92.713-41.508 92.713-92.713C606.06 41.508 564.552 0 513.347 0s-92.719 41.508-92.719 92.713c0 51.205 41.513 92.713 92.719 92.713" p-id="12063"></path></svg>
-<!--            <button v-show="isButtonVisible" class="red-button" @click.stop="remove(item.name)">删除</button>-->
             <button v-show="buttonVisibilities[item.index]" class="red-button" @click.stop="remove(item.name)">删除</button>
           </div>
         </div>
@@ -212,6 +214,9 @@ function judgeTab(activeName:string){
 }
 .dialog-confirm{
   color: #9d6a09;
+}
+.min-icon{
+  outline: none!important;
 }
 .right{
   display: flex;

@@ -59,8 +59,12 @@ function back(){
     <img src="../assets/icon.png" width="25" height="25" alt="Logo Image" style="margin-left: 5px;margin-right: 10px;user-select: none">
     <ElSearch></ElSearch>
     <div id="stage-button">
-      <inline-svg :src="`../assets/svg/${live_name}.svg`" class="window-button back" @click.left="changeUpdateState"></inline-svg>
-      <inline-svg src="../assets/svg/back.svg" class="window-button back" @click.left="back()"></inline-svg>
+      <el-tooltip :content="`${live_name}`" placement="bottom" effect="light" :show-arrow="false">
+        <inline-svg :src="`../assets/svg/${live_name}.svg`" class="window-button back" @click.left="changeUpdateState"></inline-svg>
+      </el-tooltip>
+      <el-tooltip content="返回" placement="bottom" effect="light" :show-arrow="false">
+        <inline-svg src="../assets/svg/back.svg" class="window-button back" @click.left="back()"></inline-svg>
+      </el-tooltip>
       <inline-svg src="../assets/svg/minimize.svg" class="window-button min" @click.left="window_minimize"></inline-svg>
       <inline-svg :src="`../assets/svg/${max_state_name}.svg`" :class="`window-button ${max_state_name}`" @click.left="window_maximize" ></inline-svg>
       <inline-svg src="../assets/svg/close.svg" class="window-button close"  @click.left="window_close"></inline-svg>
@@ -85,6 +89,9 @@ function back(){
   /*top: 0px;
   left: 0;
   right: 0;*/
+}
+.window-button{/*去掉加上tooltip后出现的黑色边框*/
+  outline: none !important;
 }
 
 
