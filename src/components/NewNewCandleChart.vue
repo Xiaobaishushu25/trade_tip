@@ -210,7 +210,30 @@ function handleRawData(raw: StockData[]){
   let ma10 = [];
   let ma20 = [];
   let ma60 = [];
-  for (let i = 0; i < raw.length; i++) {
+  let element = raw[0];
+  let color, borderColor;
+  if (element.open < element.close) {
+    color = 'white';
+    borderColor = 'red';
+  } else {
+    color = 'green';
+    borderColor = 'green';
+  }
+  categoryData.push(element.date);
+  values.push([element.open,element.close,element.low,element.high,element.vol,0.0]);
+  // volumes.push([i, element.vol, element.open > element.close ? 1 : -1]);
+  volumes.push({
+    value:element.vol,
+    itemStyle: {
+      color:color,
+      borderColor:borderColor
+    }
+  });
+  ma5.push(element.ma5);
+  ma10.push(element.ma10);
+  ma20.push(element.ma20);
+  ma60.push(element.ma60);
+  for (let i = 1; i < raw.length; i++) {
     let element = raw[i];
     let color, borderColor;
     if (element.open < element.close) {
@@ -221,7 +244,8 @@ function handleRawData(raw: StockData[]){
       borderColor = 'green';
     }
     categoryData.push(element.date);
-    values.push([element.open,element.close,element.low,element.high,element.vol]);
+    //最后一个元素是涨跌幅，需要用到前一天的收盘价
+    values.push([element.open,element.close,element.low,element.high,element.vol,calculateChangeRate(raw[i-1].close,element.close)]);
     // volumes.push([i, element.vol, element.open > element.close ? 1 : -1]);
     volumes.push({
       value:element.vol,
@@ -886,6 +910,7 @@ function init_option(){
       formatter: function (params: any) { // params 是 formatter 需要的数据集
         let htmlContent;
         if (params.seriesType == "candlestick") {
+          console.log(params)
           let change = (params.data[2] - params.data[1]).toFixed(3);
           const { openClass, closeClass, changeClass } = formatPriceLabel(params.data[1], params.data[2], change);
           htmlContent = `<div class="column tip">
@@ -896,7 +921,7 @@ function init_option(){
       <label class="green-label">最低：${params.data[3]}</label>
       <label class="${closeClass}">收盘：${params.data[2]}</label>
       <label class="${changeClass}">涨跌：${change}</label>
-      <label class="${changeClass}">涨幅：${calculateChangeRate(params.data[1], params.data[2])}%</label>
+      <label class="${changeClass}">涨幅：${params.data[6]}%</label>
 <!--      <label>成交量：${params.data[5]}</label>-->
       <label>成交量：${formatLargeNumber(params.data[5])}</label>
     </div>`
