@@ -1,9 +1,9 @@
 use std::collections::HashMap;
-use anyhow::{Context};
+use anyhow::{anyhow, Context};
 use log::{info};
 use reqwest::Client;
 use reqwest::header::HeaderMap;
-use crate::app_errors::AppResult;
+use crate::app_errors::{AppError, AppResult};
 use crate::dtos::stock_dto::StockLiveData;
 use crate::entities::prelude::StockData;
 use crate::service::http::{init_http, REQUEST};
@@ -95,6 +95,25 @@ impl HttpRequest {
         // println!("{:?}", vec);
         // info!("{:?}", live_data);
         Ok(live_data)
+    }
+    pub async fn get_live_price_img(&self,code:&str)->AppResult<Vec<u8>> {
+        match get_market_by_code(code)?.as_str() {
+            "sh"=>{
+                let url = format!("https://webquotepic.eastmoney.com/GetPic.aspx?nid=1.{}&imageType=GNR&token=4f1862fc3b5e77c150a2b985b12db0fd",code);
+                let result = self.client.get(url.clone()).send().await.with_context(||format!("请求url:{}",url))?;
+                let content = result.bytes().await.unwrap();
+                Ok(content.to_vec())
+            },
+            "sz"=>{
+                let url = format!("https://webquotepic.eastmoney.com/GetPic.aspx?nid=0.{}&imageType=GNR&token=4f1862fc3b5e77c150a2b985b12db0fd",code);
+                let result = self.client.get(url.clone()).send().await.with_context(||format!("请求url:{}",url))?;
+                let content = result.bytes().await.unwrap();
+                Ok(content.to_vec())
+            }
+            _=>{
+                Err(AppError::from(anyhow!("无法判断股票的市场！")))
+            }
+        }
     }
 }
 #[tokio::test]

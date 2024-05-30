@@ -78,6 +78,8 @@ const downColor = 'rgb(55,150,55)';
 const nowDate = getFormattedDate();
 
 const contextMenuShow = ref(false);
+
+
 const chart=ref(null);
 let chartIsInit = false;
 let myChart: EChartsType;
@@ -87,6 +89,7 @@ let newGraphicData:Graphic[] =[]
 let stockData:CandleStockData;
 // 创建一个映射来存储每个id对应的group
 const groupMap = new Map<string, { group: any }>();
+
 const inputVisible = ref(false)
 const inputValue = ref('');
 const inputRef = ref();
@@ -910,7 +913,6 @@ function init_option(){
       formatter: function (params: any) { // params 是 formatter 需要的数据集
         let htmlContent;
         if (params.seriesType == "candlestick") {
-          console.log(params)
           let change = (params.data[2] - params.data[1]).toFixed(3);
           const { openClass, closeClass, changeClass } = formatPriceLabel(params.data[1], params.data[2], change);
           htmlContent = `<div class="column tip">

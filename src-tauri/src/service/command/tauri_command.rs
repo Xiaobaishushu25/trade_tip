@@ -424,6 +424,20 @@ pub async fn query_live_stocks_data<'r>(state: State<'r, MyState>,group_name:Str
     }
 }
 #[tauri::command]
+pub async fn query_live_stocks_data_img(request: tauri::ipc::Request<'_>,code:String) -> Result<tauri::ipc::Response,String> {
+    // info!("查询图片数据:{}",code);
+    match REQUEST.get().unwrap().get_live_price_img(&code).await{
+        Ok(data)=>{
+            let response = tauri::ipc::Response::new(data);
+            Ok(response)
+        },
+        Err(e)=>{
+            error!("查询股票实时价格图失败:{}",e);
+            Err(e.to_string())
+        }
+    }
+}
+#[tauri::command]
 pub fn exit_app() {
     info!("退出程序");
     exit(0)

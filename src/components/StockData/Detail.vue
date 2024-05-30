@@ -1,6 +1,26 @@
 <script setup lang="ts">
 import {store} from "../../store.ts";
+import {onMounted, ref, watch} from "vue";
+import {invoke} from "@tauri-apps/api/core";
 
+
+const ImageSrc = ref('');
+const priceImageShow = ref(false);
+
+// onMounted(async () => {
+//   await getStockPriceImg(store.stockinfoG!.code);
+// })
+watch(() => store.stockinfoG!.code, async (newVal) => {
+  // console.log('分组内的的股票changed:', newVal);
+  if (priceImageShow.value){
+    await getStockPriceImg(newVal);
+  }
+});
+watch(priceImageShow, async (newVal) => {
+  if (newVal){
+    await getStockPriceImg(store.stockinfoG!.code);
+  }
+})
 function getColor(percent:number){
   if (percent > 0) {
     return 'red'; // 红色
@@ -10,33 +30,26 @@ function getColor(percent:number){
     return 'black'; // 黑色
   }
 }
-// function getMaClass(ma:string){
-//   switch (ma) {
-//     case '均线多头':
-//       return 'up-tag';
-//     case '均线空头':
-//       return 'down-tag';
-//     default:
-//       return 'normal';
-//   }
-// }
-// function getBoxClass(box: string) {
-//   switch (box) {
-//     case '已跌破箱体':
-//     case '上轨区':
-//       return 'down-tag';
-//     case '已突破箱体':
-//     case '下轨区':
-//       return 'up-tag';
-//     default:
-//       return 'normal';
-//   }
-// }
-// const stockInfoG = store.stockinfoG
+async function getStockPriceImg(code:string){
+  invoke<ArrayBuffer>("query_live_stocks_data_img", {code: code}).then(data => {
+    const blob = new Blob([data], { type: 'image/png' }); // 根据你的图片类型设置MIME类型，如'image/jpeg'、'image/png'等
+    ImageSrc.value = URL.createObjectURL(blob);
+  }).catch(err => {
+    console.log(err)
+  })
+}
+
 </script>
 
 <template>
   <div class="detail column">
+    <el-drawer v-model="priceImageShow" direction="ltr" size="100%" :modal="false" modal-class="mask-layer" custom-class="custom-drawer">
+      <template #default>
+        <div>
+          <img  :src=ImageSrc  alt="test">
+        </div>
+      </template>
+    </el-drawer>
     <div class="row" style="gap:10px">
       <label style="font-family: 'Arial'; display: flex;  ">{{store.stockinfoG!.code}}</label>
       <label :style="{ color: store.stockinfoG!.hold ?'orange':'black' }" style="font-family: 'Adobe 黑体 Std R';font-weight: bold;font-size: 25px">{{store.stockinfoG!.name}}</label>
@@ -72,7 +85,8 @@ function getColor(percent:number){
     </div>
     <el-divider />
     <el-tag :class="store.stockinfoG?.rowData?.advise[1]" style="align-items: center;font-size: 18px">{{store.stockinfoG?.rowData?.advise[0]}} </el-tag>
-
+    <el-divider />
+    <el-button type="info" @click="priceImageShow = true">打开分时图</el-button>
 <!--    <label>{{store.stockinfoG}}</label>-->
   </div>
 
@@ -106,5 +120,15 @@ function getColor(percent:number){
 }
 .normal{
   color: #000;
+}
+.custom-drawer {
+  position: absolute !important; /* 确保抽屉定位绝对，避免影响布局 */
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+::v-deep .mask-layer{
+  width: 740px !important;
 }
 </style>
