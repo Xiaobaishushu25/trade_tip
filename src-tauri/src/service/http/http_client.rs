@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 use anyhow::{anyhow, Context};
+use bytes::Bytes;
 use log::{info};
 use reqwest::Client;
 use reqwest::header::HeaderMap;
 use crate::app_errors::{AppError, AppResult};
 use crate::dtos::stock_dto::StockLiveData;
 use crate::entities::prelude::StockData;
-use crate::service::http::{init_http, REQUEST};
+use crate::service::http::{REQUEST};
 use crate::utils::stock_util::{get_market_by_code};
 
 // pub static REQUEST:OnceLock<HttpRequest> = OnceLock::new();
@@ -79,36 +80,24 @@ impl HttpRequest {
                     ma30:None ,
                     ma60:None ,
                 });
-                // let code = split[0];
-                // let content = split[1];
-                // let split = content.split("~");
-                // let split = split.collect::<Vec<&str>>();
-                // println!("{:?}", split);
-                // info!("获取实时数据:{:?}", live_data);
             }
         }
-        // let stock_data = result.json::<Vec<StockData>>().await.with_context(||format!("发生错误了:{}",url))?;
-        // let stock_data = result.json::<Vec<StockData>>().await.with_context(||{error!("发生错误了:{}",url);format!("请求url:{}",url)})?;
-        // let stock_data = result.json::<Vec<StockData>>().await?;
-        // let closes = stock_data.iter().map(|item| item.close).collect::<Vec<f64>>();
-        // let vec = compute_ma(5, closes).await;
-        // println!("{:?}", vec);
-        // info!("{:?}", live_data);
         Ok(live_data)
     }
-    pub async fn get_live_price_img(&self,code:&str)->AppResult<Vec<u8>> {
+    ///获取股票的日内走势图,其实是一个图片，读取为Bytes
+    pub async fn get_intraday_chart_img(&self, code:&str) ->AppResult<Bytes> {
         match get_market_by_code(code)?.as_str() {
             "sh"=>{
                 let url = format!("https://webquotepic.eastmoney.com/GetPic.aspx?nid=1.{}&imageType=GNR&token=4f1862fc3b5e77c150a2b985b12db0fd",code);
                 let result = self.client.get(url.clone()).send().await.with_context(||format!("请求url:{}",url))?;
                 let content = result.bytes().await.unwrap();
-                Ok(content.to_vec())
+                Ok(content)
             },
             "sz"=>{
                 let url = format!("https://webquotepic.eastmoney.com/GetPic.aspx?nid=0.{}&imageType=GNR&token=4f1862fc3b5e77c150a2b985b12db0fd",code);
                 let result = self.client.get(url.clone()).send().await.with_context(||format!("请求url:{}",url))?;
                 let content = result.bytes().await.unwrap();
-                Ok(content.to_vec())
+                Ok(content)
             }
             _=>{
                 Err(AppError::from(anyhow!("无法判断股票的市场！")))

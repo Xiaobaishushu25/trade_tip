@@ -86,7 +86,7 @@
 <!--  updateStockInfoG();-->
 <!--  if (props.activeName === props.groupName){-->
 <!--    console.log("当前页面更新了，开始实时查询")-->
-<!--    invoke("query_live_stocks_data",{groupName:props.groupName}).catch(err => {-->
+<!--    invoke("query_live_stocks_data_by_group_name",{groupName:props.groupName}).catch(err => {-->
 <!--      console.log(err);-->
 <!--    })-->
 <!--  }-->
@@ -100,7 +100,7 @@
 <!--  //   show.value = false;-->
 <!--  // })-->
 <!--  window.addEventListener('resize', calculateTableHeight);-->
-<!--  // invoke("query_live_stocks_data",{groupName:props.groupName}).catch(err => {-->
+<!--  // invoke("query_live_stocks_data_by_group_name",{groupName:props.groupName}).catch(err => {-->
 <!--  //   console.log(err);-->
 <!--  // })-->
 <!--  listen("live_stock_data", ({payload }) => {-->

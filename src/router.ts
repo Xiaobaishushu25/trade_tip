@@ -36,23 +36,6 @@ const routes: Array<RouteRecordRaw> = [
         path: '/tool',
         component: Tool, // 工具界面的布局组件
     },
-// 路由的默认路径
-//     {
-//         path:'/',
-//         redirect:"/tab"
-//     },
-//     {
-//         path:'/dataDetail',
-//         component: DataDetail,
-//     },
-//     {
-//         path:'/tool',
-//         component: Tool,
-//     },
-//     {
-//         path:'/tab',
-//         component: GroupTab,
-//     }
 ]
 
 // 创建路由对象

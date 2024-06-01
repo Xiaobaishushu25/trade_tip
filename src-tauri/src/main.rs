@@ -8,21 +8,19 @@ mod dtos;
 mod entities;
 mod service;
 mod utils;
+mod cache;
 
 use std::collections::HashMap;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use log::{error, info};
-use tauri::Manager;
-use tauri_plugin_window_state::{StateFlags, WindowExt};
-// use tauri_plugin_window_state::{StateFlags, WindowExt};
 use tokio::task::JoinHandle;
 use crate::app_errors::AppResult;
+use crate::cache::intraday_chart_cache::IntradayChartCache;
 use crate::entities::init_db_coon;
-use crate::service::command::tauri_command::{add_stock_info, get_response, query_all_groups, query_groups_by_code, query_stock_info, query_stocks_by_group_name, create_group,delete_group, update_stock_groups, remove_stock_from_group, update_stock_hold, query_stocks_day_k_limit, query_live_stocks_data, update_live_state, query_graphic_by_code, save_graphic, query_box, query_live_stock_data_by_code, delete_graphic_by_id, delete_graphic_by_group_id, exit_app, update_groups,query_live_stocks_data_img};
+use crate::service::command::tauri_command::{add_stock_info, get_response, query_all_groups, query_groups_by_code, query_stock_info, query_stocks_by_group_name, create_group, delete_group, update_stock_groups, remove_stock_from_group, update_stock_hold, query_stocks_day_k_limit, query_live_stocks_data_by_group_name, update_live_state, query_graphic_by_code, save_graphic, query_box, query_live_stock_data_by_code, delete_graphic_by_id, delete_graphic_by_group_id, exit_app, update_groups, query_intraday_chart_img};
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
-use crate::service::curd::update_all_day_k;
 use crate::service::http::{init_http};
 ///是否需要实时更新
 pub static UPDATEING: AtomicBool = AtomicBool::new(true);
@@ -95,6 +93,7 @@ async fn main() {
     tauri::Builder::default()
         // .manage(MyState{task:Mutex::new(None)})
         .manage(state)
+        .manage(IntradayChartCache::new())
         // .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
@@ -131,7 +130,7 @@ async fn main() {
             remove_stock_from_group,
             update_stock_hold,
             query_stocks_day_k_limit,
-            query_live_stocks_data,
+            query_live_stocks_data_by_group_name,
             query_live_stock_data_by_code,
             update_live_state,
             query_graphic_by_code,
@@ -140,7 +139,7 @@ async fn main() {
             delete_graphic_by_id,
             delete_graphic_by_group_id,
             update_groups,
-            query_live_stocks_data_img,
+            query_intraday_chart_img,
             exit_app
         ])
         .run(tauri::generate_context!())

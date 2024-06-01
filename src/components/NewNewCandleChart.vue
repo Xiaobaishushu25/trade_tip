@@ -1309,14 +1309,6 @@ function deleteGroupGraphic(group_id:string){
       </el-button>
     </div>
   </el-dialog>
-<!--  <el-dialog v-model="inputVisible" :show-close="false" width="400" align-center>-->
-<!--&lt;!&ndash;    <div class="text-input-container"></div>&ndash;&gt;-->
-<!--    <el-input v-model="inputValue" ref="inputRef" placeholder="请输入文字内容(按回车确认)" @keydown.enter.prevent="newText" type="textarea" rows="3" clearable ></el-input>-->
-<!--    <div style="margin-top: 20px">-->
-<!--      <label>颜色</label><el-color-picker v-model="newTextColor" />-->
-<!--      <label style="margin-left: 20px" >大小</label><el-input-number v-model="newTextFontSize" :min="9" :max="25" style="margin-left: 10px;width: 110px"/>-->
-<!--    </div>-->
-<!--  </el-dialog>-->
 </template>
 
 <style >

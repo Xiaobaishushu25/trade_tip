@@ -66,7 +66,7 @@ function query_box(){
 watch(activeName, () => {
   let groupName = activeName.value;
   store.activeGroup = groupName;
-  invoke("query_live_stocks_data",{groupName: groupName}).catch(err => {
+  invoke("query_live_stocks_data_by_group_name",{groupName: groupName}).catch(err => {
     console.log(err);
   });
   invoke<StockInfoG[]>("query_stocks_by_group_name", {name: groupName}).then(res => {

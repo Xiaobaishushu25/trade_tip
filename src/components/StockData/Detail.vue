@@ -1,24 +1,24 @@
 <script setup lang="ts">
 import {store} from "../../store.ts";
-import {onMounted, ref, watch} from "vue";
+import { ref, watch} from "vue";
 import {invoke} from "@tauri-apps/api/core";
 
 
 const ImageSrc = ref('');
-const priceImageShow = ref(false);
+const IntradayChartShow = ref(false);
 
 // onMounted(async () => {
 //   await getStockPriceImg(store.stockinfoG!.code);
 // })
 watch(() => store.stockinfoG!.code, async (newVal) => {
   // console.log('分组内的的股票changed:', newVal);
-  if (priceImageShow.value){
-    await getStockPriceImg(newVal);
+  if (IntradayChartShow.value){
+    await getIntradayChartImg(newVal);
   }
 });
-watch(priceImageShow, async (newVal) => {
+watch(IntradayChartShow, async (newVal) => {
   if (newVal){
-    await getStockPriceImg(store.stockinfoG!.code);
+    await getIntradayChartImg(store.stockinfoG!.code);
   }
 })
 function getColor(percent:number){
@@ -30,11 +30,12 @@ function getColor(percent:number){
     return 'black'; // 黑色
   }
 }
-async function getStockPriceImg(code:string){
-  invoke<ArrayBuffer>("query_live_stocks_data_img", {code: code}).then(data => {
+async function getIntradayChartImg(code:string){
+  invoke<ArrayBuffer>("query_intraday_chart_img", {code: code}).then(data => {
     const blob = new Blob([data], { type: 'image/png' }); // 根据你的图片类型设置MIME类型，如'image/jpeg'、'image/png'等
     ImageSrc.value = URL.createObjectURL(blob);
   }).catch(err => {
+    ImageSrc.value = '';
     console.log(err)
   })
 }
@@ -43,15 +44,15 @@ async function getStockPriceImg(code:string){
 
 <template>
   <div class="detail column">
-    <el-drawer v-model="priceImageShow" direction="ltr" size="100%" :modal="false" modal-class="mask-layer" custom-class="custom-drawer">
+    <el-drawer v-model="IntradayChartShow" direction="ltr" size="100%" :modal="false" modal-class="mask-layer" custom-class="custom-drawer">
       <template #default>
         <div>
-          <img  :src=ImageSrc  alt="test">
+          <img  :src=ImageSrc  alt="获取分时图失败">
         </div>
       </template>
     </el-drawer>
     <div class="row" style="gap:10px">
-      <label style="font-family: 'Arial'; display: flex;  ">{{store.stockinfoG!.code}}</label>
+      <label style="font-family: 'Arial',serif; display: flex;  ">{{store.stockinfoG!.code}}</label>
       <label :style="{ color: store.stockinfoG!.hold ?'orange':'black' }" style="font-family: 'Adobe 黑体 Std R';font-weight: bold;font-size: 25px">{{store.stockinfoG!.name}}</label>
     </div>
     <el-divider />
@@ -86,7 +87,7 @@ async function getStockPriceImg(code:string){
     <el-divider />
     <el-tag :class="store.stockinfoG?.rowData?.advise[1]" style="align-items: center;font-size: 18px">{{store.stockinfoG?.rowData?.advise[0]}} </el-tag>
     <el-divider />
-    <el-button type="info" @click="priceImageShow = true">打开分时图</el-button>
+    <el-button type="" @click="IntradayChartShow = true">打开分时图</el-button>
 <!--    <label>{{store.stockinfoG}}</label>-->
   </div>
 

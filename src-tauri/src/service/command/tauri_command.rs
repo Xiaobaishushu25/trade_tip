@@ -4,11 +4,12 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::{Duration};
 use log::{error, info};
-use tauri::{AppHandle, Manager, State};
+use tauri::{Manager, State};
 use tokio::time::sleep;
 use crate::dtos::stock_dto::{StockInfoG, StockLiveData};
-use crate::entities::prelude::{Graphic, Graphics, StockData, StockGroup, StockInfo};
+use crate::entities::prelude::{Graphic, StockData, StockGroup, StockInfo};
 use crate::{get_close_prices, MyState, UPDATEING};
+use crate::cache::intraday_chart_cache::IntradayChartCache;
 use crate::dtos::graphic_dto::GraphicDTO;
 use crate::service::command::handle::{handle_delete_stock, handle_new_stock, handle_stock_livedata};
 use crate::service::curd::graphic_curd::GraphicCurd;
@@ -20,11 +21,10 @@ use crate::service::curd::update_all_day_k;
 use crate::service::http::{ REQUEST};
 #[tauri::command]
 pub async fn update_live_state<'r>(state: State<'r, MyState>,app_handle: tauri::AppHandle,group_name:String,live_state:bool)->Result<(),String> {
-    // state.update_live_state(live_state);
-    info!("更新状态:{}",live_state);
+    // info!("更新状态:{}",live_state);
     UPDATEING.store(live_state, Ordering::Relaxed);
     if live_state {
-        let _ = query_live_stocks_data(state,group_name,app_handle).await;
+        let _ = query_live_stocks_data_by_group_name(state,group_name,app_handle).await;
     }
     Ok(())
 }
@@ -36,8 +36,9 @@ pub async fn update_all_stock_day_k() -> Result<String,String> {
             Ok("更新成功".to_string())
         },
         Err(e)=>{
-            error!("更新日线数据失败:{}",e);
-            Err(format!("更新日线数据失败:{}",e.to_string()))
+            handle_error("更新日线数据失败",e.to_string())
+            // error!("更新日线数据失败:{}",e);
+            // Err(format!("更新日线数据失败:{}",e.to_string()))
         }
     }
 }
@@ -49,22 +50,24 @@ pub async fn get_response(url: String) -> Result<String,String> {
             Ok(response.text().await.unwrap())
         },
         Err(e)=>{
-            error!("http请求错误:{}",e);
-            Err(format!("http请求错误:{}",e.to_string()))
+            handle_error(&format!("http请求错误,地址为{}",url),e.to_string())
+            // error!("http请求错误:{}",e);
+            // Err(format!("http请求错误:{}",e.to_string()))
         }
     }
 }
 #[tauri::command]
 pub async fn add_stock_info(code: String,name:String) -> Result<StockInfo,String> {
     let stock_info = StockInfo::new(code, name);
-    match StockInfoCurd::insert(stock_info).await{
+    match StockInfoCurd::insert(stock_info.clone()).await{
         Ok(stock_info)=>{
             // info!("插入成功:{:?}",stock_info);
             Ok(stock_info)
         },
         Err(e)=>{
-            error!("插入失败:{}",e);
-            Err(e.to_string())
+            handle_error(&format!("插入失败:{:?}",stock_info),e.to_string())
+            // error!("插入失败:{}",e);
+            // Err(e.to_string())
         }
     }
 }
@@ -76,8 +79,9 @@ pub async fn query_stock_info() -> Result<Vec<StockInfo>,String> {
             Ok(stock_infos)
         },
         Err(e)=>{
-            error!("查询失败:{}",e);
-            Err(e.to_string())
+            handle_error("查询所有股票信息失败",e.to_string())
+            // error!("查询失败:{}",e);
+            // Err(e.to_string())
         }
     }
 }
@@ -87,12 +91,13 @@ pub async fn query_all_groups() -> Result<Vec<StockGroup>,String> {
     info!("查询所有分组");
     match StockGroupCurd::query_all().await{
         Ok(stock_groups)=>{
-            info!("查询所有分组成功:{:?}",stock_groups);
+            // info!("查询所有分组成功:{:?}",stock_groups);
             Ok(stock_groups)
         },
         Err(e)=>{
-            error!("查询失败:{}",e);
-            Err(e.to_string())
+            handle_error("查询所有分组失败",e.to_string())
+            // error!("查询失败:{}",e);
+            // Err(e.to_string())
         }
     }
 }
@@ -106,32 +111,35 @@ pub async fn query_stocks_by_group_name(name:String) -> Result<Vec<StockInfoG>,S
                 Ok(more_infos)
             },
             Err(e)=>{
-                error!("查询失败:{}",e);
-                Err(e.to_string())
+                handle_error("查询持有分组失败",e.to_string())
+                // error!("查询失败:{}",e);
+                // Err(e.to_string())
             }
         }
     }
-    match GroupStockRelationCurd::query_stocks_by_group_name(name).await{
+    match GroupStockRelationCurd::query_stocks_by_group_name(name.clone()).await{
         Ok(more_infos)=>{
             // // info!("根据分组名查询成功:{:?}",more_infos);
             Ok(more_infos)
         },
         Err(e)=>{
-            error!("查询失败:{}",e);
-            Err(e.to_string())
+            handle_error(&format!("根据分组名{}查询其中股票失败",name),e.to_string())
+            // error!("查询失败:{}",e);
+            // Err(e.to_string())
         }
     }
 }
 #[tauri::command]
 pub async fn query_groups_by_code(code:String) -> Result<Vec<String>,String> {
-    match GroupStockRelationCurd::query_groups_by_stock_code(code).await{
+    match GroupStockRelationCurd::query_groups_by_stock_code(code.clone()).await{
         Ok(stock_groups)=>{
             // info!("根据股票代码查询分组成功:{:?}",stock_groups);
             Ok(stock_groups)
         },
         Err(e)=>{
-            error!("查询失败:{}",e);
-            Err(e.to_string())
+            handle_error(&format!("根据股票代码{}查询分组失败",code),e.to_string())
+            // error!("查询失败:{}",e);
+            // Err(e.to_string())
         }
     }
 }
@@ -143,11 +151,13 @@ pub async fn create_group(name:String) -> Result<i32,String> {
             Ok(stock_group.index)
         },
         Err(e)=>{
-            error!("插入分组失败:{}",e);
-            Err(e.to_string())
+            handle_error("插入分组失败",e.to_string())
+            // error!("插入分组失败:{}",e);
+            // Err(e.to_string())
         }
     }
 }
+/// 更新分组索引
 #[tauri::command]
 pub async fn update_groups(groups:Vec<StockGroup>) -> Result<(),String> {
     match StockGroupCurd::update_all_index(groups).await{
@@ -156,21 +166,23 @@ pub async fn update_groups(groups:Vec<StockGroup>) -> Result<(),String> {
             Ok(())
         },
         Err(e)=>{
-            error!("更新分组索引失败:{}",e);
-            Err(e.to_string())
+            handle_error("更新分组索引失败",e.to_string())
+            // error!("更新分组索引失败:{}",e);
+            // Err(e.to_string())
         }
     }
 }
 #[tauri::command]
 pub async fn delete_group(name:String) -> Result<i32,String> {
-    match StockGroupCurd::delete_by_name(name).await{
+    match StockGroupCurd::delete_by_name(name.clone()).await{
         Ok(count)=>{
             // info!("删除分组成功:{:?}",count);
             Ok(count)
         },
         Err(e)=>{
-            error!("删除分组失败:{}",e);
-            Err(e.to_string())
+            handle_error(&format!("删除分组{}失败",name.as_str()),e.to_string())
+            // error!("删除分组失败:{}",e);
+            // Err(e.to_string())
         }
     }
 }
@@ -188,24 +200,19 @@ pub async fn update_stock_groups<'r>(state: State<'r,MyState>, is_new:bool, code
                         state.update_history_close_price(code.clone(),prices.get(&code).unwrap().clone())
                     }
                     Err(e) => {
-                        error!("更新缓存失败:{}",e);
-                        return Err(format!("更新缓存失败:{}",e.to_string()));
+                        return handle_error(&format!("更新缓存失败:{}",code), e.to_string());
+                        // error!("更新缓存失败:{}",e);
+                        // return Err(format!("更新缓存失败:{}",e.to_string()));
                     }
                 }
                 info!("创建成功:{:?}",code);
             },
             Err(e)=>{
-                error!("创建失败:{}",e);
-                return Err(e.to_string());
+                return handle_error(&format!("创建{}失败",code), e.to_string());
+                // error!("创建失败:{}",e);
+                // return Err(e.to_string());
             }
         }
-        // match GroupStockRelationCurd::insert(GroupStockR::new("全部".into(),code.clone())).await{
-        //     Ok(_) => { Ok(()) }
-        //     Err(e) => {
-        //         error!("插入失败:{}",e);
-        //         return Err(e.to_string());
-        //     }
-        // }
     }else if group_names.is_empty(){//全部没选上
         return match handle_delete_stock(&code).await{
             Ok(_)=>{
@@ -213,45 +220,49 @@ pub async fn update_stock_groups<'r>(state: State<'r,MyState>, is_new:bool, code
                 Ok(())
             },
             Err(e)=>{
-                error!("删除失败:{}",e);
-                Err(e.to_string())
+                handle_error(&format!("删除{}失败",code), e.to_string())
+                // error!("删除失败:{}",e);
+                // Err(e.to_string())
             }
         }
     };
-    match GroupStockRelationCurd::update_groups_by_code(code, group_names).await{
+    match GroupStockRelationCurd::update_groups_by_code(code.clone(), group_names).await{
         Ok(_)=>{
             // info!("更新分组成功。");
             Ok(())
         },
         Err(e)=>{
-            error!("更新分组失败:{}",e);
-            Err(e.to_string())
+            handle_error(&format!("更新{}分组失败",code), e.to_string())
+            // error!("更新分组失败:{}",e);
+            // Err(e.to_string())
         }
     }
 }
 #[tauri::command]
 pub async fn remove_stock_from_group(code:String,group_name:String) -> Result<(),String> {
-    match GroupStockRelationCurd::delete_by_code_and_group_name(code, group_name).await{
+    match GroupStockRelationCurd::delete_by_code_and_group_name(code.clone(), group_name.clone()).await{
         Ok(_)=>{
             // info!("删除成功。");
             Ok(())
         },
         Err(e)=>{
-            error!("删除失败:{}",e);
-            Err(e.to_string())
+            handle_error(&format!("从{}分组删除股票{}失败",group_name,code), e.to_string())
+            // error!("删除失败:{}",e);
+            // Err(e.to_string())
         }
     }
 }
 #[tauri::command]
 pub async fn update_stock_hold(code:String,hold:bool) -> Result<(),String> {
-    match StockInfoCurd::update_hold_by_code(code, hold).await{
+    match StockInfoCurd::update_hold_by_code(code.clone(), hold).await{
         Ok(_)=>{
             // info!("更新成功。");
             Ok(())
         },
         Err(e)=>{
-            error!("更新失败:{}",e);
-            Err(e.to_string())
+            handle_error(&format!("更新{}持仓状态失败",code), e.to_string())
+            // error!("更新失败:{}",e);
+            // Err(e.to_string())
         }
     }
 }
@@ -263,22 +274,24 @@ pub async fn query_stocks_day_k_limit(code:String) -> Result<Vec<StockData>,Stri
             Ok(stock_data_list)
         },
         Err(e)=>{
-            error!("查询日线数据失败:{}",e);
-            Err(format!("查询日线数据失败:{}",e))
+            handle_error(&format!("查询{}日线数据失败",code), e.to_string())
+            // error!("查询日线数据失败:{}",e);
+            // Err(format!("查询日线数据失败:{}",e))
         }
     }
 }
 #[tauri::command]
 pub async fn query_graphic_by_code(code:String) -> Result<Vec<GraphicDTO>,String> {
-    match GraphicCurd::query_by_code(code).await{
+    match GraphicCurd::query_by_code(code.clone()).await{
         Ok(data_list)=>{
             let data = data_list.into_iter().map(|item| { From::<Graphic>::from(item) }).collect::<Vec<_>>();
             // info!("查询成功:{:?}",data);
             Ok(data)
         },
         Err(e)=>{
-            error!("查询失败:{}",e);
-            Err(e.to_string())
+            handle_error(&format!("查询{}图形元素失败",code), e.to_string())
+            // error!("查询失败:{}",e);
+            // Err(e.to_string())
         }
     }
 }
@@ -293,8 +306,9 @@ pub async fn save_graphic(code:String,graphic:Vec<GraphicDTO>) -> Result<(),Stri
             Ok(())
         },
         Err(e)=>{
-            error!("查询失败:{}",e);
-            Err(e.to_string())
+            handle_error("保存图形元素失败", e.to_string())
+            // error!("查询失败:{}",e);
+            // Err(e.to_string())
         }
     }
 }
@@ -306,8 +320,9 @@ pub async fn delete_graphic_by_id(id:String) -> Result<(),String> {
             Ok(())
         },
         Err(e)=>{
-            error!("删除图形{:?}失败",id);
-            Err(format!("删除图形{:?}失败:{}",id,e.to_string()))
+            handle_error(&format!("删除分组{:?}内的图形失败",id),e.to_string())
+            // error!("删除图形{:?}失败",id);
+            // Err(format!("删除图形{:?}失败:{}",id,e.to_string()))
         }
     }
 }
@@ -319,8 +334,9 @@ pub async fn delete_graphic_by_group_id(group_id:String) -> Result<(),String> {
             Ok(())
         },
         Err(e)=>{
-            error!("删除图形{:?}失败",group_id);
-            Err(format!("删除图形{:?}失败:{}",group_id,e.to_string()))
+            handle_error(&format!("删除图形{:?}失败",group_id),e.to_string())
+            // error!("删除图形{:?}失败",group_id);
+            // Err(format!("删除图形{:?}失败:{}",group_id,e.to_string()))
         }
     }
 }
@@ -332,12 +348,13 @@ pub async fn query_box() -> Result<HashMap<String,Vec<f64>>,String> {
             Ok(data)
         },
         Err(e)=>{
-            error!("查询失败:{}",e);
-            Err(e.to_string())
+            handle_error("查询箱体数据失败",e.to_string())
+            // error!("查询失败:{}",e);
+            // Err(e.to_string())
         }
     }
 }
-//查询单个股票的实时数据，用于点击k线图时获取最新数据，无需等待
+///查询单个股票的实时数据，用于点击k线图时获取最新数据，无需等待
 #[tauri::command]
 // pub async fn query_live_stock_data_by_code(code:String,app_handle: tauri::AppHandle,) -> Result<HashMap<String,StockLiveData>,String> {
 pub async fn query_live_stock_data_by_code<'r>(code:String,state: State<'r, MyState>) -> Result<StockLiveData,String> {
@@ -358,22 +375,25 @@ pub async fn query_live_stock_data_by_code<'r>(code:String,state: State<'r, MySt
                     // info!("查询成功:{:?}",stock_data_list);
                 },
                 Err(e)=>{
-                    error!("处理股票实时信息失败:{}",e);
-                    Err(e.to_string())
+                    handle_error("处理股票实时信息失败",e.to_string())
+                    // error!("处理股票实时信息失败:{}",e);
+                    // Err(e.to_string())
                 }
             }
         },
         Err(e) => {
-            error!("查询股票实时信息失败失败:{}",e);
-            Err(e.to_string())
+            handle_error("根据股票代码查询股票实时信息失败",e.to_string())
+            // error!("查询股票实时信息失败失败:{}",e);
+            // Err(e.to_string())
         }
     }
 }
+/// 查询分组内多个股票的实时数据
+/// 先查询分组内的所有股票代码
 #[tauri::command]
-pub async fn query_live_stocks_data<'r>(state: State<'r, MyState>,group_name:String,app_handle: tauri::AppHandle) -> Result<(),String> {
+pub async fn query_live_stocks_data_by_group_name<'r>(state: State<'r, MyState>,group_name:String,app_handle: tauri::AppHandle) -> Result<(),String> {
     info!("查询实时数据:{}",group_name);
-    // app_handle.get_webview_window("main").unwrap().window()
-    // let window = app_handle.get_webview_window("main").unwrap().window();
+    //查询分组内的所有股票代码
     let result = if group_name =="持有"{
         StockInfoCurd::query_all_hold_only_code().await
     }else {
@@ -392,7 +412,6 @@ pub async fn query_live_stocks_data<'r>(state: State<'r, MyState>,group_name:Str
                 let history_close_price = history_close_price;
                 loop {
                     let x = UPDATEING.load(Ordering::Relaxed);
-                    // info!("是否查询实时数据:{}",x);
                     if x {
                         match REQUEST.get().unwrap().get_live_stock_data(&codes).await {
                             Ok(mut stock_data_list) => {
@@ -418,22 +437,21 @@ pub async fn query_live_stocks_data<'r>(state: State<'r, MyState>,group_name:Str
             Ok(())
         }
         Err(e) => {
-            error!("查询股票实时信息失败失败:{}",e);
-            Err(e.to_string())
+            handle_error("根据分组查询分组内股票实时信息失败",e.to_string())
+            // error!("查询股票实时信息失败失败:{}",e);
+            // Err(e.to_string())
         }
     }
 }
 #[tauri::command]
-pub async fn query_live_stocks_data_img(request: tauri::ipc::Request<'_>,code:String) -> Result<tauri::ipc::Response,String> {
-    // info!("查询图片数据:{}",code);
-    match REQUEST.get().unwrap().get_live_price_img(&code).await{
+pub async fn query_intraday_chart_img<'r>(state: State<'r, IntradayChartCache>, code:String) -> Result<tauri::ipc::Response,String> {
+    match state.get_intraday_chart(&code).await{
         Ok(data)=>{
-            let response = tauri::ipc::Response::new(data);
+            let response = tauri::ipc::Response::new(data.to_vec());
             Ok(response)
         },
         Err(e)=>{
-            error!("查询股票实时价格图失败:{}",e);
-            Err(e.to_string())
+            handle_error("查询股票分时图失败",e.to_string())
         }
     }
 }
@@ -441,4 +459,10 @@ pub async fn query_live_stocks_data_img(request: tauri::ipc::Request<'_>,code:St
 pub fn exit_app() {
     info!("退出程序");
     exit(0)
+}
+///处理错误，先记录到日志中，再返回错误
+/// 使用泛型 T，这样它可以返回任何类型的 Result
+fn handle_error<T>(tip:&str,e:String)->Result<T,String>{
+    error!("{}:{}",tip,e); //查询股票分时图失败:Network Error: net::ERR_CONNECTION_RESET
+    Err(format!("{}:{}",tip,e))
 }
