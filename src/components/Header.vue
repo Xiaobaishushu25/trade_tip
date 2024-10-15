@@ -33,6 +33,9 @@ async function changeUpdateState(){
   await invoke('update_live_state',{groupName:store.activeGroup,liveState:!live_state.value});
   live_state.value = !live_state.value;
 }
+async function open_setting(){
+
+}
 async function window_minimize(){
   console.log("窗口是",await WebviewWindow.getCurrent().isResizable());
   await WebviewWindow.getCurrent().minimize()
@@ -59,6 +62,9 @@ function back(){
     <img src="../assets/icon.png" width="25" height="25" alt="Logo Image" style="margin-left: 5px;margin-right: 10px;user-select: none">
     <ElSearch></ElSearch>
     <div id="stage-button">
+      <el-tooltip content="设置" placement="bottom" effect="light" :show-arrow="false">
+        <inline-svg src="../assets/svg/setting.svg" class="window-button back" @click.left="open_setting"></inline-svg>
+      </el-tooltip>
       <el-tooltip :content="`${live_name}`" placement="bottom" effect="light" :show-arrow="false">
         <inline-svg :src="`../assets/svg/${live_name}.svg`" class="window-button back" @click.left="changeUpdateState"></inline-svg>
       </el-tooltip>
