@@ -1,4 +1,4 @@
-use sea_orm::{ActiveModelTrait, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait, ModelTrait, QueryFilter, QueryOrder, QuerySelect, Statement};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, ModelTrait, QueryOrder, QuerySelect};
 use sea_orm::ActiveValue::Set;
 use crate::app_errors::AppResult;
 use crate::entities::{init_db_coon, open_db_log};

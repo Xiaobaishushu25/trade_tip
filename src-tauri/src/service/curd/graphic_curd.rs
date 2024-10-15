@@ -6,11 +6,11 @@ use crate::entities::prelude::{ActiveGraphic, Graphic, Graphics};
 
 pub struct GraphicCurd;
 impl GraphicCurd {
-    pub async fn query_all()->AppResult<Vec<Graphic>>{
-        let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
-        let graphics = Graphics::find().all(db).await?;
-        Ok(graphics)
-    }
+    // pub async fn query_all()->AppResult<Vec<Graphic>>{
+    //     let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
+    //     let graphics = Graphics::find().all(db).await?;
+    //     Ok(graphics)
+    // }
     pub async fn query_by_code(code:String)->AppResult<Vec<Graphic>>{
         let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
         let graphics = Graphics::find().filter(Column::Code.eq(code)).all(db).await?;
@@ -83,10 +83,19 @@ impl GraphicCurd {
         let _ = Graphics::delete_by_id(id).exec(db).await?;
         Ok(())
     }
+    ///根据分组id删除所有图形，这个分组不是股票分组
     pub async fn delete_by_group_id(group_id:String)->AppResult<()>{
         let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
         let _ = Graphics::delete_many()
             .filter(Column::GroupId.eq(group_id))
+            .exec(db).await?;
+        Ok(())
+    }
+    ///根据code删除所有图形
+    pub async fn delete_by_code(code:String)->AppResult<()>{
+        let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        let _ = Graphics::delete_many()
+            .filter(Column::Code.eq(code))
             .exec(db).await?;
         Ok(())
     }

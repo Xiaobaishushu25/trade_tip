@@ -1,6 +1,6 @@
 [package]
 name = "trade_tip"
-version = "0.0.4"
+version = "0.0.6"
 description = "金融助手"
 authors = ["you"]
 edition = "2021"
@@ -36,6 +36,7 @@ tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
 
 chrono = "0.4"
+bytes = "1.6.0"
 
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!

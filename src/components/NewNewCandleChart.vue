@@ -65,7 +65,7 @@ watch(() => store.stockinfoG,async (newValue: any) => {
   if(code!=newValue.code){
     save_graphic();
     code = newValue.code;
-    console.log("info code变化了",code);
+    // console.log("info code变化了",code);
     await updateChart();
     // myChart.setOption({})
   }
@@ -78,6 +78,8 @@ const downColor = 'rgb(55,150,55)';
 const nowDate = getFormattedDate();
 
 const contextMenuShow = ref(false);
+
+
 const chart=ref(null);
 let chartIsInit = false;
 let myChart: EChartsType;
@@ -87,6 +89,7 @@ let newGraphicData:Graphic[] =[]
 let stockData:CandleStockData;
 // 创建一个映射来存储每个id对应的group
 const groupMap = new Map<string, { group: any }>();
+
 const inputVisible = ref(false)
 const inputValue = ref('');
 const inputRef = ref();
@@ -103,7 +106,11 @@ const options = {
 }
 watch(()=>store.isBlur,(newValue)=>{
   if (newValue){
+    //当页面获得焦点时，锁定缩放图表，并将isCtrlPressed改为false。因为其他快捷键比如qq截图，会按下Ctrl（此时会解锁图表缩放），然后页面失去焦点无法
+    //监听到Ctrl释放，会导致图表缩放状态异常。
     contextMenuShow.value = false;
+    setZoomLock(true);
+    isCtrlPressed = false;
   }
 })
 
@@ -130,7 +137,7 @@ onMounted(async ()=>{
     }
   })
   unlistenResize = await listen(TauriEvent.WINDOW_RESIZED, async (param) => {
-    console.log("蜡烛图1监听到了窗口尺寸改变",param);
+    // console.log("蜡烛图1监听到了窗口尺寸改变",param);
     if (param.payload.height>50){
       await nextTick();
       // myChart.resize();
@@ -206,7 +213,30 @@ function handleRawData(raw: StockData[]){
   let ma10 = [];
   let ma20 = [];
   let ma60 = [];
-  for (let i = 0; i < raw.length; i++) {
+  let element = raw[0];
+  let color, borderColor;
+  if (element.open < element.close) {
+    color = 'white';
+    borderColor = 'red';
+  } else {
+    color = 'green';
+    borderColor = 'green';
+  }
+  categoryData.push(element.date);
+  values.push([element.open,element.close,element.low,element.high,element.vol,0.0]);
+  // volumes.push([i, element.vol, element.open > element.close ? 1 : -1]);
+  volumes.push({
+    value:element.vol,
+    itemStyle: {
+      color:color,
+      borderColor:borderColor
+    }
+  });
+  ma5.push(element.ma5);
+  ma10.push(element.ma10);
+  ma20.push(element.ma20);
+  ma60.push(element.ma60);
+  for (let i = 1; i < raw.length; i++) {
     let element = raw[i];
     let color, borderColor;
     if (element.open < element.close) {
@@ -217,7 +247,8 @@ function handleRawData(raw: StockData[]){
       borderColor = 'green';
     }
     categoryData.push(element.date);
-    values.push([element.open,element.close,element.low,element.high,element.vol]);
+    //最后一个元素是涨跌幅，需要用到前一天的收盘价
+    values.push([element.open,element.close,element.low,element.high,element.vol,calculateChangeRate(raw[i-1].close,element.close)]);
     // volumes.push([i, element.vol, element.open > element.close ? 1 : -1]);
     volumes.push({
       value:element.vol,
@@ -270,7 +301,6 @@ function handleGraphicData(graphics: Graphic[]=graphicData.value){
           fill: style?.color,
         },
         onmouseup: function (param:any) {
-          console.log(param.event)
           if (param.event.button==2){
             options.x=param.event.offsetX+10;
             options.y=param.event.offsetY+10;
@@ -373,9 +403,8 @@ async function updateChart(){
   await query_graphic();
 }
 function updateLiveData(live_data:Record<string, StockLiveData>){
-  console.log("更新实时数据",live_data[code],live_data[code] != undefined)
+  // console.log("更新实时数据",live_data[code],live_data[code] != undefined)
   if (live_data[code] != undefined){
-    // console.log("进来了吗",stockData[stockData.length-1].categoryData);
     const newData = live_data[code];
     let len = stockData.categoryData.length-1;
     let color, borderColor;
@@ -387,7 +416,7 @@ function updateLiveData(live_data:Record<string, StockLiveData>){
       borderColor = 'green';
     }
     if(stockData.categoryData[len]!=nowDate){
-      console.log("不是一天的数据，更新");
+      // console.log("不是一天的数据，更新");
       stockData.categoryData.push(nowDate);
       stockData.values.push([newData.open,newData.price,newData.low,newData.high,newData.volume]);
       // stockData.volumes.push([newData.volume, newData.open > newData.price ? 1 : -1]);
@@ -403,8 +432,6 @@ function updateLiveData(live_data:Record<string, StockLiveData>){
       stockData.ma20.push(newData.ma20);
       stockData.ma60.push(newData.ma60);
     }else{
-      console.log("已有今天的数据，更新")
-      // stockData.categoryData[len] = getFormattedDate();
       stockData.values[len] = [newData.open,newData.price,newData.low,newData.high,newData.volume];
       stockData.volumes[len] = {
         value:newData.volume,
@@ -524,7 +551,6 @@ function updateLiveData(live_data:Record<string, StockLiveData>){
 function updateLineOption(){
   myChart.setOption({
     graphic: graphicData.value.map(function (item, dataIndex) {
-      console.log("渲染graphic:",item);
       let startPixel = myChart.convertToPixel({seriesIndex: 0}, item.start);
       let style = item.style;
       if (item.graphic_type==="line"){
@@ -579,7 +605,6 @@ function clear_all(){
 async function query_graphic(){
   try {
     const res = await invoke<Graphic[]>('query_graphic_by_code', { code: code }); // 使用 await 等待 invoke 完成
-    console.log("查到了图形数据",res);
     if (res.length===0){
       return;
     }
@@ -609,12 +634,10 @@ async function query_stocks_day_k_limit(){
       }
       data.unshift(leastData)
     }
-    console.log("查到了K线数据",data);
     rawData.value = data.reverse(); // 处理查询到的数据
     myChart.clear();
     myChart.setOption(init_option(),true);
     myChart.resize();
-    console.log("现在的配置是",myChart.getOption());
     chartIsInit = true;
     return;
     // myChart.hideLoading();
@@ -622,25 +645,10 @@ async function query_stocks_day_k_limit(){
     console.log(err);
   }
 }
-// async function query_least_stock_data(){
-//   try {
-//     const res = await invoke<StockData>('query_live_stock_data_by_code', { code: code }); // 使用 await 等待 invoke 完成
-//     console.log("查到了最新K线数据",res);
-//     const liveDataRecord: Record<string, StockLiveData> = {
-//       [code]: res
-//     };
-//     updateLiveData(liveDataRecord);
-//     return res;
-//     // myChart.hideLoading();
-//   } catch (err) {
-//     console.log(err);
-//   }
-// }
+
 function save_graphic(){
   let data = graphicData.value;
-  console.log("保存图形",data);
   invoke('save_graphic', { code:code,graphic: data }).then(() => {
-    console.log("保存图形成功");
     emit("graphic_change",{})
   }).catch((err) => {
     console.log("保存图形失败",err);
@@ -648,12 +656,14 @@ function save_graphic(){
 }
 function wheelChangeCode(event: WheelEvent){
   const deltaY = event.deltaY; // 滚动的垂直距离
+  console.log("检测到滚动")
   debouncedFunction(deltaY)
 }
 function unlockZoom(event:KeyboardEvent){
   if (event.ctrlKey) {
     if (!isCtrlPressed){
       isCtrlPressed = true;
+      // console.log("ctrl被按下,解锁图表")
       setZoomLock(false);
     }
   }
@@ -663,6 +673,7 @@ function lockZoom(event:KeyboardEvent){
   if (event.key === 'Control') {
     if (isCtrlPressed){
       isCtrlPressed = false;
+      // console.log("ctrl被抬起,锁定图表")
       setZoomLock(true);
     }
   }
@@ -768,12 +779,10 @@ const hoverHandler = function (params: any) {
   }
 };
 const clickHandler = async function (params: any) {
-  console.log("绘制状态",paintState)
   const pointInPixel = [params.offsetX, params.offsetY];
   if (myChart.containPixel('grid',pointInPixel)) {
     // let clickPointData = myChart.convertFromPixel({seriesIndex: 0}, pointInPixel);
     if (currentCount==0){
-      console.log("绘制第一个点")
       start = pointInPixel;
       if (paintState==PaintState.Text){
         inputVisible.value = true;
@@ -787,7 +796,6 @@ const clickHandler = async function (params: any) {
       }
     }else if (currentCount == 1){
       if (paintState==PaintState.HL||paintState==PaintState.HLS||paintState==PaintState.PHL||paintState==PaintState.PHLS){
-        console.log("绘制水平线段")
         let startPointData = myChart.convertFromPixel({seriesIndex: 0},[start[0], start[1]]);
         let endPointData = myChart.convertFromPixel({seriesIndex: 0},[pointInPixel[0], start[1]]);
         let groupId = generateId();
@@ -817,7 +825,6 @@ const clickHandler = async function (params: any) {
           })
         }
       }else if (paintState==PaintState.LS){
-        console.log("绘制线段")
         // let endPoint = myChart.convertFromPixel({seriesIndex: 0},[clickPointData[0], clickPointData[1]]);
         let startPointData = myChart.convertFromPixel({seriesIndex: 0},[start[0], start[1]]);
         let endPointData = myChart.convertFromPixel({seriesIndex: 0},[pointInPixel[0], pointInPixel[1]]);
@@ -878,7 +885,6 @@ function get_line(start:number[],end:number[]){
 }
 function init_option(){
   const data = handleRawData(rawData.value);
-  console.log("处理后的数据是",data)
   return {
     animation: false,
     legend: {
@@ -917,7 +923,7 @@ function init_option(){
       <label class="green-label">最低：${params.data[3]}</label>
       <label class="${closeClass}">收盘：${params.data[2]}</label>
       <label class="${changeClass}">涨跌：${change}</label>
-      <label class="${changeClass}">涨幅：${calculateChangeRate(params.data[1], params.data[2])}%</label>
+      <label class="${changeClass}">涨幅：${params.data[6]}%</label>
 <!--      <label>成交量：${params.data[5]}</label>-->
       <label>成交量：${formatLargeNumber(params.data[5])}</label>
     </div>`
@@ -1155,7 +1161,6 @@ function init_option(){
   }
 }
 function computeWeek(date:string){
-  // console.log(date)
   var date = new Date(date)
   var day = date.getDay();
   // 根据获取的数字，转换为对应的中文星期几
@@ -1237,7 +1242,6 @@ function deleteGroupGraphic(group_id:string){
   invoke('delete_graphic_by_group_id',{groupId:group_id}).then(()=>{
     successNotification("删除成功");
     //从列表中删除所有group_id为group_id的图形
-    console.log("删除前",group_id,graphicData.value)
     const deleteGraphics = graphicData.value.filter((item:any)=>item.group_id === group_id);
     myChart.setOption({ //本来想把这个封装到updateLineOption里面的，发现默认值给action是merge还是replace都不行。
       //function updateLineOption(action: any='replace或者merge')无法更新位置
@@ -1258,8 +1262,6 @@ function deleteGroupGraphic(group_id:string){
       })
     });
     graphicData.value = graphicData.value.filter((item:any)=>item.group_id !== group_id);
-    console.log("删除后",graphicData.value)
-
     // if(group_id === ""){
     //   //从列表中删除所有group_id为group_id的图形
     //   graphicData.value = graphicData.value.filter((item:any)=>item.group_id !== group_id);
@@ -1307,14 +1309,6 @@ function deleteGroupGraphic(group_id:string){
       </el-button>
     </div>
   </el-dialog>
-<!--  <el-dialog v-model="inputVisible" :show-close="false" width="400" align-center>-->
-<!--&lt;!&ndash;    <div class="text-input-container"></div>&ndash;&gt;-->
-<!--    <el-input v-model="inputValue" ref="inputRef" placeholder="请输入文字内容(按回车确认)" @keydown.enter.prevent="newText" type="textarea" rows="3" clearable ></el-input>-->
-<!--    <div style="margin-top: 20px">-->
-<!--      <label>颜色</label><el-color-picker v-model="newTextColor" />-->
-<!--      <label style="margin-left: 20px" >大小</label><el-input-number v-model="newTextFontSize" :min="9" :max="25" style="margin-left: 10px;width: 110px"/>-->
-<!--    </div>-->
-<!--  </el-dialog>-->
 </template>
 
 <style >

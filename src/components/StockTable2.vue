@@ -57,7 +57,7 @@ watch(() => props.stocks_change, (_) => {
   updateStockInfoG();
   if (props.activeName === props.groupName){
     console.log("当前页面更新了，开始实时查询")
-    invoke("query_live_stocks_data",{groupName:props.groupName}).catch(err => {
+    invoke("query_live_stocks_data_by_group_name",{groupName:props.groupName}).catch(err => {
       console.log(err);
     })
   }
@@ -156,6 +156,8 @@ async function updateLiveData(live_data:Record<string, StockLiveData>){
         }
       }
     }
+    //因为已经限定了当前tab就是选中的tab，所以这里同步更新全局状态的StockInfoGs，不然详情页拿不到数据
+    store.stockinfoGs = StockInfoGs.value;
   }
 }
 const getRowClass=({
@@ -322,6 +324,13 @@ const filterAdvise = (value: string, stock: StockInfoG) => {
   }
   return value===stock.rowData?.advise[0];
 }
+const filterName = (value: string, stock: StockInfoG) => {
+  if (value==="未持有"){
+    return !stock.hold;
+  }else {
+    return true;
+  }
+}
 function computeBox(stock: StockInfoG){
   let code = stock.code;
   let boxes = store.boxData[code];
@@ -379,12 +388,23 @@ function divideBox(price: number, down: number, up: number): [string,string,unde
           @row-contextmenu="showContextMenu"
       >
         <el-table-column prop="code" label="代码" style="font-size: 14px" width="80" />
-        <el-table-column prop="name" label="名称" width="180">
+        <el-table-column
+            prop="name"
+            label="名称"
+            width="180"
+            :filters="[
+        { text: '未持有', value: '未持有' },
+      ]"
+            :filter-method="filterName"
+        >
           <template #default="scope">
             <el-text :style="{ color: scope.row.hold ?'orange':'black' }">{{scope.row.name}}</el-text>
           </template>
         </el-table-column>
-        <el-table-column prop="live_data.price" label="现价" sortable>
+        <el-table-column
+            prop="live_data.price"
+            label="现价"
+            sortable>
           <template #default="scope">
             <el-text :style="{color:getColor(scope.row.live_data?.percent),fontSize:'15px'}">{{scope.row.live_data?.price}}</el-text>
           </template>
