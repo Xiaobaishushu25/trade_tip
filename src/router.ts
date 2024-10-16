@@ -8,6 +8,7 @@ import Tool from './components/Tool.vue'
 import GroupTab  from "./components/GroupTab.vue";
 import DataDetail from "./components/StockData/DataDetail.vue";
 import MainLayout from "./components/MainLayout.vue";
+import Setting from "./components/Setting.vue";
 
 const routes: Array<RouteRecordRaw> = [
     // 主界面的路由
@@ -35,6 +36,11 @@ const routes: Array<RouteRecordRaw> = [
     {
         path: '/tool',
         component: Tool, // 工具界面的布局组件
+    },
+    // 工具界面的路由
+    {
+        path: '/setting',
+        component: Setting, // 工具界面的布局组件
     },
 ]
 

@@ -20,11 +20,6 @@ impl IntradayChartCache{
             if let Some(Some(data)) = self.cache.read().unwrap().get(code){
                 return Ok(data.clone())
             }
-            // if let Some(op) = self.cache.read().unwrap().get(code){
-            //     if let Some(data) = op{
-            //         return Ok(data.clone())
-            //     }
-            // }
         }
         let data = REQUEST.get().unwrap().get_intraday_chart_img(code).await?;
         {

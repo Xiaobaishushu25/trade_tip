@@ -56,7 +56,7 @@ watch(() => props.stocks_change, (_) => {
   console.log('分组内的的股票changed:', props.groupName);
   updateStockInfoG();
   if (props.activeName === props.groupName){
-    console.log("当前页面更新了，开始实时查询")
+    // console.log("当前页面更新了，开始实时查询")
     invoke("query_live_stocks_data_by_group_name",{groupName:props.groupName}).catch(err => {
       console.log(err);
     })

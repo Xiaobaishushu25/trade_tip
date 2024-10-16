@@ -6,7 +6,6 @@ import {store} from "../store.ts"
 import ElSearch from "./ElSearch.vue";
 import {useRouter} from "vue-router";
 import {saveWindowState, StateFlags} from "@tauri-apps/plugin-window-state";
-// import { saveWindowState, StateFlags } from '@tauri-apps/plugin-window-state';
 
 const router = useRouter()
 const max_state_name = ref('maximize')
@@ -34,10 +33,11 @@ async function changeUpdateState(){
   live_state.value = !live_state.value;
 }
 async function open_setting(){
-
+  const appWindow = await WebviewWindow.getByLabel('setting')
+  await appWindow?.show()
 }
 async function window_minimize(){
-  console.log("窗口是",await WebviewWindow.getCurrent().isResizable());
+  // console.log("窗口是",await WebviewWindow.getCurrent().isResizable());
   await WebviewWindow.getCurrent().minimize()
 }
 function window_maximize(){
@@ -47,7 +47,7 @@ async function window_close(){
   // await WebviewWindow.getCurrent().hide()
   // const ALL_WITHOUT_VISIBLE = StateFlags.ALL & ~StateFlags.VISIBLE;
   // await saveWindowState(ALL_WITHOUT_VISIBLE);
-  // await saveWindowState(StateFlags.ALL);
+  await saveWindowState(StateFlags.ALL);
   await invoke('exit_app', {})
   await WebviewWindow.getCurrent().close();
 }
@@ -65,7 +65,7 @@ function back(){
       <el-tooltip content="设置" placement="bottom" effect="light" :show-arrow="false">
         <inline-svg src="../assets/svg/setting.svg" class="window-button back" @click.left="open_setting"></inline-svg>
       </el-tooltip>
-      <el-tooltip :content="`${live_name}`" placement="bottom" effect="light" :show-arrow="false">
+      <el-tooltip :content="`${live_name}实时更新`" placement="bottom" effect="light" :show-arrow="false">
         <inline-svg :src="`../assets/svg/${live_name}.svg`" class="window-button back" @click.left="changeUpdateState"></inline-svg>
       </el-tooltip>
       <el-tooltip content="返回" placement="bottom" effect="light" :show-arrow="false">
@@ -74,12 +74,6 @@ function back(){
       <inline-svg src="../assets/svg/minimize.svg" class="window-button min" @click.left="window_minimize"></inline-svg>
       <inline-svg :src="`../assets/svg/${max_state_name}.svg`" :class="`window-button ${max_state_name}`" @click.left="window_maximize" ></inline-svg>
       <inline-svg src="../assets/svg/close.svg" class="window-button close"  @click.left="window_close"></inline-svg>
-<!--      <inline-svg :src="`./src/assets/svg/${live_name}.svg`" class="window-button back" @click.left="changeUpdateState"></inline-svg>-->
-<!--      <inline-svg src="../assets/svg/back.svg" class="window-button back" @click.left="back()"></inline-svg>-->
-<!--      <inline-svg src="./src/assets/svg/back.svg" class="window-button back" @click.left="back()"></inline-svg>-->
-<!--      <inline-svg src="./src/assets/svg/minimize.svg" class="window-button min" @click.left="window_minimize"></inline-svg>-->
-<!--      <inline-svg :src="`./src/assets/svg/${max_state_name}.svg`" :class="`window-button ${max_state_name}`" @click.left="window_maximize" ></inline-svg>-->
-<!--      <inline-svg src="./src/assets/svg/close.svg" class="window-button close"  @click.left="window_close"></inline-svg>-->
     </div>
   </div>
 </template>

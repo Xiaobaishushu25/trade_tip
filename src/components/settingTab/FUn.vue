@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import {onMounted,ref,watch} from "vue";
 const updateFreq = ref(5)
 const boxNum = ref(3)
 const handleBoxNum = (value: number) => {
@@ -10,25 +11,43 @@ const handleUpdateFreq = (value: number) => {
 </script>
 
 <template>
-  <el-scrollbar height="400px">
-    数据
-    <el-card style="width: 480px" shadow="always">
-      股票数据更新频率(s)： <el-input-number v-model="updateFreq" :min="15" :max="120" :step="5" @change="handleUpdateFreq" />
-      <el-divider />
-      箱体分区：
+  <div >
+    <el-scrollbar max-height="calc(100vh - 60px)">
+      <label class="title">蜡烛图</label>
+      <el-card shadow="always" style="margin: 10px;background-color:#2f2f2f40;border-radius: 10px;padding: 5px">
+        <div class="setting-row-container">
+          <label class="label-text">股票数据更新频率(s)：</label>
+          <el-input-number v-model="updateFreq" :min="15" :max="120" :step="5" @change="handleUpdateFreq" />
+        </div>
+        <el-divider style="margin: 5px" />
+        <div class="setting-row-container">
+          <label class="label-text">箱体分区数量：</label>
+          <el-input-number v-model="boxNum" :min="3" :max="8" @change="handleBoxNum" />
+        </div>
+      </el-card>
 
-    </el-card>
-    蜡烛图
-    <el-card style="width: 480px" shadow="always">
-      箱体分区： <el-input-number v-model="boxNum" :min="3" :max="8" @change="handleBoxNum" />
-      <el-divider />
-      箱体分区：
-
-    </el-card>
-
-  </el-scrollbar>
+    </el-scrollbar>
+  </div>
 </template>
-
+<style>
+.el-card__body{
+  padding: 5px;
+}
+</style>
 <style scoped>
-
+.setting-row-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center; /* 保证垂直居中 */
+  width: 100%; /* 确保容器占据整行 */
+}
+.title{
+  font-size: 20px;
+  margin-left:20px;
+  font-family: "Arial Black";
+  font-weight: 600;
+}
+.label-text{
+  font-size: 15px;
+}
 </style>

@@ -4,12 +4,14 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::{Duration};
 use log::{error, info};
-use tauri::{Manager, State};
+use tauri::{Emitter, Manager, State};
 use tokio::time::sleep;
 use crate::dtos::stock_dto::{StockInfoG, StockLiveData};
 use crate::entities::prelude::{Graphic, StockData, StockGroup, StockInfo};
 use crate::{get_close_prices, MyState, UPDATEING};
+use crate::cache::config_state::ConfigState;
 use crate::cache::intraday_chart_cache::IntradayChartCache;
+use crate::config::config::Config;
 use crate::dtos::graphic_dto::GraphicDTO;
 use crate::service::command::handle::{handle_delete_stock, handle_new_stock, handle_stock_livedata};
 use crate::service::curd::graphic_curd::GraphicCurd;
@@ -440,6 +442,15 @@ pub async fn query_live_stocks_data_by_group_name<'r>(state: State<'r, MyState>,
             handle_error("根据分组查询分组内股票实时信息失败",e.to_string())
             // error!("查询股票实时信息失败失败:{}",e);
             // Err(e.to_string())
+        }
+    }
+}
+#[tauri::command]
+pub async fn save_config<'r>(mut config_state: State<'r, ConfigState>, config: Config) -> Result<(),String> {
+    match config_state.update_config(config).await{
+        Ok(_)=>{ Ok(()) },
+        Err(e)=>{
+            handle_error("更新配置文件失败",e.to_string())
         }
     }
 }

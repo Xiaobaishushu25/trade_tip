@@ -1,20 +1,15 @@
 <script setup lang="ts">
-import {onMounted,ref,watch,computed} from "vue";
+import {onMounted,ref,watch} from "vue";
 import {invoke} from "@tauri-apps/api/core";
 import {store} from "../store.ts";
 import {StockGroup, StockInfoG} from "../type.ts";
-import StockTable from "./StockTable.vue";
 import {VueDraggable} from "vue-draggable-plus";
 import InlineSvg from "vue-inline-svg";
 import {listen} from "@tauri-apps/api/event";
 import {successNotification} from "../utils.ts";
-import {menu} from "@tauri-apps/api";
-import {MenuItemOptions} from "@tauri-apps/api/menu/menuItem";
 
 const activeName = ref('')
 const dialogVisible = ref(false)
-// const contextMenuShow = ref(false)
-// const isButtonVisible = ref(false)
 const buttonVisibilities = ref<boolean[]>()
 
 onMounted(async () => {
@@ -119,23 +114,6 @@ function remove(name:string){
 function judgeTab(activeName:string){
   return activeName != '设置';
 }
-// async function native(e){
-//   console.log("右键事件",e);
-//   let menus = await menu.Menu.new({items:[
-//       {text:"刷新"},
-//       {text:"刷新2"},
-//       {text:"刷新3"},
-//       {text:"刷新4"},
-//       {text:"刷新5"},
-//       {text:"刷新6"},
-//       {text:"刷新7"},
-//
-//       {text:"添加分组",action:() => {console.log("点击了分组")}}]});
-//   await menus.popup()
-// }
-// function handleClick(tab, event:MouseEvent){
-//   console.log(tab, event);
-// }
 </script>
 
 <template>
@@ -196,7 +174,6 @@ function judgeTab(activeName:string){
 </template>
 
 <style>
-
 /*.el-dialog__header{
   margin-top: 0;
   margin-left: 0;
@@ -224,8 +201,6 @@ function judgeTab(activeName:string){
   margin-right: 10px;
   margin-bottom: 10px;
 }
-
-
 
 .spot{
   margin-left: 30px;

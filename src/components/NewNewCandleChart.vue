@@ -1222,7 +1222,7 @@ function calculateChangeRate(openPrice:number, closePrice:number) {
   return changeRate.toFixed(2);
 }
 async function showPaintTool(){
-  const appWindow = WebviewWindow.getByLabel('tool')
+  const appWindow = await WebviewWindow.getByLabel('tool')
   await appWindow?.show()
 }
 

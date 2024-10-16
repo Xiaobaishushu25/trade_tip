@@ -12,7 +12,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "trade_tip",
+        "title": "TradeTip",
         "width": 1025,
         "height": 625,
         "minWidth": 1025,
@@ -35,6 +35,20 @@
         "visible": false,
         "url": "/#/tool",
         "center": true
+      },
+      {
+        "label": "setting",
+        "title": "设置",
+        "width": 1025,
+        "height": 800,
+        "minWidth": 1025,
+        "minHeight": 625,
+        "decorations": false,
+        "resizable": true,
+        "dragDropEnabled": false,
+        "center": true,
+        "url": "/#/setting",
+        "visible": false
       }
     ],
     "security": {
