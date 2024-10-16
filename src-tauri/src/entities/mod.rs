@@ -52,7 +52,7 @@ pub async fn init_db_coon(){
         db
     }).await;
 }
-//注意，不能与log4rs同时使用
+//注意，不能与log4rs同时使用，因为这个开启的是tracing日志，与log4rs冲突。
 pub async fn open_db_log(){
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
@@ -60,14 +60,14 @@ pub async fn open_db_log(){
         .init();
 }
 pub fn check_db_file(path:&str,current_dir:&str)->AppResult<bool>{
-    if PathBuf::from(path).exists(){
+    if PathBuf::from(path).exists() {
         info!("数据库存在");
-        return Ok(true)
-    }else {
+        Ok(true)
+    } else {
         info!("数据库不存在,创建数据库。");
         let _ = fs::create_dir_all(format!("{}/data", current_dir))?;
         let _ = File::create(path)?;
-        return Ok(false);
+        Ok(false)
     }
 }
 #[tokio::test]

@@ -9,10 +9,14 @@ mod entities;
 mod service;
 mod utils;
 mod cache;
+mod config;
 
+use std::borrow::Cow;
+use std::cell::{LazyCell, OnceCell};
 use std::collections::HashMap;
+use std::env;
 use std::sync::atomic::AtomicBool;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 use log::{error, info};
 use tokio::task::JoinHandle;
 use crate::app_errors::AppResult;
@@ -22,10 +26,15 @@ use crate::service::command::tauri_command::{add_stock_info, get_response, query
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
 use crate::service::http::{init_http};
+use crate::config::load_config;
 ///是否需要实时更新
 pub static UPDATEING: AtomicBool = AtomicBool::new(true);
 // pub static NOTICE: Mutex<Option<Vec<String>>> = Mutex::new(None);
 pub static NOTICE: Mutex<Option<String>> = Mutex::new(None);
+pub static CURRENT_DIR: LazyLock<String> = LazyLock::new(||{
+    let current_dir = &env::current_dir().unwrap();
+    current_dir.to_string_lossy().to_string()
+});
 pub struct MyState{
     // live_state:AtomicBool,
     live_task:Mutex<Option<JoinHandle<()>>>,
@@ -148,6 +157,7 @@ async fn main() {
 }
 async fn init_app() {
     log4rs::init_file("./config/log4rs.yaml", Default::default()).unwrap();
+    load_config().await;
     init_db_coon().await;
     init_http().await;
 }

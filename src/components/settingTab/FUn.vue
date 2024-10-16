@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const updateFreq = ref(5)
-const boxNum = ref(1)
+const boxNum = ref(3)
 const handleBoxNum = (value: number) => {
   console.log(value)
 }
