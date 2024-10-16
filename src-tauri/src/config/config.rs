@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::app_errors::AppResult;
 use crate::CURRENT_DIR;
 
-#[derive(Debug,Serialize,Deserialize)]
+#[derive(Debug,Default,Serialize,Deserialize)]
 pub struct Config {
     display_config: DisplayConfig,
     data_config: DataConfig,
@@ -17,11 +17,12 @@ impl Config {
     * 加载配置文件
     */
     pub async fn load()->Self{
-        let current_dir = &env::current_dir().unwrap();
-        let current_dir = current_dir.to_string_lossy();
-        let path = format!("{}/data/config", current_dir);
-        match check_config_file(&path,&current_dir){
+        // let current_dir = &env::current_dir().unwrap();
+        // let current_dir = current_dir.to_string_lossy();
+        let path = format!("{}/data/config", CURRENT_DIR.clone());
+        match check_config_file(&path,&CURRENT_DIR.clone()){
             Ok(config)=>{
+                info!("load config success{:?}",config);
                 config
             },
             Err(e)=>{
@@ -43,14 +44,14 @@ impl Config {
         }
     }
 }
-impl Default for Config {
-    fn default() -> Self {
-        Config {
-            display_config: Default::default(),
-            data_config: Default::default(),
-        }
-    }
-}
+// impl Default for Config {
+//     fn default() -> Self {
+//         Config {
+//             display_config: Default::default(),
+//             data_config: Default::default(),
+//         }
+//     }
+// }
 
 // pub(crate) async fn load_config() -> Config {
 //     let current_dir = &env::current_dir().unwrap();
@@ -94,9 +95,8 @@ fn check_config_file(path:&str,current_dir:&str)->AppResult<Config>{
         }
     } else {
         info!("配置不存在,创建配置。");
-        let _ = fs::create_dir_all(format!("{}/data", current_dir))?;
-        let config_file = File::create(path)?;
-        config_file
+        fs::create_dir_all(format!("{}/data", current_dir))?;
+        File::create(path)?
     };
     //如果上面正确读取配置文件就已经返回了，到这里说明配置文件没有内容，需要初始化默认配置
     // let config = Config::init_default();

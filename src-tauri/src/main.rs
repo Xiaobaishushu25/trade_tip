@@ -122,7 +122,7 @@ async fn main() {
         // .manage(MyState{task:Mutex::new(None)})
         .manage(state)
         .manage(IntradayChartCache::new())
-        .manage(ConfigState::new())
+        .manage(ConfigState::new().await)
         // .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
