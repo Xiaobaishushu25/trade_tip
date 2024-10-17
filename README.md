@@ -11,7 +11,6 @@
 [English](README.md)&nbsp;  [简体中文](README.zh.md)
 
 <h3>Introduction</h3>
-___
 
 This is a financial assistant client that helps you analyze stocks and funds that interest you. The main indicators are box trend and moving average.
 <h3>Features</h3>
