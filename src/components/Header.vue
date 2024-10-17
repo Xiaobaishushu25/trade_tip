@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
-import { Window } from "@tauri-apps/api/window"
-import { Webview } from "@tauri-apps/api/webview"
 import {ref, watch} from "vue";
 import {invoke} from "@tauri-apps/api/core";
 import {store} from "../store.ts"
@@ -38,6 +36,7 @@ async function open_record(){
   const webview = new WebviewWindow('record', {
     url: '/#/record',
     center: true,
+    title: '交易记录',
     width: 900,
     height: 700,
     minWidth: 800,
@@ -53,6 +52,7 @@ async function open_setting(){
   const webview = new WebviewWindow('setting', {
     url: '/#/setting',
     center: true,
+    title: '设置',
     width: 1025,
     height: 800,
     minWidth: 1025,
@@ -84,6 +84,7 @@ async function window_close(){
   // await WebviewWindow.getCurrent().hide()
   // const ALL_WITHOUT_VISIBLE = StateFlags.ALL & ~StateFlags.VISIBLE;
   // await saveWindowState(ALL_WITHOUT_VISIBLE);
+  console.log("退出程序");
   await saveWindowState(StateFlags.ALL);
   await invoke('exit_app', {})
   await WebviewWindow.getCurrent().close();

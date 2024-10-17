@@ -1,12 +1,15 @@
 use crate::app_errors::AppResult;
-use crate::entities::stock_data::{Column, Entity, TableName};
-use crate::entities::{DB, init_db_coon, stock_group, stock_info};
-use log::{error, info};
-use sea_orm::sea_query::{ColumnDef, TableCreateStatement};
-use sea_orm::{sea_query, ConnectionTrait, DatabaseConnection, EntityName, EntityTrait, ExecResult, Statement, Schema};
 use crate::entities::group_stock_relation::Relation::StockInfos;
 use crate::entities::prelude::{Graphics, GroupStockRs, StockGroups};
+use crate::entities::stock_data::{Column, Entity, TableName};
+use crate::entities::{init_db_coon, stock_group, stock_info, DB};
 use crate::service::curd::stock_group_curd::StockGroupCurd;
+use log::{error, info};
+use sea_orm::sea_query::{ColumnDef, TableCreateStatement};
+use sea_orm::{
+    sea_query, ConnectionTrait, DatabaseConnection, EntityName, EntityTrait, ExecResult, Schema,
+    Statement,
+};
 
 // use std::env;
 // use sea_query::{ColumnDef, Iden, SqliteQueryBuilder, Table, Value};
@@ -124,7 +127,9 @@ pub async fn drop_table_with_dyn_name(table_name: &str) -> AppResult<()> {
 // use sea_orm::{Schema, ConnectionTrait, EntityTrait};
 
 async fn create_table<E>(db_connection: &sea_orm::DatabaseConnection, entity: E)
-    where E: EntityTrait{
+where
+    E: EntityTrait,
+{
     let backend = db_connection.get_database_backend();
     let schema = Schema::new(backend);
     let execution = db_connection.execute(backend.build(&schema.create_table_from_entity(entity)));
@@ -168,7 +173,7 @@ where
     //     Err(e) => println!("Error: {}", e),
     // }
 }
-pub async fn create_all_need_table(db:&DatabaseConnection){
+pub async fn create_all_need_table(db: &DatabaseConnection) {
     let _ = create_table(db, stock_info::Entity).await;
     let _ = create_table(db, Graphics).await;
     let _ = create_table(db, StockGroups).await;

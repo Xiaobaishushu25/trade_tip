@@ -437,9 +437,7 @@ function divideBox(price: number, down: number, up: number): [string,string,unde
             :filter-method="filterAdvise"
         >
           <template #default="scope">
-<!--            <el-text :class="getAdvise(scope.row)[1]" >{{getAdvise(scope.row)[0]}}</el-text>-->
             <el-tag :class="scope.row.rowData?.advise?.[1]" >{{scope.row.rowData?.advise?.[0]}}</el-tag>
-<!--            <el-tag :class="getAdvise(scope.row)[1]" >{{getAdvise(scope.row)[0]}}</el-tag>-->
           </template>
         </el-table-column>
       </el-table>

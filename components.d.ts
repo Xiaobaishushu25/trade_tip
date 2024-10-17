@@ -11,7 +11,6 @@ declare module 'vue' {
     DataDetail: typeof import('./src/components/StockData/DataDetail.vue')['default']
     Detail: typeof import('./src/components/StockData/Detail.vue')['default']
     DisPlay: typeof import('./src/components/settingComponents/DisPlay.vue')['default']
-    DragTest: typeof import('./src/components/DragTest.vue')['default']
     ElAutocomplete: typeof import('element-plus/es')['ElAutocomplete']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCard: typeof import('element-plus/es')['ElCard']
@@ -43,12 +42,15 @@ declare module 'vue' {
     RHeader: typeof import('./src/components/transactionRecordComponents/RHeader.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    RTable: typeof import('./src/components/transactionRecordComponents/RTable.vue')['default']
+    RToolBar: typeof import('./src/components/transactionRecordComponents/RToolBar.vue')['default']
     Search: typeof import('./src/components/Search.vue')['default']
     Setting: typeof import('./src/components/Setting.vue')['default']
     StockGroupMange: typeof import('./src/components/group/StockGroupMange.vue')['default']
     StockGroupSelect: typeof import('./src/components/group/StockGroupSelect.vue')['default']
     StockTable2: typeof import('./src/components/StockTable2.vue')['default']
     Tool: typeof import('./src/components/Tool.vue')['default']
+    ToolBar: typeof import('./src/components/transactionRecordComponents/RToolBar.vue')['default']
     TransactionRecord: typeof import('./src/components/TransactionRecord.vue')['default']
   }
 }

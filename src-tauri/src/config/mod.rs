@@ -1,5 +1,5 @@
-use std::io::Write;
 use serde::{Deserialize, Serialize};
+use std::io::Write;
 
 pub mod config;
 

@@ -1,46 +1,44 @@
-use std::{env, fs};
+use crate::app_errors::AppResult;
+use crate::CURRENT_DIR;
+use log::{error, info};
+use serde::{Deserialize, Serialize};
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::PathBuf;
-use log::{error, info};
-use serde::{Deserialize, Serialize};
-use crate::app_errors::AppResult;
-use crate::CURRENT_DIR;
+use std::{env, fs};
 
-#[derive(Debug,Default,Serialize,Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Config {
     display_config: DisplayConfig,
     data_config: DataConfig,
 }
 impl Config {
     /**
-    * 加载配置文件
-    */
-    pub async fn load()->Self{
+     * 加载配置文件
+     */
+    pub async fn load() -> Self {
         // let current_dir = &env::current_dir().unwrap();
         // let current_dir = current_dir.to_string_lossy();
         let path = format!("{}/data/config", CURRENT_DIR.clone());
-        match check_config_file(&path,&CURRENT_DIR.clone()){
-            Ok(config)=>{
-                info!("load config success{:?}",config);
+        match check_config_file(&path, &CURRENT_DIR.clone()) {
+            Ok(config) => {
+                info!("load config success{:?}", config);
                 config
-            },
-            Err(e)=>{
-                error!("创建或解析配置文件{}失败:{}",path,e.to_string());
-                panic!("创建或解析配置文件{}失败:{}",path,e.to_string())
+            }
+            Err(e) => {
+                error!("创建或解析配置文件{}失败:{}", path, e.to_string());
+                panic!("创建或解析配置文件{}失败:{}", path, e.to_string())
             }
         }
     }
-    pub async fn update(&mut self,config:Config)->AppResult<()>{
-        match save_config(&config).await{
-            Ok(_)=>{
+    pub async fn update(&mut self, config: Config) -> AppResult<()> {
+        match save_config(&config).await {
+            Ok(_) => {
                 info!("save config success");
                 *self = config;
                 Ok(())
             }
-            Err(e)=>{
-                Err(e)
-            }
+            Err(e) => Err(e),
         }
     }
 }
@@ -70,27 +68,27 @@ impl Config {
 /**
  * 保存配置文件
  */
-async fn save_config(config:&Config)->AppResult<()>{
+async fn save_config(config: &Config) -> AppResult<()> {
     let path = format!("{}/data/config", CURRENT_DIR.clone());
     let mut config_file = OpenOptions::new()
-        .write(true)  // 以写入模式打开文件
-        .truncate(true)  // 清空文件内容
+        .write(true) // 以写入模式打开文件
+        .truncate(true) // 清空文件内容
         .open(path)?;
     config_file.write_all(serde_json::to_string(config)?.as_bytes())?;
     Ok(())
 }
-fn check_config_file(path:&str,current_dir:&str)->AppResult<Config>{
-    let mut config_file:File = if PathBuf::from(path).exists() {
+fn check_config_file(path: &str, current_dir: &str) -> AppResult<Config> {
+    let mut config_file: File = if PathBuf::from(path).exists() {
         info!("配置存在");
-        if let Ok(config) = serde_json::from_str::<Config>(&fs::read_to_string(path)?){
-            return Ok(config) //如果正确解析配置文件，直接返回
-        }else {
+        if let Ok(config) = serde_json::from_str::<Config>(&fs::read_to_string(path)?) {
+            return Ok(config); //如果正确解析配置文件，直接返回
+        } else {
             error!("配置文件格式错误，将重新创建配置文件。");
             //清除配置文件内容
             // 打开文件并清空内容
             OpenOptions::new()
-                .write(true)  // 以写入模式打开文件
-                .truncate(true)  // 清空文件内容
+                .write(true) // 以写入模式打开文件
+                .truncate(true) // 清空文件内容
                 .open(path)?
         }
     } else {
@@ -106,22 +104,19 @@ fn check_config_file(path:&str,current_dir:&str)->AppResult<Config>{
     Ok(config)
 }
 
-
-#[derive(Debug,Serialize,Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DisplayConfig {
     a_extend: bool,
 }
 impl Default for DisplayConfig {
     fn default() -> Self {
-        DisplayConfig {
-            a_extend: false,
-        }
+        DisplayConfig { a_extend: false }
     }
 }
-#[derive(Debug,Serialize,Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DataConfig {
-    update_freq:i32,
-    box_num:i32,
+    update_freq: i32,
+    box_num: i32,
 }
 impl Default for DataConfig {
     fn default() -> Self {

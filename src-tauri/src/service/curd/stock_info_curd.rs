@@ -1,11 +1,11 @@
 use crate::app_errors::AppResult;
-use crate::entities::{init_db_coon};
+use crate::dtos::stock_dto::StockInfoG;
+use crate::entities::init_db_coon;
 use sea_orm::ActiveValue::Set;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QuerySelect};
-use crate::dtos::stock_dto::StockInfoG;
 
 use crate::entities::prelude::{ActiveStockInfo, StockInfo, StockInfos};
-use crate::entities::stock_info::{Column};
+use crate::entities::stock_info::Column;
 
 pub struct StockInfoCurd;
 impl StockInfoCurd {
@@ -111,15 +111,13 @@ impl StockInfoCurd {
             .all(db)
             .await?
             .into_iter()
-            .map(|model|{
-                StockInfoG {
-                    group_name:"持有".into(),
-                    index:0,
-                    code:model.code,
-                    name:model.name,
-                    r#box: model.r#box,
-                    hold:model.hold,
-                }
+            .map(|model| StockInfoG {
+                group_name: "持有".into(),
+                index: 0,
+                code: model.code,
+                name: model.name,
+                r#box: model.r#box,
+                hold: model.hold,
             })
             .collect::<Vec<_>>();
         Ok(infos)

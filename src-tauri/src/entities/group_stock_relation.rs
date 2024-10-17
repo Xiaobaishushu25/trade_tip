@@ -10,15 +10,15 @@ pub struct Model {
     pub group_name: String,
     #[sea_orm(primary_key)]
     pub stock_code: String,
-    pub index:i32
+    pub index: i32,
 }
 
 impl Model {
-    pub fn new(group_name:String,stock_code:String)->Self{
-        Self{
+    pub fn new(group_name: String, stock_code: String) -> Self {
+        Self {
             group_name,
             stock_code,
-            index:0
+            index: 0,
         }
     }
 }

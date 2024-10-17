@@ -3,7 +3,7 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize,Deserialize)]
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
 #[sea_orm(table_name = "stock_group")]
 pub struct Model {
     pub index: i32,
@@ -12,11 +12,8 @@ pub struct Model {
 }
 
 impl Model {
-    pub fn new(name:String)->Self{
-        Self{
-            index: 0,
-            name,
-        }
+    pub fn new(name: String) -> Self {
+        Self { index: 0, name }
     }
 }
 

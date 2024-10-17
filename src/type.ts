@@ -98,5 +98,18 @@ interface Style {
     font?: string; // 文字专用，使用string类型，?表示可选
     line_width?: number; // 线专用，使用number类型对应f64，?表示可选
 }
+
+interface TransactionRecord {
+    date: string;
+    time: string;
+    code: string;
+    name: string;
+    direction: string;
+    num: number;
+    price: number;
+    amount: number;
+    remark: string
+}
+
 export { PaintState }; // 导出枚举值
-export type { StockLiveData,StockGroup,StockInfoG,StockData,Graphic,RowData };
+export type { StockLiveData,StockGroup,StockInfoG,StockData,Graphic,RowData,TransactionRecord };

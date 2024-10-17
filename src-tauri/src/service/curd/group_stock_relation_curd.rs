@@ -1,12 +1,15 @@
 use crate::app_errors::AppResult;
+use crate::dtos::stock_dto::StockInfoG;
 use crate::entities::group_stock_relation::Column;
 use crate::entities::prelude::{
     ActiveGroupStockR, GroupStockR, GroupStockRs, StockGroups, StockInfos,
 };
 use crate::entities::{group_stock_relation, init_db_coon, open_db_log, stock_info};
 use sea_orm::ActiveValue::Set;
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, JoinType, LinkDef, Linked, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, RelationTrait};
-use crate::dtos::stock_dto::StockInfoG;
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, EntityTrait, JoinType, LinkDef, Linked, PaginatorTrait,
+    QueryFilter, QueryOrder, QuerySelect, RelationTrait,
+};
 
 pub struct GroupToStockInfo;
 
@@ -43,7 +46,7 @@ impl GroupStockRelationCurd {
         let model = ActiveGroupStockR {
             group_name: Set(group_stock_r.group_name),
             stock_code: Set(group_stock_r.stock_code),
-            index:Set(max_index+1)
+            index: Set(max_index + 1),
         }
         .insert(db)
         .await?;
@@ -55,7 +58,9 @@ impl GroupStockRelationCurd {
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
         let models = group_stock_rs
             .into_iter()
-            .map(|group_stock_r|crate::entities::group_stock_relation::ActiveModel::from(group_stock_r))
+            .map(|group_stock_r| {
+                crate::entities::group_stock_relation::ActiveModel::from(group_stock_r)
+            })
             .collect::<Vec<_>>();
         let _ = GroupStockRs::insert_many(models).exec(db).await?;
         Ok(())
@@ -171,23 +176,27 @@ impl GroupStockRelationCurd {
             .filter(Column::GroupName.is_not_in(groups.clone()))
             .exec(db)
             .await?;
-        for name in groups.clone(){
-            let result = GroupStockRs::find_by_id((name.clone(), stock_code.clone())).count(db).await?;
-            if result == 0{
+        for name in groups.clone() {
+            let result = GroupStockRs::find_by_id((name.clone(), stock_code.clone()))
+                .count(db)
+                .await?;
+            if result == 0 {
                 let model = GroupStockR::new(name, stock_code.clone());
                 let _ = Self::insert(model).await?;
             }
         }
         Ok(())
     }
-    pub async fn delete_by_code_and_group_name(code:String, group_name:String) -> AppResult<()> {
+    pub async fn delete_by_code_and_group_name(code: String, group_name: String) -> AppResult<()> {
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
-        let _ = GroupStockRs::delete_by_id((group_name, code)).exec(db).await?;
+        let _ = GroupStockRs::delete_by_id((group_name, code))
+            .exec(db)
+            .await?;
         Ok(())
     }
-    pub async fn delete_by_group_name(group_name:String) -> AppResult<()> {
+    pub async fn delete_by_group_name(group_name: String) -> AppResult<()> {
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
@@ -198,7 +207,7 @@ impl GroupStockRelationCurd {
         Ok(())
     }
     ///根据股票代码删除所有相关分组信息
-    pub async fn delete_by_stock_code(stock_code:String) -> AppResult<()> {
+    pub async fn delete_by_stock_code(stock_code: String) -> AppResult<()> {
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;

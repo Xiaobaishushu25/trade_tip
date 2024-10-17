@@ -45,6 +45,7 @@
       "allow": [
         "**"
       ]
-    }
+    },
+    "dialog:default"
   ]
 }

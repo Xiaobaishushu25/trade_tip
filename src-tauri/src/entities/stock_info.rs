@@ -14,8 +14,8 @@ pub struct Model {
 }
 
 impl Model {
-    pub fn new(code:String,name:String)->Self{
-        Self{
+    pub fn new(code: String, name: String) -> Self {
+        Self {
             code,
             name,
             r#box: None,

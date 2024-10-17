@@ -17,24 +17,24 @@ const handleUpdateFreq = (value: number) => {
       <el-card shadow="always" style="margin: 10px;background-color:#2f2f2f40;border-radius: 10px;padding: 5px">
         <div class="setting-row-container">
           <label class="label-text">导出证券数据：</label>
-          <el-input-number v-model="updateFreq" :min="15" :max="120" :step="5" @change="handleUpdateFreq" />
+          <el-input-number v-model="updateFreq" :min="15" :max="120" :step="5" class="custom-input" @change="handleUpdateFreq" />
         </div>
         <el-divider style="margin: 5px" />
         <div class="setting-row-container">
           <label class="label-text">箱体分区数量：</label>
-          <el-input-number v-model="boxNum" :min="3" :max="8" @change="handleBoxNum" />
+          <el-input-number v-model="boxNum" :min="3" :max="8" class="custom-input" @change="handleBoxNum" />
         </div>
       </el-card>
       <label class="title">蜡烛图</label>
       <el-card shadow="always" style="margin: 10px;background-color:#2f2f2f40;border-radius: 10px;padding: 5px">
         <div class="setting-row-container">
           <label class="label-text">股票数据更新频率(s)：</label>
-          <el-input-number v-model="updateFreq" :min="15" :max="120" :step="5" @change="handleUpdateFreq" />
+          <el-input-number v-model="updateFreq" :min="15" :max="120" :step="5" class="custom-input" @change="handleUpdateFreq" />
         </div>
         <el-divider style="margin: 5px" />
         <div class="setting-row-container">
           <label class="label-text">箱体分区数量：</label>
-          <el-input-number v-model="boxNum" :min="3" :max="8" @change="handleBoxNum" />
+          <el-input-number v-model="boxNum" :min="3" :max="8" class="custom-input" @change="handleBoxNum" />
         </div>
       </el-card>
 
@@ -45,14 +45,15 @@ const handleUpdateFreq = (value: number) => {
 .el-card__body{
   padding: 5px;
 }
+.el-input{
+  --el-input-text-color: black;
+  --el-input-focus-border-color: #d5343400;
+}
+.el-input__wrapper{
+  box-shadow:none;
+}
 </style>
 <style scoped>
-.setting-row-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center; /* 保证垂直居中 */
-  width: 100%; /* 确保容器占据整行 */
-}
 .title{
   font-size: 20px;
   margin-left:20px;
@@ -62,4 +63,13 @@ const handleUpdateFreq = (value: number) => {
 .label-text{
   font-size: 15px;
 }
+.custom-input {
+  background-color: #c8656500; /* 设置背景色 */
+  width: 100px; /* 设置宽度 */
+  height: 25px; /* 设置高度 */
+}
+.custom-input:hover{
+  border: #cf0f59;
+}
+
 </style>

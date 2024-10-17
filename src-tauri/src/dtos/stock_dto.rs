@@ -12,7 +12,7 @@ pub struct StockInfoG {
     pub hold: bool,
 }
 ///股票实时数据
-#[derive(Serialize,Clone,Debug)]
+#[derive(Serialize, Clone, Debug)]
 pub struct StockLiveData {
     pub code: String,
     // pub name: String,

@@ -16,4 +16,6 @@ pub struct TransactionRecord {
     pub price: f32,
     #[serde(rename = "成交金额")]
     pub amount: f32,
+    #[serde(skip_serializing)] // 忽略该字段
+    pub remark:String
 }

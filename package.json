@@ -12,6 +12,7 @@
   "dependencies": {
     "@imengyu/vue3-context-menu": "^1.4.3",
     "@tauri-apps/api": "^2.0.2",
+    "@tauri-apps/plugin-dialog": "^2.0.0",
     "@tauri-apps/plugin-fs": "^2.0.0",
     "@tauri-apps/plugin-http": "2.0.0-beta.2",
     "@tauri-apps/plugin-shell": "^2.0.0",

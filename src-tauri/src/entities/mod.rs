@@ -1,35 +1,41 @@
-use std::{env, fs};
+use crate::app_errors::AppResult;
+use crate::entities::table::create_all_need_table;
+use log::{error, info};
+use sea_orm::{ColIdx, ConnectOptions, Database, DatabaseConnection};
 use std::fs::File;
 use std::path::PathBuf;
 use std::time::Duration;
-use log::{error, info};
-use sea_orm::{ColIdx, ConnectOptions, Database, DatabaseConnection};
+use std::{env, fs};
 use tokio::sync::OnceCell;
-use crate::app_errors::AppResult;
-use crate::entities::table::create_all_need_table;
-///这个mod文件主要是定义了数据库相关的结构体。
-pub mod table;
-pub mod stock_info;
+pub mod graphic;
+pub mod group_stock_relation;
 pub(crate) mod prelude;
 pub mod stock_data;
 pub mod stock_group;
-pub mod group_stock_relation;
-pub mod graphic;
+pub mod stock_info;
+///这个mod文件主要是定义了数据库相关的结构体。
+pub mod table;
 pub mod transaction_record;
 
 // pub static DB:OnceLock<DatabaseConnection> = OnceLock::new();
-pub static DB:OnceCell<DatabaseConnection> = OnceCell::const_new();
-pub async fn init_db_coon(){
+pub static DB: OnceCell<DatabaseConnection> = OnceCell::const_new();
+pub async fn init_db_coon() {
     let current_dir = &env::current_dir().unwrap();
     let current_dir = current_dir.to_string_lossy();
     let path = format!("{}/data/data.db", current_dir);
-    let exist = match check_db_file(&path,&current_dir){
-        Ok(flag)=>{
-            flag
-        },
-        Err(e)=>{
-            error!("数据库文件不存在，创建数据库文件{}失败:{}",path,e.to_string());
-            panic!("数据库文件不存在，创建数据库文件{}失败:{}",path,e.to_string())
+    let exist = match check_db_file(&path, &current_dir) {
+        Ok(flag) => flag,
+        Err(e) => {
+            error!(
+                "数据库文件不存在，创建数据库文件{}失败:{}",
+                path,
+                e.to_string()
+            );
+            panic!(
+                "数据库文件不存在，创建数据库文件{}失败:{}",
+                path,
+                e.to_string()
+            )
         }
     };
     DB.get_or_init(|| async {
@@ -37,7 +43,7 @@ pub async fn init_db_coon(){
         // url.push_str(&*env::current_dir().unwrap().to_string_lossy());
         // url.push_str(&*env::current_dir().unwrap().as_ref());
         // url.push_str("/data/data.db?mode=rwc");
-        let url = format!("sqlite:{}?mode=rwc",path);
+        let url = format!("sqlite:{}?mode=rwc", path);
         // url.push_str("?mode=rwc");
         // url.push_str("?mode=rwc");
         let mut opt = ConnectOptions::new(url);
@@ -51,16 +57,17 @@ pub async fn init_db_coon(){
             let _ = create_all_need_table(&db).await;
         };
         db
-    }).await;
+    })
+    .await;
 }
 //注意，不能与log4rs同时使用，因为这个开启的是tracing日志，与log4rs冲突。
-pub async fn open_db_log(){
+pub async fn open_db_log() {
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)
         .with_test_writer()
         .init();
 }
-pub fn check_db_file(path:&str,current_dir:&str)->AppResult<bool>{
+pub fn check_db_file(path: &str, current_dir: &str) -> AppResult<bool> {
     if PathBuf::from(path).exists() {
         info!("数据库存在");
         Ok(true)

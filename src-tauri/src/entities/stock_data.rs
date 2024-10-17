@@ -1,8 +1,8 @@
-use serde_with::DisplayFromStr;
-use serde_with::serde_as;
 use arraystring::{typenum::U32, ArrayString};
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
+use serde_with::DisplayFromStr;
 
 pub type TableName = ArrayString<U32>;
 
@@ -17,7 +17,7 @@ impl EntityName for Entity {
     }
 }
 #[serde_as]
-#[derive(Clone, Debug, PartialEq, DeriveModel, DeriveActiveModel, Deserialize,Serialize)]
+#[derive(Clone, Debug, PartialEq, DeriveModel, DeriveActiveModel, Deserialize, Serialize)]
 pub struct Model {
     // #[serde(default = "path")]
     // pub name: String,

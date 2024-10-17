@@ -4,46 +4,53 @@
 // #![feature(error_generic_member_access)]
 
 mod app_errors;
+mod cache;
+mod config;
 mod dtos;
 mod entities;
 mod service;
 mod utils;
-mod cache;
-mod config;
 
+use crate::app_errors::AppResult;
+use crate::cache::config_state::ConfigState;
+use crate::cache::intraday_chart_cache::IntradayChartCache;
+use crate::config::config::Config;
+use crate::entities::init_db_coon;
+use crate::service::command::tauri_command::{
+    add_stock_info, create_group, delete_graphic_by_group_id, delete_graphic_by_id, delete_group,
+    exit_app, get_response, query_all_groups, query_box, query_graphic_by_code,
+    query_groups_by_code, query_intraday_chart_img, query_live_stock_data_by_code,
+    query_live_stocks_data_by_group_name, query_stock_info, query_stocks_by_group_name,
+    query_stocks_day_k_limit, remove_stock_from_group, save_graphic, update_groups,
+    update_live_state, update_stock_groups, update_stock_hold,
+};
+use crate::service::curd::stock_data_curd::StockDataCurd;
+use crate::service::curd::stock_info_curd::StockInfoCurd;
+use crate::service::http::init_http;
+use log::{error, info};
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::env;
 use std::future::Future;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, LazyLock, Mutex};
-use log::{error, info};
 use tokio::task::JoinHandle;
-use crate::app_errors::AppResult;
-use crate::cache::config_state::ConfigState;
-use crate::cache::intraday_chart_cache::IntradayChartCache;
-use crate::config::config::Config;
-use crate::entities::init_db_coon;
-use crate::service::command::tauri_command::{add_stock_info, get_response, query_all_groups, query_groups_by_code, query_stock_info, query_stocks_by_group_name, create_group, delete_group, update_stock_groups, remove_stock_from_group, update_stock_hold, query_stocks_day_k_limit, query_live_stocks_data_by_group_name, update_live_state, query_graphic_by_code, save_graphic, query_box, query_live_stock_data_by_code, delete_graphic_by_id, delete_graphic_by_group_id, exit_app, update_groups, query_intraday_chart_img};
-use crate::service::curd::stock_data_curd::StockDataCurd;
-use crate::service::curd::stock_info_curd::StockInfoCurd;
-use crate::service::http::{init_http};
 ///是否需要实时更新
 pub static UPDATEING: AtomicBool = AtomicBool::new(true);
 // pub static NOTICE: Mutex<Option<Vec<String>>> = Mutex::new(None);
 pub static NOTICE: Mutex<Option<String>> = Mutex::new(None);
-pub static CURRENT_DIR: LazyLock<String> = LazyLock::new(||{
+pub static CURRENT_DIR: LazyLock<String> = LazyLock::new(|| {
     let current_dir = &env::current_dir().unwrap();
     current_dir.to_string_lossy().to_string()
 });
-pub struct MyState{
+pub struct MyState {
     // live_state:AtomicBool,
-    live_task:Mutex<Option<JoinHandle<()>>>,
-    history_close_price:Mutex<HashMap<String,Arc<Vec<f64>>>>,
+    live_task: Mutex<Option<JoinHandle<()>>>,
+    history_close_price: Mutex<HashMap<String, Arc<Vec<f64>>>>,
     // config: Config
 }
-impl MyState{
-    pub async fn new() -> Self{
+impl MyState {
+    pub async fn new() -> Self {
         let result = get_close_prices(None).await;
         let close_prices = match result {
             Ok(data) => {
@@ -51,27 +58,30 @@ impl MyState{
                 data
             }
             Err(e) => {
-                error!("初始化缓存失败:{}",e.to_string());
+                error!("初始化缓存失败:{}", e.to_string());
                 // NOTICE.lock().unwrap().unwrap().
                 HashMap::new()
             }
         };
-        Self{
-            live_task:Mutex::new(None),
-            history_close_price:Mutex::new(close_prices),
+        Self {
+            live_task: Mutex::new(None),
+            history_close_price: Mutex::new(close_prices),
         }
     }
-    pub fn update_history_close_price(&self,code:String,close_prices:Arc<Vec<f64>>){
-        self.history_close_price.lock().unwrap().insert(code,close_prices);
+    pub fn update_history_close_price(&self, code: String, close_prices: Arc<Vec<f64>>) {
+        self.history_close_price
+            .lock()
+            .unwrap()
+            .insert(code, close_prices);
         // self.history_close_price.insert(code,close_price);
     }
-    fn abort_task(&self){
-        if let Some(task) = self.live_task.lock().unwrap().take(){
+    fn abort_task(&self) {
+        if let Some(task) = self.live_task.lock().unwrap().take() {
             info!("hava task cancel");
             task.abort();
         }
     }
-    pub fn set_task(&self,task:JoinHandle<()>){
+    pub fn set_task(&self, task: JoinHandle<()>) {
         self.abort_task();
         *self.live_task.lock().unwrap() = Some(task);
     }
@@ -93,18 +103,23 @@ impl MyState{
     //
     // }
 }
-pub async fn get_close_prices(single_code:Option<&str>) ->AppResult<HashMap<String,Arc<Vec<f64>>>> {
+pub async fn get_close_prices(
+    single_code: Option<&str>,
+) -> AppResult<HashMap<String, Arc<Vec<f64>>>> {
     if single_code.is_none() {
         let codes = StockInfoCurd::query_all_only_code().await?;
         let mut map = HashMap::with_capacity(codes.len());
         for code in codes {
-            map.insert(code.clone(),Arc::new(StockDataCurd::query_only_close_price_by_nums(&code,60).await?));
+            map.insert(
+                code.clone(),
+                Arc::new(StockDataCurd::query_only_close_price_by_nums(&code, 60).await?),
+            );
         }
         Ok(map)
-    }else {
+    } else {
         let code = single_code.unwrap();
-        let close_price = StockDataCurd::query_only_close_price_by_nums(code,60).await?;
-        Ok(HashMap::from([(code.to_string(),Arc::new(close_price))]))
+        let close_price = StockDataCurd::query_only_close_price_by_nums(code, 60).await?;
+        Ok(HashMap::from([(code.to_string(), Arc::new(close_price))]))
     }
 }
 #[tokio::main]
@@ -117,8 +132,9 @@ async fn main() {
     // init_app().await;
     let state = MyState::new().await;
     info!("ui start");
-    
+
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         // .manage(MyState{task:Mutex::new(None)})
         .manage(state)
         .manage(IntradayChartCache::new())
@@ -180,15 +196,21 @@ async fn init_app() {
     init_db_coon().await;
     init_http().await;
 }
-async fn update(){
-    match crate::service::curd::update_all_day_k().await{
-        Ok(_)=>{
+async fn update() {
+    match crate::service::curd::update_all_day_k().await {
+        Ok(_) => {
             info!("更新日线数据成功");
-            NOTICE.lock().unwrap().replace("更新日线数据成功".to_string());
-        },
-        Err(e)=>{
-            error!("更新日线数据失败:{}",e);
-            NOTICE.lock().unwrap().replace(format!("更新日线数据失败:{}",e.to_string()));
+            NOTICE
+                .lock()
+                .unwrap()
+                .replace("更新日线数据成功".to_string());
+        }
+        Err(e) => {
+            error!("更新日线数据失败:{}", e);
+            NOTICE
+                .lock()
+                .unwrap()
+                .replace(format!("更新日线数据失败:{}", e.to_string()));
         }
     };
 }
