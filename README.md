@@ -1,6 +1,5 @@
 # TradeTip
 
-[//]: # (![]&#40;https://img.shields.io/badge/license-MIT-blue&#41; ![]&#40;https://img.shields.io/badge/rust-vue-green&#41; ![]&#40;https://img.shields.io/badge/status-developing-red&#41; ![]&#40;https://img.shields.io/badge/pr-welcome-orange&#41;)
 <div style="display: flex; align-items: center; justify-content: flex-start;">
     <img src="readme-img/icon.png" width="25" height="auto" style="margin-right: 10px;" alt="icon"> 
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="License: MIT" style="margin-right: 10px;">
