@@ -1,4 +1,4 @@
-# TradeTip（金融助手） 
+# TradeTip
 
 [//]: # (![]&#40;https://img.shields.io/badge/license-MIT-blue&#41; ![]&#40;https://img.shields.io/badge/rust-vue-green&#41; ![]&#40;https://img.shields.io/badge/status-developing-red&#41; ![]&#40;https://img.shields.io/badge/pr-welcome-orange&#41;)
 <div style="display: flex; align-items: center; justify-content: flex-start;">
@@ -13,9 +13,11 @@
 
 <h3>Introduction</h3>
 ___
+
 This is a financial assistant client that helps you analyze stocks and funds that interest you. The main indicators are box trend and moving average.
 <h3>Features</h3>
 ___
+
 It has the following features:
 - Provide real-time data, historical candlestick data, historical trading volume, box analysis, and moving average analysis.
 - Support online search and adding stocks, group management.
@@ -29,6 +31,7 @@ ___
 
 <h3>Application screenshot</h3>
 ___
+
 ![img.png](readme-img/img.png)
 ![img2.png](readme-img/img2.png)
 ![img3.png](readme-img/img3.png)
