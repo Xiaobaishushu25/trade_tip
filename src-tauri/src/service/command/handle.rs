@@ -3,13 +3,14 @@ use std::sync::Arc;
 use anyhow::anyhow;
 use crate::app_errors::AppResult;
 use crate::dtos::stock_dto::StockLiveData;
+use crate::entities::init_db_coon;
 use crate::entities::prelude::StockInfo;
 use crate::entities::table::{create_table_with_dyn_name};
 use crate::service::curd::graphic_curd::GraphicCurd;
 use crate::service::curd::group_stock_relation_curd::GroupStockRelationCurd;
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
-use crate::service::http::{REQUEST};
+use crate::service::http::{init_http, REQUEST};
 use crate::utils::stock_util::{calculate_ago_with_num, compute_mul_ma, compute_single_ma};
 
 ///处理并保存股票数据

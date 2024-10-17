@@ -11,6 +11,7 @@ pub mod stock_data_curd;
 pub mod stock_group_curd;
 pub mod group_stock_relation_curd;
 pub mod graphic_curd;
+mod transaction_record_curd;
 
 /// 更新所有股票的日k数据
 pub async fn update_all_day_k() ->AppResult<()> {

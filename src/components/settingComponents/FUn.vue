@@ -13,6 +13,18 @@ const handleUpdateFreq = (value: number) => {
 <template>
   <div >
     <el-scrollbar max-height="calc(100vh - 60px)">
+      <label class="title">证券表</label>
+      <el-card shadow="always" style="margin: 10px;background-color:#2f2f2f40;border-radius: 10px;padding: 5px">
+        <div class="setting-row-container">
+          <label class="label-text">导出证券数据：</label>
+          <el-input-number v-model="updateFreq" :min="15" :max="120" :step="5" @change="handleUpdateFreq" />
+        </div>
+        <el-divider style="margin: 5px" />
+        <div class="setting-row-container">
+          <label class="label-text">箱体分区数量：</label>
+          <el-input-number v-model="boxNum" :min="3" :max="8" @change="handleBoxNum" />
+        </div>
+      </el-card>
       <label class="title">蜡烛图</label>
       <el-card shadow="always" style="margin: 10px;background-color:#2f2f2f40;border-radius: 10px;padding: 5px">
         <div class="setting-row-container">

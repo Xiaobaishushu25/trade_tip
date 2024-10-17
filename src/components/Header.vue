@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
+import { Window } from "@tauri-apps/api/window"
+import { Webview } from "@tauri-apps/api/webview"
 import {ref, watch} from "vue";
 import {invoke} from "@tauri-apps/api/core";
 import {store} from "../store.ts"
@@ -32,9 +34,44 @@ async function changeUpdateState(){
   await invoke('update_live_state',{groupName:store.activeGroup,liveState:!live_state.value});
   live_state.value = !live_state.value;
 }
+async function open_record(){
+  const webview = new WebviewWindow('record', {
+    url: '/#/record',
+    center: true,
+    width: 900,
+    height: 700,
+    minWidth: 800,
+    minHeight: 625,
+    decorations: false,
+    resizable: true,
+    dragDropEnabled: false,
+    visible: false,
+  });
+  await webview.show()
+}
 async function open_setting(){
-  const appWindow = await WebviewWindow.getByLabel('setting')
-  await appWindow?.show()
+  const webview = new WebviewWindow('setting', {
+    url: '/#/setting',
+    center: true,
+    width: 1025,
+    height: 800,
+    minWidth: 1025,
+    minHeight: 625,
+    decorations: false,
+    resizable: true,
+    dragDropEnabled: false,
+    visible: false,
+  });
+  // await webview.once('tauri://created', function () {
+  //   console.log("webview successfully created")
+  // });
+  // await webview.once('tauri://error', function (e) {
+  //   console.log("an error happened creating the webview", e)
+  // });
+  await webview.show()
+  // // const appWindow = await WebviewWindow.getByLabel('setting')
+  // console.log(webview)
+  // await webview?.show()
 }
 async function window_minimize(){
   // console.log("窗口是",await WebviewWindow.getCurrent().isResizable());
@@ -62,6 +99,9 @@ function back(){
     <img src="../assets/icon.png" width="25" height="25" alt="Logo Image" style="margin-left: 5px;margin-right: 10px;user-select: none">
     <ElSearch></ElSearch>
     <div id="stage-button">
+      <el-tooltip content="交易记录" placement="bottom" effect="light" :show-arrow="false">
+        <inline-svg src="../assets/svg/record.svg" class="window-button back record" @click.left="open_record"></inline-svg>
+      </el-tooltip>
       <el-tooltip content="设置" placement="bottom" effect="light" :show-arrow="false">
         <inline-svg src="../assets/svg/setting.svg" class="window-button back" @click.left="open_setting"></inline-svg>
       </el-tooltip>
@@ -93,8 +133,12 @@ function back(){
 .window-button{/*去掉加上tooltip后出现的黑色边框*/
   outline: none !important;
 }
+.record path{
+  transform: scale(0.9);
+  transform-origin: center;
+  stroke-width: 20;
 
-
+}
 #stage-button{
   display: flex;
   flex-direction:row;
@@ -106,10 +150,6 @@ function back(){
   height: 30px;
   width: 40px;
 }
-/*.min path{
-  stroke: red;
-  stroke-width: 0.5;
-}*/
 .min path{
   transform: scale(0.6);
   transform-origin: center;

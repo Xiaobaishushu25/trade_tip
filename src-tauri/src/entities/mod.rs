@@ -7,7 +7,7 @@ use sea_orm::{ColIdx, ConnectOptions, Database, DatabaseConnection};
 use tokio::sync::OnceCell;
 use crate::app_errors::AppResult;
 use crate::entities::table::create_all_need_table;
-
+///这个mod文件主要是定义了数据库相关的结构体。
 pub mod table;
 pub mod stock_info;
 pub(crate) mod prelude;
@@ -15,6 +15,7 @@ pub mod stock_data;
 pub mod stock_group;
 pub mod group_stock_relation;
 pub mod graphic;
+pub mod transaction_record;
 
 // pub static DB:OnceLock<DatabaseConnection> = OnceLock::new();
 pub static DB:OnceCell<DatabaseConnection> = OnceCell::const_new();

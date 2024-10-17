@@ -22,11 +22,11 @@
 </template>
 
 <script lang="ts" setup>
-import DisPlay from "./settingTab/DisPlay.vue";
+import DisPlay from "./settingComponents/DisPlay.vue";
 import {ref, watch} from "vue";
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {saveWindowState, StateFlags} from "@tauri-apps/plugin-window-state";
-import FUn from "./settingTab/FUn.vue";
+import FUn from "./settingComponents/FUn.vue";
 async function window_minimize(){
   await WebviewWindow.getCurrent().minimize()
 }
@@ -35,8 +35,7 @@ async function window_close(){
   // const ALL_WITHOUT_VISIBLE = StateFlags.ALL & ~StateFlags.VISIBLE;
   // await saveWindowState(ALL_WITHOUT_VISIBLE);
   await saveWindowState(StateFlags.ALL);
-  // await WebviewWindow.getCurrent().close();
-  await WebviewWindow.getCurrent().hide();
+  await WebviewWindow.getCurrent().close();
 }
 </script>
 <style>

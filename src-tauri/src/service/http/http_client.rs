@@ -7,7 +7,7 @@ use reqwest::header::HeaderMap;
 use crate::app_errors::{AppError, AppResult};
 use crate::dtos::stock_dto::StockLiveData;
 use crate::entities::prelude::StockData;
-use crate::service::http::{REQUEST};
+use crate::service::http::{init_http, REQUEST};
 use crate::utils::stock_util::{get_market_by_code};
 
 // pub static REQUEST:OnceLock<HttpRequest> = OnceLock::new();

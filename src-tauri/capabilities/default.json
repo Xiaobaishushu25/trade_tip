@@ -5,7 +5,8 @@
   "windows": [
     "main",
     "tool",
-    "setting"
+    "setting",
+    "record"
   ],
   "permissions": [
     "core:path:default",
@@ -18,6 +19,8 @@
     "core:window:allow-unmaximize",
     "core:window:allow-close",
     "core:window:allow-hide",
+    "core:webview:allow-create-webview-window",
+    "core:webview:allow-webview-show",
     "window-state:allow-save-window-state",
     "window-state:allow-restore-state",
     "core:app:default",
