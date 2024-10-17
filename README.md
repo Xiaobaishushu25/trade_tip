@@ -17,6 +17,8 @@ ___
 This is a financial assistant client that helps you analyze stocks and funds that interest you. The main indicators are box trend and moving average.
 <h3>Features</h3>
 ___
+## 🎯 Features
+___
 
 It has the following features:
 - Provide real-time data, historical candlestick data, historical trading volume, box analysis, and moving average analysis.
