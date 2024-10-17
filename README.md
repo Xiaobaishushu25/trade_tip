@@ -12,10 +12,12 @@
 
 <h3>Introduction</h3>
 
-This is a financial assistant client that helps you analyze stocks and funds that interest you. The main indicators are box trend and moving average.
-<h3>Features</h3>
 ___
-## 🎯 Features
+
+This is a financial assistant client that helps you analyze stocks and funds that interest you. The main indicators are box trend and moving average.
+
+<h3>Features</h3>
+
 ___
 
 It has the following features:
