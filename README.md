@@ -29,9 +29,14 @@ It has the following features:
 - Multi platform support.
 
 <h3>Development Plan</h3>
-___
+
+---
+
+- [ ] setting window.
+- [ ] import transaction data and analyze.
 
 <h3>Application screenshot</h3>
+
 ___
 
 ![img.png](readme-img/img.png)
