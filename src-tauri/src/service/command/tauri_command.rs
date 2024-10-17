@@ -3,7 +3,7 @@ use crate::cache::intraday_chart_cache::IntradayChartCache;
 use crate::config::config::Config;
 use crate::dtos::graphic_dto::GraphicDTO;
 use crate::dtos::stock_dto::{StockInfoG, StockLiveData};
-use crate::entities::prelude::{Graphic, StockData, StockGroup, StockInfo};
+use crate::entities::prelude::{Graphic, StockData, StockGroup, StockInfo, TransactionRecord};
 use crate::service::command::handle::{
     handle_delete_stock, handle_new_stock, handle_stock_livedata,
 };
@@ -23,6 +23,8 @@ use std::sync::Arc;
 use std::time::Duration;
 use tauri::{Emitter, Manager, State};
 use tokio::time::sleep;
+use crate::service::curd::transaction_record_curd::TransactionRecordCurd;
+
 #[tauri::command]
 pub async fn update_live_state<'r>(
     state: State<'r, MyState>,
@@ -499,7 +501,7 @@ pub async fn query_live_stocks_data_by_group_name<'r>(
 }
 #[tauri::command]
 pub async fn save_config<'r>(
-    mut config_state: State<'r, ConfigState>,
+    config_state: State<'r, ConfigState>,
     config: Config,
 ) -> Result<(), String> {
     match config_state.update_config(config).await {
@@ -518,6 +520,21 @@ pub async fn query_intraday_chart_img<'r>(
             Ok(response)
         }
         Err(e) => handle_error("查询股票分时图失败", e.to_string()),
+    }
+}
+
+#[tauri::command]
+pub async fn read_save_transaction_records(path: String) -> Result<Vec<TransactionRecord>, String> {
+    match TransactionRecordCurd::read_csv_file(&path).await{
+        Ok(data) => {
+           match TransactionRecordCurd::insert(data.clone()).await{
+               Ok(_)=>Ok(data),
+               Err(e)=>handle_error("保存交易记录失败", e.to_string())
+           }
+        }
+        Err(e) => {
+            handle_error("读取交易记录文件失败", e.to_string())
+        }
     }
 }
 #[tauri::command]

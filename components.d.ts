@@ -11,6 +11,7 @@ declare module 'vue' {
     DataDetail: typeof import('./src/components/StockData/DataDetail.vue')['default']
     Detail: typeof import('./src/components/StockData/Detail.vue')['default']
     DisPlay: typeof import('./src/components/settingComponents/DisPlay.vue')['default']
+    DragTest: typeof import('./src/components/DragTest.vue')['default']
     ElAutocomplete: typeof import('element-plus/es')['ElAutocomplete']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCard: typeof import('element-plus/es')['ElCard']
@@ -50,7 +51,6 @@ declare module 'vue' {
     StockGroupSelect: typeof import('./src/components/group/StockGroupSelect.vue')['default']
     StockTable2: typeof import('./src/components/StockTable2.vue')['default']
     Tool: typeof import('./src/components/Tool.vue')['default']
-    ToolBar: typeof import('./src/components/transactionRecordComponents/RToolBar.vue')['default']
     TransactionRecord: typeof import('./src/components/TransactionRecord.vue')['default']
   }
 }

@@ -10,12 +10,16 @@ async function clearFilter(){
   console.log("clearFilter")
   tableRef.value?.clearFilter();
 }
+async function exportRecords(records){
+  console.log("exportData")
+  tableRef.value?.addRecords(records);
+}
 </script>
 
 <template>
   <div>
     <RHeader></RHeader>
-    <RToolBar ref="barRef" @clearFilter="clearFilter"></RToolBar>
+    <RToolBar ref="barRef" @clearFilter="clearFilter" @exportRecords="exportRecords"></RToolBar>
     <RTable ref="tableRef"></RTable>
   </div>
 </template>

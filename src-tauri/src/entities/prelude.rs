@@ -17,3 +17,7 @@ pub use super::group_stock_relation::Model as GroupStockR;
 pub use super::graphic::ActiveModel as ActiveGraphic;
 pub use super::graphic::Entity as Graphics;
 pub use super::graphic::Model as Graphic;
+
+pub use super::transaction_record::ActiveModel as ActiveTransactionRecord;
+pub use super::transaction_record::Entity as TransactionRecords;
+pub use super::transaction_record::Model as TransactionRecord;

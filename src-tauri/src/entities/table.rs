@@ -1,6 +1,6 @@
 use crate::app_errors::AppResult;
 use crate::entities::group_stock_relation::Relation::StockInfos;
-use crate::entities::prelude::{Graphics, GroupStockRs, StockGroups};
+use crate::entities::prelude::{Graphics, GroupStockRs, StockGroups, TransactionRecords};
 use crate::entities::stock_data::{Column, Entity, TableName};
 use crate::entities::{init_db_coon, stock_group, stock_info, DB};
 use crate::service::curd::stock_group_curd::StockGroupCurd;
@@ -168,17 +168,14 @@ where
         ))
         .await?;
     Ok(())
-    // match execution.await {
-    //     Ok(_) => println!("Deleted {}", entity.table_name()),
-    //     Err(e) => println!("Error: {}", e),
-    // }
 }
 pub async fn create_all_need_table(db: &DatabaseConnection) {
     let _ = create_table(db, stock_info::Entity).await;
     let _ = create_table(db, Graphics).await;
     let _ = create_table(db, StockGroups).await;
     let _ = create_table(db, GroupStockRs).await;
-    let _ = StockGroupCurd::insert_init(db).await.unwrap();
+    let _ = create_table(db, TransactionRecords).await;
+    StockGroupCurd::insert_init(db).await.unwrap();
 }
 #[tokio::test]
 async fn test_create_table_with_dyn_name() {
@@ -218,3 +215,10 @@ async fn test_create_graphic() {
     let result = create_table(&DB.get().unwrap(), Graphics).await;
     println!("{result:?}")
 }
+#[tokio::test]
+async fn test_create_transaction_records() {
+    init_db_coon().await;
+    let result = create_table(&DB.get().unwrap(), TransactionRecords).await;
+    println!("{result:?}")
+}
+

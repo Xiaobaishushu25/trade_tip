@@ -11,6 +11,9 @@ dependencies:
   '@tauri-apps/api':
     specifier: ^2.0.2
     version: 2.0.2
+  '@tauri-apps/plugin-dialog':
+    specifier: ^2.0.0
+    version: 2.0.0
   '@tauri-apps/plugin-fs':
     specifier: ^2.0.0
     version: 2.0.0
@@ -718,6 +721,12 @@ packages:
       '@tauri-apps/cli-win32-ia32-msvc': 2.0.3
       '@tauri-apps/cli-win32-x64-msvc': 2.0.3
     dev: true
+
+  /@tauri-apps/plugin-dialog@2.0.0:
+    resolution: {integrity: sha512-ApNkejXP2jpPBSifznPPcHTXxu9/YaRW+eJ+8+nYwqp0lLUtebFHG4QhxitM43wwReHE81WAV1DQ/b+2VBftOA==}
+    dependencies:
+      '@tauri-apps/api': 2.0.2
+    dev: false
 
   /@tauri-apps/plugin-fs@2.0.0:
     resolution: {integrity: sha512-BNEeQQ5aH8J5SwYuWgRszVyItsmquRuzK2QRkVj8Z0sCsLnSvJFYI3JHRzzr3ltZGq1nMPtblrlZzuKqVzRawA==}

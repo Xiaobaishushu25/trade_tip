@@ -22,7 +22,7 @@ use crate::service::command::tauri_command::{
     query_groups_by_code, query_intraday_chart_img, query_live_stock_data_by_code,
     query_live_stocks_data_by_group_name, query_stock_info, query_stocks_by_group_name,
     query_stocks_day_k_limit, remove_stock_from_group, save_graphic, update_groups,
-    update_live_state, update_stock_groups, update_stock_hold,
+    update_live_state, update_stock_groups, update_stock_hold,read_save_transaction_records
 };
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
@@ -185,6 +185,7 @@ async fn main() {
             delete_graphic_by_group_id,
             update_groups,
             query_intraday_chart_img,
+            read_save_transaction_records,
             exit_app
         ])
         .run(tauri::generate_context!())

@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { open } from '@tauri-apps/plugin-dialog';
-const emit = defineEmits([ "clearFilter" ]);
+import {invoke} from "@tauri-apps/api/core";
+
+
+const emit = defineEmits([ "clearFilter","exportRecords" ]);
 async function importData() {
   const file = await open({
     title: '选择交易数据',
@@ -13,7 +16,14 @@ async function importData() {
       },
     ],
   });
-  console.log(file);
+  console.log(file); //直接就是文件路径
+  invoke('read_save_transaction_records', {path: file}).then(data => {
+    console.log(data);
+    emit('exportRecords',data);
+  }).catch(e => {
+    console.log(e);
+  });
+
 // Prints file path or URI
 }
 </script>

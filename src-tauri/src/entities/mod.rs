@@ -39,10 +39,6 @@ pub async fn init_db_coon() {
         }
     };
     DB.get_or_init(|| async {
-        // let mut url = "sqlite:".to_string();
-        // url.push_str(&*env::current_dir().unwrap().to_string_lossy());
-        // url.push_str(&*env::current_dir().unwrap().as_ref());
-        // url.push_str("/data/data.db?mode=rwc");
         let url = format!("sqlite:{}?mode=rwc", path);
         // url.push_str("?mode=rwc");
         // url.push_str("?mode=rwc");
