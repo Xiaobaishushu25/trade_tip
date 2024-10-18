@@ -33,7 +33,7 @@ It has the following features:
 ---
 
 - [ ] setting window.
-- [ ] import transaction data and analyze.
+- [√] import transaction data and analyze.
 - [ ] enable redownload stock candlestick data.
 
 <h3>Application screenshot</h3>

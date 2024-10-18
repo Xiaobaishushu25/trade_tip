@@ -4,9 +4,7 @@ use crate::config::config::Config;
 use crate::dtos::graphic_dto::GraphicDTO;
 use crate::dtos::stock_dto::{StockInfoG, StockLiveData};
 use crate::entities::prelude::{Graphic, StockData, StockGroup, StockInfo, TransactionRecord};
-use crate::service::command::handle::{
-    handle_delete_stock, handle_new_stock, handle_stock_livedata,
-};
+use crate::service::command::handle::{handle_and_save_record, handle_delete_stock, handle_new_stock, handle_stock_livedata};
 use crate::service::curd::graphic_curd::GraphicCurd;
 use crate::service::curd::group_stock_relation_curd::GroupStockRelationCurd;
 use crate::service::curd::stock_data_curd::StockDataCurd;
@@ -522,23 +520,39 @@ pub async fn query_intraday_chart_img<'r>(
         Err(e) => handle_error("查询股票分时图失败", e.to_string()),
     }
 }
-
+///历史交易数据查询。默认查询100条记录。
 #[tauri::command]
-pub async fn read_save_transaction_records(path: String) -> Result<Vec<TransactionRecord>, String> {
-    match TransactionRecordCurd::read_csv_file(&path).await{
-        Ok(data) => {
-           match TransactionRecordCurd::insert(data.clone()).await{
-               Ok(_)=>Ok(data),
-               Err(e)=>handle_error("保存交易记录失败", e.to_string())
-           }
-        }
+pub async fn query_transaction_records() -> Result<Vec<TransactionRecord>, String> {
+    info!("查询交易记录");
+    match TransactionRecordCurd::query_by_num(100).await{
+        Ok(data) => Ok(data),
         Err(e) => {
             handle_error("读取交易记录文件失败", e.to_string())
         }
     }
 }
+///读取新增的交易记录文件，并保存到数据库中，成功保存后返回新增的交易记录数据。
 #[tauri::command]
-pub fn exit_app() {
+pub async fn read_save_transaction_records(path: String) -> Result<Vec<TransactionRecord>, String> {
+    match handle_and_save_record(path).await{
+        Ok(data) => Ok(data),
+        Err(e) => {
+            handle_error("读取、保存交易记录文件失败", e.to_string())
+        }
+    }
+}
+#[tauri::command]
+pub async fn update_transaction_record(record: TransactionRecord) -> Result<(), String> {
+    info!("更新交易记录:{:?}", record);
+    match TransactionRecordCurd::update(record).await{
+        Ok(_) => Ok(()),
+        Err(e) => {
+            handle_error("更新交易记录失败", e.to_string())
+        }
+    }
+}
+#[tauri::command]
+pub async fn exit_app() {
     info!("退出程序");
     exit(0)
 }

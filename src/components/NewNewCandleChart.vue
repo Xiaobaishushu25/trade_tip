@@ -656,7 +656,6 @@ function save_graphic(){
 }
 function wheelChangeCode(event: WheelEvent){
   const deltaY = event.deltaY; // 滚动的垂直距离
-  console.log("检测到滚动")
   debouncedFunction(deltaY)
 }
 function unlockZoom(event:KeyboardEvent){

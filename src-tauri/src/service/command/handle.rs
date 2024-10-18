@@ -1,7 +1,7 @@
 use crate::app_errors::AppResult;
 use crate::dtos::stock_dto::StockLiveData;
 use crate::entities::init_db_coon;
-use crate::entities::prelude::StockInfo;
+use crate::entities::prelude::{StockInfo, TransactionRecord};
 use crate::entities::table::create_table_with_dyn_name;
 use crate::service::curd::graphic_curd::GraphicCurd;
 use crate::service::curd::group_stock_relation_curd::GroupStockRelationCurd;
@@ -12,6 +12,7 @@ use crate::utils::stock_util::{calculate_ago_with_num, compute_mul_ma, compute_s
 use anyhow::anyhow;
 use std::collections::HashMap;
 use std::sync::Arc;
+use crate::service::curd::transaction_record_curd::TransactionRecordCurd;
 
 ///处理并保存股票数据
 /// 需要先根据code创建表，然后处理日线数据（主要是计算ma60）
@@ -48,28 +49,7 @@ pub(crate) async fn handle_and_save_stock_data(create_need: bool, code: &str) ->
 // async fn compute_live_ma(code:&str,mas:Vec<f64>) ->AppResult<()>{
 // async fn compute_live_ma(code:&str,price:f64,history_close:&Vec<f64>) ->AppResult<()>{
 async fn compute_live_ma(price: f64, history_close: &Vec<f64>) -> AppResult<Vec<f64>> {
-    // let history_close = CACHE.get().unwrap().get(code).ok_or(anyhow!("缓存中没有{}数据",code))?;
-    // let mut data = vec![price];
-    // data.extend_from_slice(history_close);
     let live_ma_data = compute_mul_ma(vec![5, 10, 20, 60], price, history_close).await;
-    // let mut stock_data = REQUEST.get().unwrap().get_live_stock_data(&vec![code.into()]).await?;
-    // let data = stock_data.get(code).unwrap();
-    // let open = data.open;
-    // // let close = data.price;
-    // // let vol = data.volume;
-    // init_db_coon().await;
-    // // let mut x = StockDataCurd::query_by_nums(code, 59).await?.iter().map(|item|item.close).collect::<Vec<f64>>();
-    // let y = StockDataCurd::query_by_nums(code, 19).await?;
-    // println!("{:?}", y);
-    // let mut x = StockDataCurd::query_by_nums(code, 59).await?.iter().map(|item|item.close).collect::<Vec<f64>>();
-    // // x.push(data.price);
-    // x.insert(0,data.price);
-    // println!("现价是{}",data.price);
-    // println!("过去价格是{:?}",x);
-    // // let vec1 = compute_single_ma(20, x).await;
-    // // x.reverse();
-    // let ma_60 = compute_mul_ma(vec![5,10,20,60], &x).await;
-    // println!("{:?}",ma_60);
     Ok(live_ma_data)
 }
 pub async fn handle_new_stock(code: &str, name: &str) -> AppResult<()> {
@@ -107,6 +87,36 @@ pub async fn handle_stock_livedata(
     }
     Ok(())
 }
+
+///以下区域是历史交易数据处理函数
+/// 处理和保存交易记录
+/// 读取csv文件，然后查询数据库中最新记录，然后只保存最新记录之后的数据并返回。
+/// 
+pub(crate) async fn handle_and_save_record(path:String) -> AppResult<Vec<TransactionRecord>> {
+    let pending_data = TransactionRecordCurd::read_csv_file(&path).await?;
+    let truncated_data = if let Some(latest_record) = TransactionRecordCurd::query_latest_record().await?{
+        let latest_key = (latest_record.date.clone(), latest_record.time.clone(), latest_record.code.clone());
+        // 找到最新记录的索引
+        let latest_index = pending_data.iter().position(|record| {
+            let key = (record.date.clone(), record.time.clone(), record.code.clone());
+            key == latest_key
+        });
+        if let Some(index) = latest_index {
+            // 只保留最新记录之后的数据
+            &pending_data[index + 1..]
+        } else {
+            // 如果没有找到最新记录，则保留所有数据
+            &pending_data
+        }
+    }else { 
+        // 如果没有最新记录，则保留所有数据
+        &pending_data
+    };
+    //如果插入出错，则返回错误，不会走到Ok(truncated_data.to_vec())返回数据。
+    TransactionRecordCurd::insert(truncated_data.to_vec()).await?;
+    Ok(truncated_data.to_vec())
+}
+
 
 #[tokio::test]
 async fn test_handle_new_stock() {

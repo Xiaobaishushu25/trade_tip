@@ -2,23 +2,25 @@
 import {store} from "../../store.ts";
 import { ref, watch} from "vue";
 import {invoke} from "@tauri-apps/api/core";
+import RTable from "../transactionRecordComponents/RTable.vue";
 
 
 const ImageSrc = ref('');
+const rTableRef = ref();
 const IntradayChartShow = ref(false);
 
-// onMounted(async () => {
-//   await getStockPriceImg(store.stockinfoG!.code);
-// })
 watch(() => store.stockinfoG!.code, async (newVal) => {
   // console.log('分组内的的股票changed:', newVal);
   if (IntradayChartShow.value){
     await getIntradayChartImg(newVal);
+    rTableRef.value?.codeFilter(newVal);
   }
 });
 watch(IntradayChartShow, async (newVal) => {
   if (newVal){
+    console.log("打开分时图");
     await getIntradayChartImg(store.stockinfoG!.code);
+    rTableRef.value?.codeFilter(store.stockinfoG!.code);
   }
 })
 function getColor(percent:number){
@@ -46,8 +48,15 @@ async function getIntradayChartImg(code:string){
   <div class="detail column">
     <el-drawer v-model="IntradayChartShow" direction="ltr" size="100%" :modal="false" modal-class="mask-layer" custom-class="custom-drawer">
       <template #default>
-        <div>
-          <img  :src=ImageSrc  alt="获取分时图失败">
+<!--        <div @wheel.stop.prevent>-->
+<!--          <img :src=ImageSrc  alt="获取分时图失败">-->
+<!--          <RTable ></RTable>-->
+<!--        </div>-->
+        <div @wheel.stop> <!-- 防止滚动穿透，影响下面的蜡烛图也跟着滚动 -->
+          <div class="scrollable-content">
+            <img :src="ImageSrc" alt="获取分时图失败" style="height: 500px;width:650px;margin-left: 50px">
+            <RTable ref="rTableRef" :code="store.stockinfoG!.code" ></RTable>
+          </div>
         </div>
       </template>
     </el-drawer>
@@ -55,7 +64,7 @@ async function getIntradayChartImg(code:string){
       <label style="font-family: 'Arial',serif; display: flex;  ">{{store.stockinfoG!.code}}</label>
       <label :style="{ color: store.stockinfoG!.hold ?'orange':'black' }" style="font-family: 'Adobe 黑体 Std R';font-weight: bold;font-size: 25px">{{store.stockinfoG!.name}}</label>
     </div>
-    <el-divider />
+    <el-divider style="margin: 5px"/>
     <div class="row" >
       <label >今开 {{store.stockinfoG?.live_data?.open}}</label>
       <label >最高 {{store.stockinfoG?.live_data?.high}}</label>
@@ -86,8 +95,9 @@ async function getIntradayChartImg(code:string){
     </div>
     <el-divider />
     <el-tag :class="store.stockinfoG?.rowData?.advise[1]" style="align-items: center;font-size: 18px">{{store.stockinfoG?.rowData?.advise[0]}} </el-tag>
-    <el-divider />
-    <el-button type="" @click="IntradayChartShow = true">打开分时图</el-button>
+    <el-divider style="margin: 5px"/>
+    <el-button plain @click="IntradayChartShow = true">打开分时图</el-button>
+    <el-button plain @click="IntradayChartShow = true">打开历史交易表</el-button>
 <!--    <label>{{store.stockinfoG}}</label>-->
   </div>
 
@@ -129,7 +139,8 @@ async function getIntradayChartImg(code:string){
   width: 100%;
   height: 100%;
 }
-::v-deep .mask-layer{
-  width: 740px !important;
+:deep(.mask-layer){
+  /*width: 740px !important;*/
+  width: 840px !important;
 }
 </style>

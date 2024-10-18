@@ -14,7 +14,6 @@ mod utils;
 use crate::app_errors::AppResult;
 use crate::cache::config_state::ConfigState;
 use crate::cache::intraday_chart_cache::IntradayChartCache;
-use crate::config::config::Config;
 use crate::entities::init_db_coon;
 use crate::service::command::tauri_command::{
     add_stock_info, create_group, delete_graphic_by_group_id, delete_graphic_by_id, delete_group,
@@ -22,16 +21,15 @@ use crate::service::command::tauri_command::{
     query_groups_by_code, query_intraday_chart_img, query_live_stock_data_by_code,
     query_live_stocks_data_by_group_name, query_stock_info, query_stocks_by_group_name,
     query_stocks_day_k_limit, remove_stock_from_group, save_graphic, update_groups,
-    update_live_state, update_stock_groups, update_stock_hold,read_save_transaction_records
+    update_live_state, update_stock_groups, update_stock_hold,read_save_transaction_records,
+    query_transaction_records,update_transaction_record,
 };
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
 use crate::service::http::init_http;
 use log::{error, info};
-use std::borrow::Cow;
 use std::collections::HashMap;
 use std::env;
-use std::future::Future;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, LazyLock, Mutex};
 use tokio::task::JoinHandle;
@@ -186,6 +184,8 @@ async fn main() {
             update_groups,
             query_intraday_chart_img,
             read_save_transaction_records,
+            query_transaction_records,
+            update_transaction_record,
             exit_app
         ])
         .run(tauri::generate_context!())

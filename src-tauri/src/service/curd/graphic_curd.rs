@@ -89,7 +89,7 @@ impl GraphicCurd {
             let _ = Graphics::insert_many(
                 graphic_list
                     .into_iter()
-                    .map(|model| ActiveGraphic::from(model))
+                    .map(ActiveGraphic::from)
                     .collect::<Vec<_>>(),
             )
             .exec(db)

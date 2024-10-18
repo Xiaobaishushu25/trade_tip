@@ -25,6 +25,14 @@ const aExtend = ref(true) //always extend
               style="--el-switch-on-color: #13ce66;"
           />
         </div>
+        <div class="setting-row-container">
+          <label class="label-text">默认展示K线条数:</label>
+          <el-switch
+              v-model="aExtend"
+              class="ml-2"
+              style="--el-switch-on-color: #13ce66;"
+          />
+        </div>
         <el-divider style="margin: 5px" />
         <label class="label-text">总是将标价线段延伸到图表的右边界:</label>
         <el-switch

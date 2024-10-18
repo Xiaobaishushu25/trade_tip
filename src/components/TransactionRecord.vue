@@ -7,11 +7,9 @@ import {ref, watch} from "vue";
 const barRef = ref(null);
 const tableRef = ref(null);
 async function clearFilter(){
-  console.log("clearFilter")
   tableRef.value?.clearFilter();
 }
 async function exportRecords(records){
-  console.log("exportData")
   tableRef.value?.addRecords(records);
 }
 </script>
