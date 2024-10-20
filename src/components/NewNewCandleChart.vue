@@ -1346,19 +1346,25 @@ function init_option(){
 let currentIndex = - 1; // 当前索引
 // 监听键盘事件
 document.addEventListener('keydown', function (event) {
-  if (currentIndex == -1) {
-    currentIndex = rawData.value.length-1
+  // 检查事件目标是否为输入框,因为是监听的document，所以需要判断一下
+  if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
+    // console.log('在输入框中，不处理事件');
+    return; // 如果是在输入框中，直接返回，不处理事件
+  }
+  if (currentIndex === -1) {
+    currentIndex = rawData.value.length - 1;
   }
   if (event.key === 'ArrowLeft') {
     if (currentIndex > 0) {
       setHover(currentIndex - 1);
     }
   } else if (event.key === 'ArrowRight') {
-    if (currentIndex <= rawData.value.length - 1) {
+    if (currentIndex < rawData.value.length - 1) {
       setHover(currentIndex + 1);
     }
   }
 });
+
 function setHover(index) {
   currentIndex = index;
   //目前在触发tooltip时鼠标不会跟着动，是因为触发因素的原因，看第948行配置的tooltip的trigger，如果为axis则
