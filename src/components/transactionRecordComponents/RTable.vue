@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {TransactionRecord} from "../../type.ts";
+import {StockInfoG, TransactionRecord} from "../../type.ts";
 import {ref,reactive, watch,onMounted,nextTick,} from "vue";
 import {invoke} from "@tauri-apps/api/core";
 import {errorNotification} from "../../utils.ts";
@@ -7,11 +7,21 @@ import {errorNotification} from "../../utils.ts";
 
 const tableRef = ref(null);
 const tableRowInputRef: any = ref(null)
+
+const contextMenuShow = ref(false)
+const options = {
+  theme: 'flat',
+  date:"",
+  time:"",
+  code:"",
+  zIndex: 3,
+  x: 500,
+  y: 200
+}
+
 onMounted(() => {
-  console.log("table mounted")
+  console.log("rtable mounted")
   invoke<TransactionRecord[]>('query_transaction_records',{}).then(data => {
-    console.log(data);
-    // transactionRecords = data;
     addRecords(data);
   }).catch(e => {
     console.error(e)
@@ -31,11 +41,11 @@ const tableRowClassName = ({row}: {
   return 'black-row'
 }
 async function codeFilter(specifiedCode:string) {
-  console.log("table codeFilter", specifiedCode);
   selectedCode = specifiedCode;
   filteredRecords.value = transactionRecords.filter(record => record.code === specifiedCode);
 }
-async function clearFilter() {
+async function deleteAllRecords() {
+  transactionRecords = [];
   filteredRecords.value = transactionRecords;
   selectedCode = '0';
 }
@@ -52,9 +62,6 @@ async function clearFilter() {
 //   console.log(filteredRecords.value)
 // }
 async function addRecords(records: TransactionRecord[]) {
-  console.log(records);
-  // 追加数据到 transactionRecords
-  // transactionRecords.push(...records);
   // 从前面插入数据到 transactionRecords
   transactionRecords.unshift(...records);
   // 判断 selectedCode，如果不是 '0' 则过滤后赋值，否则直接赋值全部数据
@@ -88,7 +95,6 @@ const onInputTableBlur = async (scope: any) => {
   state.tableRowEditIndex = undefined
   state.tableColumnEditIndex = undefined
   let data = scope.row;
-  console.log(data)
   if (data.remark !== '双击编辑') {
     let result = await invoke('update_transaction_record',{record: data});
     if (result!=null) {
@@ -97,7 +103,26 @@ const onInputTableBlur = async (scope: any) => {
   }
 }
 
-defineExpose({ codeFilter, clearFilter, addRecords})
+function showContextMenu(row: TransactionRecord, _: any, e: MouseEvent) {
+  options.x = e.x;
+  options.y = e.y;
+  options.date = row.date;
+  options.time = row.time;
+  options.code = row.code;
+  contextMenuShow.value=true
+}
+async function deleteRecord() {
+  invoke('delete_transaction_record_by_primary', {date: options.date, time: options.time, code: options.code}).then(data => {
+    console.log("删除成功")
+    transactionRecords = transactionRecords.filter(record => record.date !== options.date || record.time !== options.time || record.code !== options.code)
+    filteredRecords.value = transactionRecords
+  }).catch(e => {
+    console.error(e)
+    errorNotification("删除失败")
+  })
+}
+
+defineExpose({ codeFilter, deleteAllRecords, addRecords})
 </script>
 
 <template>
@@ -105,7 +130,8 @@ defineExpose({ codeFilter, clearFilter, addRecords})
       ref="tableRef"
       :data="filteredRecords"
       :row-class-name="tableRowClassName"
-      max-height="calc(100vh - 90px)"
+      max-height="calc(100vh - 80px)"
+      @row-contextmenu="showContextMenu"
       style="width: 100%;font-size: 14px;padding-left: 20px"
   >
     <el-table-column prop="date" label="交易日期" sortable style="font-size: 14px" width="100" />
@@ -142,6 +168,12 @@ defineExpose({ codeFilter, clearFilter, addRecords})
       </template>
     </el-table-column>>
   </el-table>
+  <context-menu
+      v-model:show="contextMenuShow"
+      :options="options"
+  >
+    <context-menu-item label="删除" @click.left="deleteRecord" />
+  </context-menu>
 </template>
 
 <style>

@@ -6,8 +6,8 @@ import {ref, watch} from "vue";
 
 const barRef = ref(null);
 const tableRef = ref(null);
-async function clearFilter(){
-  tableRef.value?.clearFilter();
+async function deleteAllRecords(){
+  tableRef.value?.deleteAllRecords();
 }
 async function exportRecords(records){
   tableRef.value?.addRecords(records);
@@ -17,7 +17,7 @@ async function exportRecords(records){
 <template>
   <div>
     <RHeader></RHeader>
-    <RToolBar ref="barRef" @clearFilter="clearFilter" @exportRecords="exportRecords"></RToolBar>
+    <RToolBar ref="barRef" @deleteAllRecords="deleteAllRecords" @exportRecords="exportRecords"></RToolBar>
     <RTable ref="tableRef"></RTable>
   </div>
 </template>

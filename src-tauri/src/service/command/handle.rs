@@ -1,4 +1,4 @@
-use crate::app_errors::AppResult;
+use crate::app_errors::{AppError, AppResult};
 use crate::dtos::stock_dto::StockLiveData;
 use crate::entities::init_db_coon;
 use crate::entities::prelude::{StockInfo, TransactionRecord};
@@ -12,6 +12,8 @@ use crate::utils::stock_util::{calculate_ago_with_num, compute_mul_ma, compute_s
 use anyhow::anyhow;
 use std::collections::HashMap;
 use std::sync::Arc;
+use log::{error, info};
+use crate::app_errors::AppError::AnyHow;
 use crate::service::curd::transaction_record_curd::TransactionRecordCurd;
 
 ///处理并保存股票数据
@@ -93,7 +95,12 @@ pub async fn handle_stock_livedata(
 /// 读取csv文件，然后查询数据库中最新记录，然后只保存最新记录之后的数据并返回。
 /// 
 pub(crate) async fn handle_and_save_record(path:String) -> AppResult<Vec<TransactionRecord>> {
-    let pending_data = TransactionRecordCurd::read_csv_file(&path).await?;
+    let mut pending_data = TransactionRecordCurd::read_csv_file(&path).await?;
+    //把pending_data中的数据按日期升序排序
+    // pending_data.sort_by(|a, b| a.date.cmp(&b.date));
+    pending_data.reverse();
+    
+    // pending_data.sort_by(|a, b| b.date.cmp(&a.date));
     let truncated_data = if let Some(latest_record) = TransactionRecordCurd::query_latest_record().await?{
         let latest_key = (latest_record.date.clone(), latest_record.time.clone(), latest_record.code.clone());
         // 找到最新记录的索引
@@ -103,18 +110,33 @@ pub(crate) async fn handle_and_save_record(path:String) -> AppResult<Vec<Transac
         });
         if let Some(index) = latest_index {
             // 只保留最新记录之后的数据
+            info!("最新记录是：{:?}", latest_record);
             &pending_data[index + 1..]
         } else {
+            info!("没有找到最新记录");
             // 如果没有找到最新记录，则保留所有数据
             &pending_data
         }
-    }else { 
+    }else {
+        info!("目前没有交易记录");
         // 如果没有最新记录，则保留所有数据
         &pending_data
     };
+    info!("处理待插入的交易记录：{:?}", truncated_data);
     //如果插入出错，则返回错误，不会走到Ok(truncated_data.to_vec())返回数据。
-    TransactionRecordCurd::insert(truncated_data.to_vec()).await?;
-    Ok(truncated_data.to_vec())
+    match TransactionRecordCurd::insert(truncated_data.to_vec()).await{
+        Ok(_) => {
+            let mut data = truncated_data.to_vec();
+            data.reverse(); //需要再倒序，不然返给前端的是反的。
+            Ok(data)
+        },
+        Err(e) => {
+            error!("待处理的全部交易记录：{:?}", pending_data);
+            error!("当前待插入的交易记录：{:?}", truncated_data);
+            Err(AnyHow(anyhow::anyhow!("插入交易记录失败：{}", e)))
+        }
+    }
+    // Ok(truncated_data.to_vec())
 }
 
 

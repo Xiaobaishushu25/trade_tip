@@ -7,6 +7,7 @@ import {VueDraggable} from "vue-draggable-plus";
 import InlineSvg from "vue-inline-svg";
 import {listen} from "@tauri-apps/api/event";
 import {successNotification} from "../utils.ts";
+import StockTable from "./StockTable.vue";
 
 const activeName = ref('')
 const dialogVisible = ref(false)
@@ -127,7 +128,8 @@ function judgeTab(activeName:string){
           class="tab-pane"
       >
 <!--        <StockTable :stocks_change="group.stocks_change" :group-name="group.name" :active-name="activeName"></StockTable>-->
-        <StockTable2 :stocks_change="group.stocks_change" :group-name="group.name" :active-name="activeName"></StockTable2>
+<!--        <StockTable2 :stocks_change="group.stocks_change" :group-name="group.name" :active-name="activeName"></StockTable2>-->
+        <StockTable :stocks_change="group.stocks_change" :group-name="group.name" :active-name="activeName"></StockTable>
       </el-tab-pane>
       <el-tab-pane name="设置">
         <template #label>
@@ -174,12 +176,6 @@ function judgeTab(activeName:string){
 </template>
 
 <style>
-/*.el-dialog__header{
-  margin-top: 0;
-  margin-left: 0;
-  margin-right: 0;
-  width: 100%;
-}*/
 .dialog-button{
   height: 25px;
   width: 35px;
@@ -213,7 +209,7 @@ function judgeTab(activeName:string){
 .tab-container{
   height: 100%;
 }
-.el-tabs__nav-scroll{
+.tab-container .el-tabs__nav-scroll{/*孩子孙子一样都能选到*/
   padding-left: 20px;
 }
 .tab-pane{

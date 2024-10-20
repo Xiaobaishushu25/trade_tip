@@ -138,6 +138,7 @@ async function getIntradayChartImg(code:string){
   left: 0;
   width: 100%;
   height: 100%;
+  background-color: #0f0f0f; /* 设置背景色 */
 }
 :deep(.mask-layer){
   /*width: 740px !important;*/

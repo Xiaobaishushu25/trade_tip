@@ -84,9 +84,10 @@ enum PaintState {
 interface Graphic{
     group_id: string;
     code: string;
-    id: string; // 使用Option<String>在Rust中表示可选字段，在TypeScript中对应为可选属性
+    id: string;
     graphic_type: string;
-    start: number[]; // 假设start是一个JSON格式的字符串，例如"[1.0,2.0]"
+    //这里面的左边含义是：10表示横坐标（代表时间，比如一共有20条数据，那么10代表第十条个数据的时间的横坐标），2.0表示纵坐标（代表价格）
+    start: number[]; // [10,2.0]
     end: number[];
     content?: string; // 文本内容
     style?: Style; // 假设config是包含文本配置信息的字符串

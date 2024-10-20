@@ -11,7 +11,7 @@ const handleUpdateFreq = (value: number) => {
 </script>
 
 <template>
-  <div >
+  <div class="setting-container">
     <el-scrollbar max-height="calc(100vh - 60px)">
       <label class="title">证券表</label>
       <el-card shadow="always" style="margin: 10px;background-color:#2f2f2f40;border-radius: 10px;padding: 5px">
@@ -45,12 +45,20 @@ const handleUpdateFreq = (value: number) => {
 .el-card__body{
   padding: 5px;
 }
-.el-input{
+.setting-container .el-input{
   --el-input-text-color: black;
   --el-input-focus-border-color: #d5343400;
 }
-.el-input__wrapper{
+.setting-container .el-input__wrapper{
   box-shadow:none;
+}
+.custom-input {
+  background-color: #c8656500; /* 设置背景色 */
+  width: 100px; /* 设置宽度 */
+  height: 25px; /* 设置高度 */
+}
+.custom-input:hover{
+  border: #cf0f59;
 }
 </style>
 <style scoped>
@@ -62,14 +70,6 @@ const handleUpdateFreq = (value: number) => {
 }
 .label-text{
   font-size: 15px;
-}
-.custom-input {
-  background-color: #c8656500; /* 设置背景色 */
-  width: 100px; /* 设置宽度 */
-  height: 25px; /* 设置高度 */
-}
-.custom-input:hover{
-  border: #cf0f59;
 }
 
 </style>

@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::PathBuf;
-use std::{env, fs};
+use std::{fs};
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Config {
@@ -27,7 +27,7 @@ impl Config {
             }
             Err(e) => {
                 error!("创建或解析配置文件{}失败:{}", path, e.to_string());
-                panic!("创建或解析配置文件{}失败:{}", path, e.to_string())
+                panic!("创建或解析配置文件{}失败:{}", path, e)
             }
         }
     }

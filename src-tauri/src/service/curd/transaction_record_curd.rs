@@ -1,11 +1,12 @@
+use sea_orm::ColumnTrait;
+use sea_orm::QueryFilter;
 use crate::app_errors::AppResult;
-use csv::{ ReaderBuilder};
-use encoding_rs::GBK;
+use csv::{ReaderBuilder, Writer, WriterBuilder};
+use encoding_rs::{Encoding, GBK};
 use std::fs::File;
 use std::io::{BufReader, Read};
-use log::info;
-use sea_orm::{ActiveModelTrait, EntityTrait, Order, PaginatorTrait, QueryOrder, QuerySelect};
-use sea_orm::sea_query::extension::postgres::PgBinOper::Regex;
+use log::{error, info};
+use sea_orm::{ActiveModelTrait, EntityTrait, QueryOrder, QuerySelect};
 use crate::entities::{init_db_coon, open_db_log};
 use crate::entities::prelude::{TransactionRecord, TransactionRecords};
 use crate::entities::transaction_record::{ActiveModel, Column};
@@ -19,6 +20,7 @@ impl TransactionRecordCurd {
     /// 2. 导出的CSV文件中有些字段的值带有不明空格和引号(但是在excel看没有)，需要用extract_and_trim函数去除引号和空白字符。
     /// 2. 导出的CSV文件中日期格式经常变化，有时为2021-10-18，有时为2021/10/18，需要用函数统一为2021-10-18格式。
     /// 该函数支持读取东方财富导出的历史成交、当日成交CSV文件，并解析为 TransactionRecord 结构体的 Vec
+    /// 目前只支持GBK编码和UTF-8编码，其他编码待支持（可以使用charset-normalizer-rs库进行检测编码方式）。
     pub async fn read_csv_file(file_path: &str) -> AppResult<Vec<TransactionRecord>> {
         let file = File::open(file_path)?;
         // 打开文件
@@ -26,8 +28,24 @@ impl TransactionRecordCurd {
         // 读取整个文件为字节
         let mut buffer = Vec::new();
         reader.read_to_end(&mut buffer)?;
-        // 将 GBK 字节流转换为 UTF-8
-        let (decoded_string, _, _) = GBK.decode(&buffer);
+        //从字节流中获取编码
+        // let result = from_bytes(&buffer, None);
+        // let ecoding = result.get_best().unwrap().encoding();//gbk、utf-8
+        // let decoded_string = if ecoding== "gbk" {
+        //     // 将 GBK 字节流转换为 UTF-8
+        //     let (decoded_string, _, _) = GBK.decode(&buffer);
+        //     decoded_string.to_string()
+        // }else { 
+        //     //由buffer构造字符串;
+        //     String::from_utf8(buffer).unwrap()
+        // };
+        let decoded_string = if let Ok(utf8_string) = String::from_utf8(buffer.clone()) {
+            utf8_string
+        } else {
+            // 尝试使用GBK解码
+            let (decoded, _, _) = GBK.decode(&buffer);
+            decoded.to_string()
+        };
         // 使用 csv 库处理转换后的字符串
         let mut csv_reader = ReaderBuilder::new()
             .trim(csv::Trim::All) // 自动去除列头和字段中的空格
@@ -53,12 +71,43 @@ impl TransactionRecordCurd {
         //     })
         //     .collect::<Vec<TransactionRecord>>())
     }
+    pub async fn save_to_file(path: String) -> AppResult<()> {
+        let file = File::create(path)?;
+        // let mut wtr = Writer::from_writer(file);
+        let mut wtr = WriterBuilder::new()
+            .has_headers(false) // 禁用默认表头
+            .from_writer(file);
+        // 写入表头
+        wtr.write_record(["成交日期", "成交时间", "证券代码", "证券名称", "委托方向", "成交数量", "成交均价", "成交金额", "备注"]).map_err(|e| anyhow::anyhow!("csv write header error: {}", e))?;
+        let transaction_records = TransactionRecordCurd::query_all().await?;
+        for model in transaction_records {
+            wtr.serialize(model).map_err(|e| anyhow::anyhow!("csv serialize error: {}", e))?;
+        }
+        wtr.flush()?;
+        Ok(())
+    }
     ///查询指定数量的历史交易数据，按照日期降序排列
     pub async fn query_by_num(num: u64) -> AppResult<Vec<TransactionRecord>> {
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
         let transaction_records = TransactionRecords::find().order_by_desc(Column::Date).limit(num).all(db).await?;
+        Ok(transaction_records)
+    }
+    ///查询所有历史交易数据，按照日期降序排列
+    pub async fn query_all() -> AppResult<Vec<TransactionRecord>> {
+        let db = crate::entities::DB
+            .get()
+            .ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        let transaction_records = TransactionRecords::find().order_by_desc(Column::Date).all(db).await?;
+        Ok(transaction_records)
+    }
+    ///查询指定代码的历史交易数据，按照日期降序排列
+    pub async fn query_by_code(code: String) -> AppResult<Vec<TransactionRecord>> {
+        let db = crate::entities::DB
+            .get()
+            .ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        let transaction_records = TransactionRecords::find().filter(Column::Code.eq(code)).order_by_desc(Column::Date).all(db).await?;
         Ok(transaction_records)
     }
     ///查询数据库中最新一条交易记录
@@ -92,6 +141,21 @@ impl TransactionRecordCurd {
         active_model.update(db).await?;
         // TransactionRecords::update(active_model).exec(db).await?;
         info!("更新交易记录成功");
+        Ok(())
+    }
+    pub async fn delete_by_primary_key(date: String, time: String, code: String) -> AppResult<()> {
+        let db = crate::entities::DB
+            .get()
+            .ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        TransactionRecords::delete_by_id((date, time, code)).exec(db).await?;
+        Ok(())
+    }
+    /// 删除所有交易记录
+    pub async fn delete_all() -> AppResult<()> {
+        let db = crate::entities::DB
+            .get()
+            .ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        TransactionRecords::delete_many().exec(db).await?;
         Ok(())
     }
 }
@@ -153,4 +217,37 @@ async fn test_update_transaction_record() {
         num: 0,
     };
     TransactionRecordCurd::update(transaction_record.clone()).await.unwrap();
+}
+#[tokio::test]
+async fn test_read_file() {
+    init_db_coon().await;
+    // let path = "G:\\待处理文件\\TradeTip_10192314.csv";
+    // let path = "C:\\Users\\Xbss\\Desktop\\18历史成交.csv";
+    let path = "C:\\Users\\Xbss\\Desktop\\奇怪16.csv";
+    // let result = from_path(&PathBuf::from(path), None).unwrap();
+    // let best_guess = result.get_best();
+    // println!("{:?}", best_guess.unwrap().encoding());
+    let file = File::open(path).unwrap();
+    // 打开文件
+    let mut reader = BufReader::new(file);
+    // 读取整个文件为字节
+    let mut buffer = Vec::new();
+    reader.read_to_end(&mut buffer).unwrap();
+    // 尝试使用UTF-8解码
+    if let Ok(utf8_string) = String::from_utf8(buffer.clone()) {
+        println!("读取为UTF-8: {}", utf8_string);
+    } else {
+        // 尝试使用GBK解码
+        let (decoded, _, _) = GBK.decode(&buffer);
+        println!("读取为GBK: {}", decoded);
+    }
+    // let x = Encoding::for_label(buffer.as_slice()).unwrap();
+    let vec = TransactionRecordCurd::read_csv_file(path).await.unwrap();
+    println!("{:?}", vec);
+}
+#[tokio::test]
+async fn test_save_to_file() {
+    init_db_coon().await;
+    let path = "G:\\APP\\金融助手\\log\\transaction_record.csv";
+    TransactionRecordCurd::save_to_file(path.to_string()).await.unwrap();
 }

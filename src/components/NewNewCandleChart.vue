@@ -2,7 +2,7 @@
 import {invoke} from "@tauri-apps/api/core";
 import {nextTick, onMounted, ref, watch} from "vue";
 import * as echarts from "echarts/core";
-import {Graphic, PaintState, StockData, StockLiveData} from "../type.ts";
+import {Graphic, PaintState, StockData, StockLiveData, TransactionRecord} from "../type.ts";
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {EChartsType} from "echarts";
 import {store} from "../store.ts";
@@ -21,7 +21,9 @@ interface VolumeItem {
 
 interface CandleStockData {
   categoryData: string[];
-  values: [number, number, number, number, number][];
+  //开盘、收盘、最低、最高、成交量、涨跌幅
+  // values: [number, number, number, number, number][];
+  values: [number, number, number, number, number,number][];
   volumes: VolumeItem[];
   ma5: number[];
   ma10: number[];
@@ -83,11 +85,14 @@ const contextMenuShow = ref(false);
 const chart=ref(null);
 let chartIsInit = false;
 let myChart: EChartsType;
+//下面一个是原始的K线和ma数据，一个是原始交易记录数据，两个需要一起处理
 const rawData = ref([]);
+const rawRecords = ref<TransactionRecord[]>([]);
+
 const graphicData = ref<Graphic[]>([])
 let newGraphicData:Graphic[] =[]
 let stockData:CandleStockData;
-// 创建一个映射来存储每个id对应的group
+// 创建一个映射来存储每个id对应的group,我的图形有组的概念，比如一个组可以有多个图形，可以共同移动，缩放等。
 const groupMap = new Map<string, { group: any }>();
 
 const inputVisible = ref(false)
@@ -97,12 +102,13 @@ const newTextColor = ref("#FF6A00")
 const newTextFontSize = ref(16)
 
 const options = {
-  // theme: 'win10 dark',
-  id:"",
+  theme: 'flat',
+  id:"", //右击时的图形的id
   group_id:"",
   zIndex: 3,
   x: 500,
-  y: 200
+  y: 200,
+  customClass: "my-menu-box",
 }
 watch(()=>store.isBlur,(newValue)=>{
   if (newValue){
@@ -116,7 +122,6 @@ watch(()=>store.isBlur,(newValue)=>{
 
 watch(graphicData, (_) => {
   // console.log("lineData变化了",graphicData.value);
-  // handleGraphicData();
   updateLineOption()
 },{deep:true});
 
@@ -126,6 +131,30 @@ onMounted(async ()=>{
   // await query_graphic();
   await updateChart();
   myChart.on('dataZoom', updateLineOption);
+  myChart.on('click', function (params) {
+    if (params.componentType === 'series' && params.seriesType === 'candlestick') {
+      // 设置当前索引为被点击的索引
+      currentIndex = params.dataIndex;
+      setHover(currentIndex);
+    }
+  });
+  myChart.on('legendselectchanged', function (params) {
+    // console.log(params.name); // 打印出图例点击的参数
+    // const selected = params.selected[params.name]; // 获取选中的状态
+    // console.log(selected); // { 'K线': true, 'MA5': false, ... }
+    const selected = params.selected; // 获取选中的状态
+    console.log(selected); // 打印所有图例的状态
+    // 检查“图线”的选中状态
+    const isGraphicSelected = selected['图线'];
+    if (isGraphicSelected) {
+      handleGraphicData()
+    }else{
+      // 取消选中图线时，清空图形
+      const chartOption = myChart.getOption();
+      chartOption.graphic = [];
+      myChart.setOption(chartOption, true);
+    }
+  });
   unlistenPaint = await listen('paint', (event) => {
     // console.log("开启绘制1")
     handlePaint(event.payload.state);
@@ -145,15 +174,6 @@ onMounted(async ()=>{
       updateLineOption();
     }
   });
-  // unlistenResize();
-  // myChart.on('dataZoom', updateLineOption);
-  // const debouncedFunction = debounce(scrollEvent, 700, true);
-  // document.addEventListener('wheel', (event: WheelEvent) => {
-  //   console.log("deltaY",event.deltaY)
-  //   // 这里可以获取滚动事件的信息
-  //   const deltaY = event.deltaY; // 滚动的垂直距离
-  //   debouncedFunction(deltaY)
-  // });
   document.addEventListener('wheel',wheelChangeCode);
   document.addEventListener('keydown', unlockZoom);
   document.addEventListener('keyup', lockZoom);
@@ -213,6 +233,7 @@ function handleRawData(raw: StockData[]){
   let ma10 = [];
   let ma20 = [];
   let ma60 = [];
+  let records = [] ;
   let element = raw[0];
   let color, borderColor;
   if (element.open < element.close) {
@@ -262,6 +283,17 @@ function handleRawData(raw: StockData[]){
     ma20.push(element.ma20);
     ma60.push(element.ma60);
   }
+  let raw2 = rawRecords.value;
+  for (let i = 0; i < raw2.length; i++) {
+    //原始数据是“证券买入”\“证券卖出”，需要转换成“买入”\“卖出”
+    let direction = raw2[i].direction.substring(2);
+    records.push([raw2[i].date,
+      raw2[i].price,
+      raw2[i].time,
+      raw2[i].num,
+      direction,
+      raw2[i].remark]);
+  }
   stockData = {
     categoryData: categoryData,
     values: values,
@@ -269,7 +301,8 @@ function handleRawData(raw: StockData[]){
     ma5: ma5,
     ma10: ma10,
     ma20:ma20,
-    ma60:ma60
+    ma60:ma60,
+    records:records
   }
   return stockData;
 }
@@ -403,7 +436,6 @@ async function updateChart(){
   await query_graphic();
 }
 function updateLiveData(live_data:Record<string, StockLiveData>){
-  // console.log("更新实时数据",live_data[code],live_data[code] != undefined)
   if (live_data[code] != undefined){
     const newData = live_data[code];
     let len = stockData.categoryData.length-1;
@@ -415,10 +447,14 @@ function updateLiveData(live_data:Record<string, StockLiveData>){
       color = 'green';
       borderColor = 'green';
     }
-    if(stockData.categoryData[len]!=nowDate){
+    if(stockData.categoryData[len]!=nowDate &&!marketisClose //如果不是今天的数据，且不是收盘时刻
+        // &&stockData.values[len][1]!=newData.price //如果最新价格不是前一天的收盘价
+        // &&stockData.values[len][2]!=newData.low  //如果最新低价不是前一天的最低价
+        // &&stockData.values[len][3]!=newData.high //如果最新高价不是前一天的最高价
+    ){
       // console.log("不是一天的数据，更新");
       stockData.categoryData.push(nowDate);
-      stockData.values.push([newData.open,newData.price,newData.low,newData.high,newData.volume]);
+      stockData.values.push([newData.open,newData.price,newData.low,newData.high,newData.volume,newData.percent]);
       // stockData.volumes.push([newData.volume, newData.open > newData.price ? 1 : -1]);
       stockData.volumes.push({
         value:newData.volume,
@@ -432,7 +468,8 @@ function updateLiveData(live_data:Record<string, StockLiveData>){
       stockData.ma20.push(newData.ma20);
       stockData.ma60.push(newData.ma60);
     }else{
-      stockData.values[len] = [newData.open,newData.price,newData.low,newData.high,newData.volume];
+      //已经有了当天的K线数据，更新
+      stockData.values[len] = [newData.open,newData.price,newData.low,newData.high,newData.volume,newData.percent];
       stockData.volumes[len] = {
         value:newData.volume,
         itemStyle: {
@@ -592,15 +629,15 @@ function updateLineOption(){
   })
 }
 //本来是想仅清除graphic,但是直接全部清除更简单，而且避免了k线图残留闪烁的问题（当切换k线图时，会从上一个直接绘制出新的，现在是由空白绘制新的）
-// async function clear_all(){
 function clear_all(){
-  // groupMap.clear();
   myChart.clear();
-  myChart.getZr().clear();
+  myChart.getZr().clear();//必须，否则偶发残留K线图的情况
   chartIsInit = false;
   console.log("清除全部数据");
   rawData.value=[];
+  rawRecords.value=[];
   graphicData.value.length = 0;
+  currentIndex = -1;
 }
 async function query_graphic(){
   try {
@@ -614,29 +651,62 @@ async function query_graphic(){
     console.log(err);
   }
 }
+//定义一个变量，用来判断是否已经收盘
+let marketisClose = false;
+
 async function query_stocks_day_k_limit(){
   try {
     const data = await invoke<StockData[]>('query_stocks_day_k_limit', { code: code }); // 使用 await 等待 invoke 完成
     if (data[0].date!=nowDate){
       const liveData = await invoke<StockLiveData>('query_live_stock_data_by_code', { code: code }); // 使用 await 等待 invoke 完成
       store.stockinfoG.live_data=liveData;
-      const leastData = {
-        date:nowDate,
-        open:liveData.open,
-        close:liveData.price,
-        high:liveData.high,
-        low:liveData.low,
-        vol:liveData.volume,
-        ma5:liveData.ma5,
-        ma10:liveData.ma10,
-        ma20:liveData.ma20,
-        ma60:liveData.ma60,
+      //todo 有可能有bug，如果某天的开盘价、收盘价、最高价、最低价和昨天完全一致的情况，会忽略当天的数据。
+      //判断最新数据和第一个数据的开盘，收盘，最高，最低是否一致，如果不一致，则插入最新数据
+      //这只是初次判断，后续持续收到新数据要一直判断。
+      if (data[0].open!=liveData.open && data[0].close!=liveData.price && data[0].high!=liveData.high && data[0].low!=liveData.low){
+        console.log("最新数据和第一个数据的开盘，收盘，最高，最低不一致，插入最新数据");
+        const leastData = {
+          date:nowDate,
+          open:liveData.open,
+          close:liveData.price,
+          high:liveData.high,
+          low:liveData.low,
+          vol:liveData.volume,
+          ma5:liveData.ma5,
+          ma10:liveData.ma10,
+          ma20:liveData.ma20,
+          ma60:liveData.ma60,
+        }
+        data.unshift(leastData)
+      }else {
+        marketisClose = true;
       }
-      data.unshift(leastData)
+      // const leastData = {
+      //   date:nowDate,
+      //   open:liveData.open,
+      //   close:liveData.price,
+      //   high:liveData.high,
+      //   low:liveData.low,
+      //   vol:liveData.volume,
+      //   ma5:liveData.ma5,
+      //   ma10:liveData.ma10,
+      //   ma20:liveData.ma20,
+      //   ma60:liveData.ma60,
+      // }
+      // //todo 有可能有bug，如果某天的开盘价、收盘价、最高价、最低价和昨天完全一致的情况，会忽略当天的数据。
+      // //判断最新数据和第一个数据的开盘，收盘，最高，最低是否一致，如果不一致，则插入最新数据
+      // if (data[0].open!=liveData.open && data[0].close!=liveData.price && data[0].high!=liveData.high && data[0].low!=liveData.low){
+      //   console.log("最新数据和第一个数据的开盘，收盘，最高，最低不一致，插入最新数据");
+      //   data.unshift(leastData)
+      // }
+      // data.unshift(leastData)
     }
-    rawData.value = data.reverse(); // 处理查询到的数据
+    const records = await invoke<TransactionRecord[]>('query_transaction_records_by_code', { code: code }); // 使用 await 等待 invoke 完成
+    rawRecords.value = records;
+    rawData.value = data.reverse(); // 处理查询到的数据，倒转顺序，最新的数据在最前面
     myChart.clear();
     myChart.setOption(init_option(),true);
+    // console.log(myChart.getOption());
     myChart.resize();
     chartIsInit = true;
     return;
@@ -649,7 +719,7 @@ async function query_stocks_day_k_limit(){
 function save_graphic(){
   let data = graphicData.value;
   invoke('save_graphic', { code:code,graphic: data }).then(() => {
-    emit("graphic_change",{})
+    emit("graphic_change",{})//有可能箱体变了，通知股票表格重新计算箱体数据
   }).catch((err) => {
     console.log("保存图形失败",err);
   });
@@ -740,9 +810,6 @@ function handlePaint(state: PaintState){
     myChart.getZr().off('click', clickHandler);
     myChart.getZr().off('mousemove', hoverHandler);
   }else {
-    // if (state==PaintState.HLS||state==PaintState.PHLS||state==PaintState.LS){
-    //   myChart.getZr().on('mousemove', hoverHandler);
-    // }
     myChart.getZr().on('mousemove', hoverHandler);
     myChart.getZr().on('click', clickHandler);
   }
@@ -765,16 +832,6 @@ const hoverHandler = function (params: any) {
         zr.add(line)
       }
     }
-    // zr.remove(line);
-    // zr.setCursorStyle('text')
-    // if(currentCount==1){
-    //   if (paintState==PaintState.HL||paintState==PaintState.HLS||paintState==PaintState.PHL||paintState==PaintState.PHLS){
-    //     line = get_line(start,[pointInPixel[0],start[1]])
-    //   }else if (paintState==PaintState.LS){
-    //     line = get_line(start,pointInPixel)
-    //   }
-    //   zr.add(line)
-    // }
   }
 };
 const clickHandler = async function (params: any) {
@@ -785,6 +842,7 @@ const clickHandler = async function (params: any) {
       start = pointInPixel;
       if (paintState==PaintState.Text){
         inputVisible.value = true;
+        isEditingGraphic = false;
         await nextTick();
         await nextTick();
         if(inputRef.value){
@@ -816,7 +874,8 @@ const clickHandler = async function (params: any) {
             code: code,
             id: generateId(),
             graphic_type: "text",
-            start: [startPointData[0], startPointData[1]],
+            //设置价格文本的位置，让其在靠右边的3/5处
+            start: [(startPointData[0]+((endPointData[0]-startPointData[0])*(3/5))), startPointData[1]],
             end:[0,0],
             style:{
               color:"#da5c0d"
@@ -844,30 +903,6 @@ const clickHandler = async function (params: any) {
     }
   }
 };
-function newText(){
-  const text = inputValue.value;
-  if (text.length!=0){
-    let startPointData = myChart.convertFromPixel({seriesIndex: 0},[start[0], start[1]]);
-    let groupId = generateId();
-    // graphicData.value.push({
-    newGraphicData.push({
-      group_id: groupId,
-      code: code,
-      id: generateId(),
-      graphic_type: "text",
-      start: startPointData,
-      end: [0,0],
-      content: text,
-      style:{
-        color:newTextColor.value,
-        size:newTextFontSize.value,
-      }
-    });
-    handleNewGraphicData();
-  }
-  inputValue.value = "";
-  inputVisible.value = false
-}
 function get_line(start:number[],end:number[]){
   return new echarts.graphic.Line({
     shape:{
@@ -890,7 +925,7 @@ function init_option(){
       top: 10,
       // left: 'left',
       left: '4%',
-      data: ['K线', 'MA5', 'MA10', 'MA20', 'MA60']
+      data: ['K线', 'MA5', 'MA10', 'MA20', 'MA60',"买卖点","图线"]
       // data: ['K线', ]
     },
     tooltip: {
@@ -898,8 +933,8 @@ function init_option(){
       trigger: 'item',
       axisPointer: {
         type: 'cross',
-        animation:false
-        // snap:true 坐标轴指示器是否自动吸附到点上。默认自动判断。好像是默认启用 https://echarts.apache.org/zh/option.html#grid.tooltip.axisPointer.snap
+        animation:false,
+        snap:true //坐标轴指示器是否自动吸附到点上。默认自动判断。好像是默认启用 https://echarts.apache.org/zh/option.html#grid.tooltip.axisPointer.snap
       },
       transitionDuration: 0,
       borderWidth: 1,
@@ -959,7 +994,7 @@ function init_option(){
       feature: {
         myTool3: {
           show: true,
-          title: '保存图线',
+          title: '保存画的字线',
           // icon: 'image://https://echarts.apache.org/zh/images/favicon.png',
           icon: 'path://M426.666667 682.666667v42.666666h170.666666v-42.666666h-170.666666z m-42.666667-85.333334h298.666667v128h42.666666V418.133333L605.866667 298.666667H298.666667v426.666666h42.666666v-128h42.666667z m260.266667-384L810.666667 379.733333V810.666667H213.333333V213.333333h430.933334zM341.333333 341.333333h85.333334v170.666667H341.333333V341.333333z',
           onclick: function (){
@@ -1034,16 +1069,26 @@ function init_option(){
       }
     ],
     yAxis: [
+        //想弄个双y轴的，但是不知道怎么弄，先用单y轴吧
+      // {
+      //   scale: true,
+      //   position: 'left', // 左侧 Y 轴
+      //   splitArea: {
+      //     show: true
+      //   },
+      // },
       {
         scale: true,
+        position: 'right', //坐标轴位置
+        splitNumber: 5, // 坐标轴网格线数量
         splitArea: {
           show: true
         }
       },
-      {
+      {//这个好像是显示成交量的y轴？
         scale: true,
         gridIndex: 1,
-        splitNumber: 2,
+        splitNumber: 2, // 坐标轴网格线数量
         axisLabel: {show: false},
         axisLine: {show: false},
         axisTick: {show: false},
@@ -1110,7 +1155,6 @@ function init_option(){
         type: 'line',
         data: data.ma5,
         smooth: true,
-        // symbol:'none',
         symbolSize: 0,
         lineStyle: {
           opacity: 0.5
@@ -1121,7 +1165,6 @@ function init_option(){
         type: 'line',
         data: data.ma10,
         smooth: true,
-        // symbol:'none',
         symbolSize: 0,
         lineStyle: {
           opacity: 0.5
@@ -1130,7 +1173,6 @@ function init_option(){
       {
         name: 'MA20',
         type: 'line',
-        // symbol:'none',
         symbolSize: 0,
         data: data.ma20,
         smooth: true,
@@ -1141,7 +1183,6 @@ function init_option(){
       {
         name: 'MA60',
         type: 'line',
-        // symbol:'none',
         symbolSize: 0,
         data: data.ma60,
         smooth: true,
@@ -1149,6 +1190,51 @@ function init_option(){
           opacity: 0.5
         },
       },
+        //todo :这里有个非常奇怪的问题，这个位置前一共有K，5,10,20，60五个线，但是马上接上散点图，散点图不显示
+        ///K，5,10,20，60，散点（不显示）
+        ///K，5,10,20，60，随意来个线（甚至{type: 'line'}这样都行，感觉就跟占位一样），散点图（显示）
+        ///K，5,10,20，散点图（显示）
+        ///K，5,10,20，Volume，散点图（不显示）
+        ///K，5,10,20，60，Volume，散点图（显示）（目前采取的这个顺序）
+        ///K，5,10,散点图（也显示）
+        ///K，5,10，60,散点图（也显示）
+        //本来以为跟前面的线的条数的奇偶有关的，但是又不是。
+      // {
+      //   type: 'line', //非常重要！！！不能删除！！！不知道有啥效果，但是删除了下面的散点图就不显示了。感觉就起个占位的作用。
+      // },
+      // {
+      //   name:"买卖点",
+      //   type: 'scatter',
+      //   data: data.records,
+      //   symbol:function(value: Array|number, params: Object){
+      //     //参见第269行的结构
+      //     if (params.data[4].includes("买入")){
+      //       // return "rect"
+      //       return "path://M102.4 0h819.2a102.4 102.4 0 0 1 102.4 102.4v819.2a102.4 102.4 0 0 1-102.4 102.4H102.4a102.4 102.4 0 0 1-102.4-102.4V102.4a102.4 102.4 0 0 1 102.4-102.4z m204.8 204.8v584.9088h259.6864c59.8016 0 107.3152-12.288 141.7216-35.2256 40.1408-27.8528 60.6208-70.4512 60.6208-127.7952 0-39.3216-11.4688-70.4512-32.768-95.0272-21.2992-24.576-50.7904-40.96-89.2928-47.5136 29.4912-9.8304 53.248-25.3952 71.2704-46.6944 17.2032-23.7568 26.2144-52.4288 26.2144-85.1968 0-45.8752-15.5648-81.92-46.6944-108.1344C666.0096 217.9072 622.592 204.8 568.5248 204.8H307.2z m67.1744 56.5248H552.96c40.96 0 72.0896 7.3728 93.3888 23.7568 21.2992 16.384 31.9488 40.96 31.9488 73.728 0 33.5872-11.4688 58.9824-32.768 76.1856-21.2992 16.384-52.4288 25.3952-93.3888 25.3952H374.3744V261.3248z m0 254.7712H561.152c45.056 0 79.4624 8.192 103.2192 26.2144 24.576 18.0224 37.6832 45.8752 37.6832 83.5584 0 37.6832-14.7456 66.3552-43.4176 84.3776-24.576 14.7456-56.5248 22.9376-97.4848 22.9376H374.3744V516.096z"
+      //     }else {
+      //       return "path://M102.4 0h819.2a102.4 102.4 0 0 1 102.4 102.4v819.2a102.4 102.4 0 0 1-102.4 102.4H102.4a102.4 102.4 0 0 1-102.4-102.4V102.4a102.4 102.4 0 0 1 102.4-102.4z m434.176 204.8c-60.6208 0-110.592 13.1072-149.0944 39.3216a133.4272 133.4272 0 0 0-64.7168 118.784c0 49.152 22.1184 86.8352 67.1744 113.0496 18.8416 9.8304 63.8976 26.2144 134.3488 47.5136 65.536 18.8416 107.3152 32.768 123.6992 42.5984 38.5024 20.48 58.1632 49.152 58.1632 86.016 0 31.1296-14.7456 55.7056-44.2368 73.728-29.4912 18.0224-68.8128 27.0336-116.3264 27.0336-52.4288 0-91.7504-11.4688-118.784-32.768-29.4912-23.7568-47.5136-61.44-53.248-112.2304H307.2c4.9152 72.0896 30.3104 125.3376 76.1856 160.5632 39.3216 29.4912 93.3888 44.2368 162.2016 44.2368 69.632 0 124.5184-14.7456 165.4784-43.4176 40.96-29.4912 61.44-70.4512 61.44-121.2416 0-53.248-24.576-94.208-72.9088-123.6992-24.576-14.7456-75.3664-33.5872-152.3712-56.5248-56.5248-16.384-92.5696-28.672-107.3152-36.864-33.5872-18.0224-49.9712-41.7792-49.9712-71.2704 0-33.5872 13.9264-58.1632 41.7792-74.5472 24.576-14.7456 58.1632-21.2992 101.5808-21.2992 47.5136 0 84.3776 9.8304 110.592 31.1296 25.3952 20.48 41.7792 51.6096 49.152 94.208h66.3552c-5.7344-61.44-27.8528-108.1344-67.1744-139.264C654.5408 219.5456 602.112 204.8 536.576 204.8z"
+      //     }
+      //   },
+      //   itemStyle: {
+      //     color: function(params) {
+      //       return params.data[4].includes("买入") ? 'red' : 'blue';
+      //     },
+      //     symbolSize: 10, // 如果需要设置大小
+      //   },
+      //   tooltip: {
+      //     trigger: 'item',
+      //     backgroundColor: 'black',
+      //     textStyle: {
+      //       color: 'white' // 设置文字颜色为白色
+      //     },
+      //     formatter: function(params) {
+      //       const data = params.data;
+      //       console.log("tip的data")
+      //       console.log(params.data)
+      //       return `${data[2]}以均价${data[1]}${data[4]}${data[3]}手,理由是${data[5]}`;
+      //     }
+      //   },
+      // },
       {
         name: 'Volume',
         type: 'bar',
@@ -1156,9 +1242,102 @@ function init_option(){
         yAxisIndex: 1,
         data: data.volumes,
       },
+      {
+        name:"买卖点",
+        type: 'scatter',
+        data: data.records,
+        z:999,
+        symbol:function(value: Array|number, params: Object){
+          //参见第269行的结构
+          if (params.data[4].includes("买入")){
+            // return "rect"
+            return "path://M102.4 0h819.2a102.4 102.4 0 0 1 102.4 102.4v819.2a102.4 102.4 0 0 1-102.4 102.4H102.4a102.4 102.4 0 0 1-102.4-102.4V102.4a102.4 102.4 0 0 1 102.4-102.4z m204.8 204.8v584.9088h259.6864c59.8016 0 107.3152-12.288 141.7216-35.2256 40.1408-27.8528 60.6208-70.4512 60.6208-127.7952 0-39.3216-11.4688-70.4512-32.768-95.0272-21.2992-24.576-50.7904-40.96-89.2928-47.5136 29.4912-9.8304 53.248-25.3952 71.2704-46.6944 17.2032-23.7568 26.2144-52.4288 26.2144-85.1968 0-45.8752-15.5648-81.92-46.6944-108.1344C666.0096 217.9072 622.592 204.8 568.5248 204.8H307.2z m67.1744 56.5248H552.96c40.96 0 72.0896 7.3728 93.3888 23.7568 21.2992 16.384 31.9488 40.96 31.9488 73.728 0 33.5872-11.4688 58.9824-32.768 76.1856-21.2992 16.384-52.4288 25.3952-93.3888 25.3952H374.3744V261.3248z m0 254.7712H561.152c45.056 0 79.4624 8.192 103.2192 26.2144 24.576 18.0224 37.6832 45.8752 37.6832 83.5584 0 37.6832-14.7456 66.3552-43.4176 84.3776-24.576 14.7456-56.5248 22.9376-97.4848 22.9376H374.3744V516.096z"
+          }else {
+            return "path://M102.4 0h819.2a102.4 102.4 0 0 1 102.4 102.4v819.2a102.4 102.4 0 0 1-102.4 102.4H102.4a102.4 102.4 0 0 1-102.4-102.4V102.4a102.4 102.4 0 0 1 102.4-102.4z m434.176 204.8c-60.6208 0-110.592 13.1072-149.0944 39.3216a133.4272 133.4272 0 0 0-64.7168 118.784c0 49.152 22.1184 86.8352 67.1744 113.0496 18.8416 9.8304 63.8976 26.2144 134.3488 47.5136 65.536 18.8416 107.3152 32.768 123.6992 42.5984 38.5024 20.48 58.1632 49.152 58.1632 86.016 0 31.1296-14.7456 55.7056-44.2368 73.728-29.4912 18.0224-68.8128 27.0336-116.3264 27.0336-52.4288 0-91.7504-11.4688-118.784-32.768-29.4912-23.7568-47.5136-61.44-53.248-112.2304H307.2c4.9152 72.0896 30.3104 125.3376 76.1856 160.5632 39.3216 29.4912 93.3888 44.2368 162.2016 44.2368 69.632 0 124.5184-14.7456 165.4784-43.4176 40.96-29.4912 61.44-70.4512 61.44-121.2416 0-53.248-24.576-94.208-72.9088-123.6992-24.576-14.7456-75.3664-33.5872-152.3712-56.5248-56.5248-16.384-92.5696-28.672-107.3152-36.864-33.5872-18.0224-49.9712-41.7792-49.9712-71.2704 0-33.5872 13.9264-58.1632 41.7792-74.5472 24.576-14.7456 58.1632-21.2992 101.5808-21.2992 47.5136 0 84.3776 9.8304 110.592 31.1296 25.3952 20.48 41.7792 51.6096 49.152 94.208h66.3552c-5.7344-61.44-27.8528-108.1344-67.1744-139.264C654.5408 219.5456 602.112 204.8 536.576 204.8z"
+          }
+        },
+        symbolSize: 16,
+        itemStyle: {
+          color: function(params) {
+            return params.data[4].includes("买入") ? 'red' : 'rgba(18,150,219,1)';
+          },
+        },
+        tooltip: {
+          trigger: 'item',
+          // backgroundColor:"red", //这个背景色只能静态的
+          textStyle: {
+            color: 'white' // 设置文字颜色为白色
+          },
+          padding:0,
+          borderWidth:0,
+          formatter: function(params) {
+            const data = params.data;
+            const backgroundColor = data[4].includes("买入") ? 'rgba(255,165,0,1)' : 'rgba(18, 150, 219, 1)';
+            // 这里可以通过设置 HTML 来应用背景颜色
+            return `<div style="background-color: ${backgroundColor};padding:3px;font-size: 18px ">
+              ${data[2]}以均价${data[1]}${data[4]}${data[3]}手,理由是${data[5]}。
+            </div>`;
+          },
+          // formatter: function(params) {
+          //   const data = params.data;
+          //   return `${data[2]}以均价${data[1]}${data[4]}${data[3]}手,理由是${data[5]}`;
+          // },
+        },
+        animation:false,
+        //由于我有可能一天买卖两次，我这分别展示的(东方财富合成一个T)，弄类似东方财富那样的不好看，会有斜线。
+        // label: {
+        //   show: true,
+        //   position: "top",
+        //   distance: 400
+        // },
+        // labelLine: {
+        //   show: true,
+        //   lineStyle: {
+        //     type: "dashed",
+        //     opacity: 0.5,
+        //   }
+        // }
+      },
+      {
+        type: 'bar',
+        name: '图线',
+        itemStyle: {
+          color: 'black' // 设置图线颜色为黑色
+        }
+      },
     ],
   }
 }
+//*********这块是左右键切换tooltip的相关代码↓
+let currentIndex = - 1; // 当前索引
+// 监听键盘事件
+document.addEventListener('keydown', function (event) {
+  if (currentIndex == -1) {
+    currentIndex = rawData.value.length-1
+  }
+  if (event.key === 'ArrowLeft') {
+    if (currentIndex > 0) {
+      setHover(currentIndex - 1);
+    }
+  } else if (event.key === 'ArrowRight') {
+    if (currentIndex <= rawData.value.length - 1) {
+      setHover(currentIndex + 1);
+    }
+  }
+});
+function setHover(index) {
+  currentIndex = index;
+  //目前在触发tooltip时鼠标不会跟着动，是因为触发因素的原因，看第948行配置的tooltip的trigger，如果为axis则
+  //鼠标会跟着移动，但是tooltip就不显示了
+  myChart.dispatchAction({
+    type: 'showTip',
+    seriesName:'K线',
+    seriesIndex: 0,
+    dataIndex: currentIndex,
+  });
+}
+//*********这块是左右键切换tooltip的相关代码↑
+
 function computeWeek(date:string){
   var date = new Date(date)
   var day = date.getDay();
@@ -1237,10 +1416,61 @@ async function showPaintTool(){
 //     errorNotification(e.toString())
 //   })
 // }
+let isEditingGraphic = false;
+const editStartX = ref(0);
+const editEndX = ref(0);
+function editGraphic(id:string){
+  //从列表中找到id为id的图形
+  isEditingGraphic = true;
+  const index = graphicData.value.findIndex((item:any)=>item.id === id);
+  if (index !== -1) {
+    const graphic = graphicData.value[index];
+    editStartX.value = graphic.start[0]
+    editEndX.value = graphic.end[0]
+    //打开编辑弹窗
+    inputVisible.value = true;
+  }
+}
+//不用手动保存，退出（返回，滑动到下一个蜡烛图等）时会自动保存全部图线数据
+function confirmGraphic(){
+  if(isEditingGraphic){//如果是编辑图形（当前特指编辑水平标价线段）
+    const index = graphicData.value.findIndex((item:any)=>item.id === options.id);
+    if (index !== -1) {
+      const graphic = graphicData.value[index];
+      graphic.start[0] = editStartX.value
+      graphic.end[0] = editEndX.value
+    }
+  }else {
+    const text = inputValue.value;
+    if (text.length!=0){
+      let startPointData = myChart.convertFromPixel({seriesIndex: 0},[start[0], start[1]]);
+      let groupId = generateId();
+      // graphicData.value.push({
+      newGraphicData.push({
+        group_id: groupId,
+        code: code,
+        id: generateId(),
+        graphic_type: "text",
+        start: startPointData,
+        end: [0,0],
+        content: text,
+        style:{
+          color:newTextColor.value,
+          size:newTextFontSize.value,
+        }
+      });
+      handleNewGraphicData();
+    }
+    inputValue.value = "";
+  }
+  inputVisible.value = false
+}
 function deleteGroupGraphic(group_id:string){
   invoke('delete_graphic_by_group_id',{groupId:group_id}).then(()=>{
     successNotification("删除成功");
     //从列表中删除所有group_id为group_id的图形
+    //2024年10月19日19:57:09我觉得可以改进一下，可以用先把所有的图形都删除，然后再重新画。
+    //https://segmentfault.com/q/1010000019632067
     const deleteGraphics = graphicData.value.filter((item:any)=>item.group_id === group_id);
     myChart.setOption({ //本来想把这个封装到updateLineOption里面的，发现默认值给action是merge还是replace都不行。
       //function updateLineOption(action: any='replace或者merge')无法更新位置
@@ -1261,10 +1491,6 @@ function deleteGroupGraphic(group_id:string){
       })
     });
     graphicData.value = graphicData.value.filter((item:any)=>item.group_id !== group_id);
-    // if(group_id === ""){
-    //   //从列表中删除所有group_id为group_id的图形
-    //   graphicData.value = graphicData.value.filter((item:any)=>item.group_id !== group_id);
-    // }
   }).catch((e)=>{
     errorNotification(e.toString())
   })
@@ -1277,8 +1503,8 @@ function deleteGroupGraphic(group_id:string){
       v-model:show="contextMenuShow"
       :options="options"
   >
-    <context-menu-item label="编辑此图形" @click="" />
-    <context-menu-item label="管理所有图形" @click="" />
+    <context-menu-item label="编辑此图形(todo)" @click="editGraphic(options.id)" />
+<!--    <context-menu-item label="管理所有图形" @click="" />-->
     <context-menu-sperator />
 <!--    <context-menu-item label="删除当前图形" @click="deleteGraphic(options.id)" />-->
     <context-menu-item label="删除当前组全部图形" @click="deleteGroupGraphic(options.group_id)" />
@@ -1287,30 +1513,37 @@ function deleteGroupGraphic(group_id:string){
     <!--        <context-menu-item label="Item2" @click="onMenuClick(3)" />-->
     <!--      </context-menu-group>-->
   </context-menu>
-  <el-dialog v-model="inputVisible" :show-close="false" draggable="true" width="400" align-center style="padding: 0">
-    <template #header="{ }">
+  <el-dialog v-model="inputVisible" :show-close="false" draggable width="400" align-center style="padding: 0" class="dialog-container">
+    <template #header="{}">
       <div class="my-header">
-        <label style="font-size: 14px;margin-left: 15px;font-family:sans-serif">添加文本</label>
+        <label style="font-size: 14px;margin-left: 15px;font-family:sans-serif"> {{ isEditingGraphic ? '编辑图形' : '添加文本' }}</label>
         <inline-svg src="../assets/svg/close.svg" class="small-close"  @click.left="inputVisible=false"></inline-svg>
       </div>
     </template>
-    <div style="margin: 20px">
+    <div v-if="!isEditingGraphic" style="margin: 20px">
       <el-input v-model="inputValue" ref="inputRef" placeholder="请输入文字内容"  type="textarea" rows="3" clearable ></el-input>
       <div style="margin-top: 20px">
         <label>颜色</label><el-color-picker v-model="newTextColor" />
         <label style="margin-left: 20px" >大小</label><el-input-number v-model="newTextFontSize" :min="9" :max="25" style="margin-left: 10px;width: 110px"/>
       </div>
     </div>
+    <div v-if="isEditingGraphic" style="margin: 20px">
+      <label>左端点：</label><el-input-number v-model="editStartX" :min="1" :max="rawData.length-20" style="width: 100px" :controls="false" /><br>
+      <label>右端点：</label><el-input-number v-model="editEndX" :min="10" :max="rawData.length+20" style="width: 100px":controls="false" />
+      <div style="margin-top: 20px">
+        <label>颜色(todo)</label><el-color-picker v-model="newTextColor" />
+      </div>
+    </div>
     <div class="dialog-footer right" style="margin-top: 20px">
       <el-button class="dialog-button" @click="inputVisible=false">取消</el-button>
-      <el-button class="dialog-button dialog-confirm" type="primary" @click="newText">
+      <el-button class="dialog-button dialog-confirm" type="primary" @click="confirmGraphic">
         确定
       </el-button>
     </div>
   </el-dialog>
 </template>
 
-<style >
+<style>
 .dialog-button{
   height: 25px;
   width: 35px;
@@ -1320,11 +1553,14 @@ function deleteGroupGraphic(group_id:string){
   font-weight: bold;
   border-color: #9170b000;
 }
-
 .candle-chart-container{
   width: 85%;
   height: 100%;
-  border: #f25378 1px solid;
+  border-right: #f25378 1px solid;
+}
+.dialog-container .el-input{
+  --el-input-text-color: black;
+  --el-input-focus-border-color: grey;
 }
 .tip{
   font-family:"Adobe 黑体 Std R",serif;
@@ -1348,7 +1584,7 @@ function deleteGroupGraphic(group_id:string){
 .black-label {
   color: black;
 }
-/*.el-dialog__header{
-  display: none;
-}*/
+.mx-context-menu.flat .mx-context-menu-item{
+  padding: 3px 0!important;/*10px是上和下 0px是左右;*/
+}
 </style>

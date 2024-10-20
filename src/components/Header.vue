@@ -3,7 +3,7 @@ import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {ref, watch} from "vue";
 import {invoke} from "@tauri-apps/api/core";
 import {store} from "../store.ts"
-import ElSearch from "./ElSearch.vue";
+import Search from "./Search.vue";
 import {useRouter} from "vue-router";
 import {saveWindowState, StateFlags} from "@tauri-apps/plugin-window-state";
 
@@ -98,7 +98,7 @@ function back(){
   <div  data-tauri-drag-region class="titlebar"  >
 <!--    <Search></Search>-->
     <img src="../assets/icon.png" width="25" height="25" alt="Logo Image" style="margin-left: 5px;margin-right: 10px;user-select: none">
-    <ElSearch></ElSearch>
+    <Search></Search>
     <div id="stage-button">
       <el-tooltip content="交易记录" placement="bottom" effect="light" :show-arrow="false">
         <inline-svg src="../assets/svg/record.svg" class="window-button back record" @click.left="open_record"></inline-svg>

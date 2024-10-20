@@ -1,7 +1,7 @@
 use crate::app_errors::AppResult;
 use crate::entities::table::create_all_need_table;
 use log::{error, info};
-use sea_orm::{ColIdx, ConnectOptions, Database, DatabaseConnection};
+use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use std::fs::File;
 use std::path::PathBuf;
 use std::time::Duration;

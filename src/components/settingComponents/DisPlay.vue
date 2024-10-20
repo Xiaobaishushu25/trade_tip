@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import {onMounted,ref,watch} from "vue";
 const aExtend = ref(true) //always extend
+const bsSize = ref(15) //always extend
+function handleUpdateBsSize(){
+}
 </script>
 
 <template>
@@ -18,15 +21,12 @@ const aExtend = ref(true) //always extend
         </div>
         <el-divider style="margin: 5px" />
         <div class="setting-row-container">
-          <label class="label-text">总是将标价线段延伸到图表的右边界:</label>
-          <el-switch
-              v-model="aExtend"
-              class="ml-2"
-              style="--el-switch-on-color: #13ce66;"
-          />
+          <label class="label-text">B/S点大小:</label>
+          <el-input-number v-model="bsSize" :min="5" :max="30" :step="1" class="custom-input" @change="handleUpdateBsSize" />
         </div>
+        <el-divider style="margin: 5px" />
         <div class="setting-row-container">
-          <label class="label-text">默认展示K线条数:</label>
+          <label class="label-text">默认展示K线百分比:</label>
           <el-switch
               v-model="aExtend"
               class="ml-2"

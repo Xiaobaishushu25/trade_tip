@@ -20,7 +20,7 @@ import {
     CandlestickChart,
     LineChart,
     BarChart,
-    CustomChart
+    CustomChart, ScatterChart
 } from 'echarts/charts';
 import { UniversalTransition } from 'echarts/features';
 import { CanvasRenderer } from 'echarts/renderers';
@@ -40,7 +40,8 @@ echarts.use([
     UniversalTransition,
     CustomChart,
     GraphicComponent,
-    MarkPointComponent
+    MarkPointComponent,
+    ScatterChart
 ]);
 
 //

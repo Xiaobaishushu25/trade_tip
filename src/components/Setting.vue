@@ -64,7 +64,7 @@ async function window_close(){
   min-height: calc(100vh - 31px);
   max-height: calc(100vh - 31px);
 }
-.setting-tabs >>> .el-tabs__item {
+.setting-tabs :deep(.el-tabs__item) {
   color: black; /* 所有 tab 的字体颜色为黑色 */
   font-size: 15px;
   font-weight: 545;
@@ -73,36 +73,35 @@ async function window_close(){
   justify-content: left;
   align-items: center;
   font-family: "黑体";
-
 }
 
-.setting-tabs >>> .el-tabs__item.is-active {
+.setting-tabs :deep(.el-tabs__item.is-active) {
   background-color: #77757550;
   border-radius: 10px;
   color: black;
 }
 
-.setting-tabs >>> .el-tabs__item:not(.is-active):hover {
+.setting-tabs :deep(.el-tabs__item:not(.is-active):hover) {
   background-color: #77757520;
   border-radius: 10px;
   color: black;
 }
-.setting-tabs >>> .el-tabs__active-bar {
+.setting-tabs :deep(.el-tabs__active-bar) {
   display: none; /* 去掉选中 tab 下方的线 */
 }
 
-.setting-tabs >>> .el-tabs__item {
+.setting-tabs :deep(.el-tabs__item) {
   border: none; /* 去掉 tab 周围的边框 */
 }
 
-.setting-tabs >>> .el-tabs__content {
+.setting-tabs :deep(.el-tabs__content) {
   border: none; /* 去掉内容区域的边框 */
 }
 .setting-tabs > .el-tabs__content {
   font-size: 20px;
 }
 /* 覆盖 Element UI 的 tab 过渡效果动画时间 */
-.setting-tabs >>> .el-tabs__item {
+.setting-tabs :deep(.el-tabs__item){
   transition: background-color 0.05s ease; /* 0.1s 表示 100ms */
 }
 </style>

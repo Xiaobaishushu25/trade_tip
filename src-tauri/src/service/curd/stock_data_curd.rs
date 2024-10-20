@@ -126,7 +126,7 @@ impl StockDataCurd {
         // let entity = Entity {
         //     table_name: TableName::from_str_truncate(code),
         // };
-        let _ = drop_table_with_dyn_name(code).await?;
+        drop_table_with_dyn_name(code).await?;
         Ok(())
     }
 }

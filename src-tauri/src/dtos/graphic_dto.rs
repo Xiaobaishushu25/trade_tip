@@ -12,7 +12,6 @@ pub struct GraphicDTO {
     pub content: Option<String>, //文本内容
     pub style: Option<Style>,
     pub horizontal: Option<bool>, //是否水平
-                                  // pub style:String,
 }
 impl From<Graphic> for GraphicDTO {
     fn from(g: Graphic) -> Self {

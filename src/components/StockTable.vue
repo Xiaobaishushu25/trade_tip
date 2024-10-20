@@ -34,7 +34,7 @@ const contextMenuShow = ref(false)
 
 
 const options = {
-  // theme: 'win10 dark',
+  theme: 'flat',
   name:"",
   code:"",
   zIndex: 3,
@@ -191,7 +191,6 @@ function removeStock(code: string){
 }
 
 function manageGroup(){
-  console.log("展示管理分组")
   showGroupManage.value = !showGroupManage.value;
 }
 function clickRow(row: StockInfoG, _: any){
@@ -445,8 +444,8 @@ function divideBox(price: number, down: number, up: number): [string,string,unde
         v-model:show="contextMenuShow"
         :options="options"
     >
-      <context-menu-item label="置顶" @click="" />
-      <context-menu-item :label="nowSelectStock?.hold?'清仓':'持有'"  @click="updateHold()" />
+      <context-menu-item label="置顶(todo)" @click="" />
+      <context-menu-item :label="nowSelectStock?.hold?'已清仓':'已持有'"  @click="updateHold()" />
       <context-menu-item label="从当前分组移除" @click="removeStock(options.code)" />
       <context-menu-sperator />
       <context-menu-item label="管理分组" @click="manageGroup()" />
@@ -455,7 +454,6 @@ function divideBox(price: number, down: number, up: number): [string,string,unde
 <!--      </context-menu-group>-->
     </context-menu>
   </div>
-
   <StockGroupMange :name="options.name" :code="options.code" :show-dialog="showGroupManage"></StockGroupMange>
 </template>
 

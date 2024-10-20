@@ -19,7 +19,7 @@ use std::process::exit;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
-use tauri::{Emitter, Manager, State};
+use tauri::{Emitter, State};
 use tokio::time::sleep;
 use crate::service::curd::transaction_record_curd::TransactionRecordCurd;
 
@@ -531,6 +531,16 @@ pub async fn query_transaction_records() -> Result<Vec<TransactionRecord>, Strin
         }
     }
 }
+///查询指定股票的交易记录。
+#[tauri::command]
+pub async fn query_transaction_records_by_code(code: String) -> Result<Vec<TransactionRecord>, String> {
+    match TransactionRecordCurd::query_by_code(code.clone()).await{
+        Ok(data) => Ok(data),
+        Err(e) => {
+            handle_error("查询交易记录失败", e.to_string())
+        }
+    }
+}
 ///读取新增的交易记录文件，并保存到数据库中，成功保存后返回新增的交易记录数据。
 #[tauri::command]
 pub async fn read_save_transaction_records(path: String) -> Result<Vec<TransactionRecord>, String> {
@@ -551,6 +561,34 @@ pub async fn update_transaction_record(record: TransactionRecord) -> Result<(), 
         }
     }
 }
+#[tauri::command]
+pub async fn delete_transaction_record_by_primary(date:String,time:String,code:String) -> Result<(), String> {
+    match TransactionRecordCurd::delete_by_primary_key(date,time,code).await{
+        Ok(_) => Ok(()),
+        Err(e) => {
+            handle_error("删除交易记录失败", e.to_string())
+        }
+    }
+}
+#[tauri::command]
+pub async fn delete_all_transaction_records() -> Result<(), String> {
+    match TransactionRecordCurd::delete_all().await{
+        Ok(_) => Ok(()),
+        Err(e) => {
+            handle_error("删除交易记录失败", e.to_string())
+        }
+    }
+}
+#[tauri::command]
+pub async fn save_transaction_records(path: String) -> Result<(), String> {
+    match TransactionRecordCurd::save_to_file(path).await{
+        Ok(_) => Ok(()),
+        Err(e) => {
+            handle_error("导出交易记录失败", e.to_string())
+        }
+    }
+}
+
 #[tauri::command]
 pub async fn exit_app() {
     info!("退出程序");

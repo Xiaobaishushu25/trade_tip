@@ -25,7 +25,6 @@ declare module 'vue' {
     ElInputNumber: typeof import('element-plus/es')['ElInputNumber']
     ElRow: typeof import('element-plus/es')['ElRow']
     ElScrollbar: typeof import('element-plus/es')['ElScrollbar']
-    ElSearch: typeof import('./src/components/ElSearch.vue')['default']
     ElSwitch: typeof import('element-plus/es')['ElSwitch']
     ElTable: typeof import('element-plus/es')['ElTable']
     ElTableColumn: typeof import('element-plus/es')['ElTableColumn']
@@ -49,7 +48,7 @@ declare module 'vue' {
     Setting: typeof import('./src/components/Setting.vue')['default']
     StockGroupMange: typeof import('./src/components/group/StockGroupMange.vue')['default']
     StockGroupSelect: typeof import('./src/components/group/StockGroupSelect.vue')['default']
-    StockTable2: typeof import('./src/components/StockTable2.vue')['default']
+    StockTable: typeof import('./src/components/StockTable.vue')['default']
     Tool: typeof import('./src/components/Tool.vue')['default']
     TransactionRecord: typeof import('./src/components/TransactionRecord.vue')['default']
   }
