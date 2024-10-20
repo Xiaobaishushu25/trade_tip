@@ -7,11 +7,11 @@ import { ref} from "vue";
 
 const activeButton = ref("button0"); // 用于跟踪哪个按钮被点击
 async function close() {
-  sendPaintState();
+  await sendPaintState();
   await WebviewWindow.getCurrent().hide();
 }
-function sendPaintState(state:PaintState = PaintState.Null) {
-  emit('paint', {state});
+async function sendPaintState(state:PaintState = PaintState.Null) {
+  await emit('paint', {state});
   activeButton.value = 'button' + state; // 假设你的按钮有对应的CSS类名
 }
 

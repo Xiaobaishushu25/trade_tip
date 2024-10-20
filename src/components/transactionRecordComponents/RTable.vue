@@ -2,6 +2,8 @@
 import {StockInfoG, TransactionRecord} from "../../type.ts";
 import {ref,reactive, watch,onMounted,nextTick,} from "vue";
 import {invoke} from "@tauri-apps/api/core";
+import {emit} from "@tauri-apps/api/event";
+
 import {errorNotification} from "../../utils.ts";
 
 
@@ -99,6 +101,9 @@ const onInputTableBlur = async (scope: any) => {
     let result = await invoke('update_transaction_record',{record: data});
     if (result!=null) {
       errorNotification(`更新备注失败：${result}`)
+    }else {
+      //把这个消息发给蜡烛图，让他更新买卖点
+      await emit('update_record_event', data)
     }
   }
 }
