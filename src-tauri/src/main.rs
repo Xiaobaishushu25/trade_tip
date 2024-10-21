@@ -15,16 +15,7 @@ use crate::app_errors::AppResult;
 use crate::cache::config_state::ConfigState;
 use crate::cache::intraday_chart_cache::IntradayChartCache;
 use crate::entities::init_db_coon;
-use crate::service::command::tauri_command::{
-    add_stock_info, create_group, delete_graphic_by_group_id, delete_graphic_by_id, delete_group,
-    exit_app, get_response, query_all_groups, query_box, query_graphic_by_code,
-    query_groups_by_code, query_intraday_chart_img, query_live_stock_data_by_code,
-    query_live_stocks_data_by_group_name, query_stock_info, query_stocks_by_group_name,
-    query_stocks_day_k_limit, remove_stock_from_group, save_graphic, update_groups,
-    update_live_state, update_stock_groups, update_stock_hold,read_save_transaction_records,
-    query_transaction_records,update_transaction_record,query_transaction_records_by_code,
-    delete_transaction_record_by_primary,delete_all_transaction_records,save_transaction_records,
-};
+use crate::service::command::tauri_command::{add_stock_info, create_group, delete_graphic_by_group_id, delete_graphic_by_id, delete_group, exit_app, get_response, query_all_groups, query_box, query_graphic_by_code, query_groups_by_code, query_intraday_chart_img, query_live_stock_data_by_code, query_live_stocks_data_by_group_name, query_stock_info, query_stocks_by_group_name, query_stocks_day_k_limit, remove_stock_from_group, save_graphic, update_groups, update_live_state, update_stock_groups, update_stock_hold, read_save_transaction_records, query_transaction_records, update_transaction_record, query_transaction_records_by_code, delete_transaction_record_by_primary, delete_all_transaction_records, save_transaction_records, get_config};
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
 use crate::service::http::init_http;
@@ -34,6 +25,8 @@ use std::env;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, LazyLock, Mutex};
 use tokio::task::JoinHandle;
+use crate::config::config::Config;
+
 ///是否需要实时更新
 pub static UPDATEING: AtomicBool = AtomicBool::new(true);
 // pub static NOTICE: Mutex<Option<Vec<String>>> = Mutex::new(None);
@@ -132,12 +125,14 @@ async fn main() {
     let state = MyState::new().await;
     info!("ui start");
 
+    // let config = Config::load();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         // .manage(MyState{task:Mutex::new(None)})
         .manage(state)
         .manage(IntradayChartCache::new())
-        .manage(ConfigState::new().await)
+        // .manage(ConfigState::new().await)
+        .manage(Mutex::new(Config::load().await))
         // .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
@@ -191,6 +186,7 @@ async fn main() {
             delete_transaction_record_by_primary,
             delete_all_transaction_records,
             save_transaction_records,
+            get_config,
             exit_app
         ])
         .run(tauri::generate_context!())
@@ -198,7 +194,9 @@ async fn main() {
     info!("ui end");
 }
 async fn init_app() {
-    log4rs::init_file("./config/log4rs.yaml", Default::default()).unwrap();
+    //todo 日志配置应该不需要放在外面的文件夹中，应该打包进二进制。
+    log4rs::init_file("./data/log4rs.yaml", Default::default()).unwrap();
+    // log4rs::init_file("./log4rs.yaml", Default::default()).unwrap();
     init_db_coon().await;
     init_http().await;
 }

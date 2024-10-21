@@ -112,5 +112,20 @@ interface TransactionRecord {
     remark: string
 }
 
+interface DisplayConfig{
+    a_extend: boolean,
+    bs_size:number,//BS点的大小
+    k_show_begin:number,//K线显示百分比
+}
+interface DataConfig{
+    update_freq: number,
+    box_num:number,
+}
+
+interface Config {
+    display_config: DisplayConfig,
+    data_config: DataConfig,
+}
+
 export { PaintState }; // 导出枚举值
-export type { StockLiveData,StockGroup,StockInfoG,StockData,Graphic,RowData,TransactionRecord };
+export type { StockLiveData,StockGroup,StockInfoG,StockData,Graphic,RowData,TransactionRecord,Config };

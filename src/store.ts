@@ -1,6 +1,6 @@
 // store.js
 import { reactive } from 'vue'
-import {RowData, StockGroup, StockInfoG} from "./type.ts";
+import {Config, RowData, StockGroup, StockInfoG} from "./type.ts";
 
 // export const store:{stockInfo:StockInfo[],
 //     stockGroups:StockGroup[],
@@ -22,7 +22,8 @@ export const store:{
     stockinfoGs:StockInfoG[],
     boxData:Record<string, number[]>,
     isBlur:boolean,
-    rowData:Map<string,RowData>
+    rowData:Map<string,RowData>,
+    config:Config
 } = reactive({
     activeGroup:"",//当前选择的分组
     stockGroups:[],//当前所有的分组
@@ -30,6 +31,7 @@ export const store:{
     stockinfoGs:[],//当前分组的所有的股票
     boxData:{},//全部的箱线图数据
     isBlur:false,//窗口是否失去焦点
-    rowData:new Map()
+    rowData:new Map(),
+    config:null//配置项
     // count:"",
 })

@@ -7,7 +7,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::{fs};
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug,Clone, Default, Serialize, Deserialize)]
 pub struct Config {
     display_config: DisplayConfig,
     data_config: DataConfig,
@@ -17,6 +17,7 @@ impl Config {
      * 加载配置文件
      */
     pub async fn load() -> Self {
+        info!("load config");
         // let current_dir = &env::current_dir().unwrap();
         // let current_dir = current_dir.to_string_lossy();
         let path = format!("{}/data/config", CURRENT_DIR.clone());
@@ -104,17 +105,18 @@ fn check_config_file(path: &str, current_dir: &str) -> AppResult<Config> {
     Ok(config)
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug,Clone, Serialize, Deserialize)]
 pub struct DisplayConfig {
     a_extend: bool,
     bs_size:i32,//BS点的大小
+    k_show_begin:i32,//K线显示百分比
 }
 impl Default for DisplayConfig {
     fn default() -> Self {
-        DisplayConfig { a_extend: false, bs_size: 14 }
+        DisplayConfig { a_extend: false, bs_size: 14, k_show_begin: 85 }
     }
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug,Clone, Serialize, Deserialize)]
 pub struct DataConfig {
     update_freq: i32,
     box_num: i32,

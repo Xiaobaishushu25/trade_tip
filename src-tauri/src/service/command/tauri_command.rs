@@ -17,7 +17,7 @@ use log::{error, info};
 use std::collections::HashMap;
 use std::process::exit;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::{Emitter, State};
 use tokio::time::sleep;
@@ -587,6 +587,12 @@ pub async fn save_transaction_records(path: String) -> Result<(), String> {
             handle_error("导出交易记录失败", e.to_string())
         }
     }
+}
+
+#[tauri::command]
+pub async fn get_config(state: State<'_, Mutex<Config>>) -> Result<Config, String> {
+    let mutex_guard = state.lock().unwrap();
+    Ok((*mutex_guard).clone())
 }
 
 #[tauri::command]

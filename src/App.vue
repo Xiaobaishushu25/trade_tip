@@ -4,6 +4,9 @@
 import {onMounted} from "vue";
 // import axios from "axios";
 import {store} from "./store.ts"
+import {invoke} from "@tauri-apps/api/core";
+import {errorNotification} from "./utils.ts";
+
 // const stockInfo = ref<StockInfo[]>([]);
 onMounted(()=>{
   //https://router.vuejs.org/zh/guide/advanced/composition-api.html#%E5%9C%A8-setup-%E4%B8%AD%E8%AE%BF%E9%97%AE%E8%B7%AF%E7%94%B1%E5%92%8C%E5%BD%93%E5%89%8D%E8%B7%AF%E7%94%B1
@@ -14,16 +17,13 @@ onMounted(()=>{
   window.addEventListener("focus",()=>{
     store.isBlur = true;
   })
-  // router.push("/tab")
-  // invoke<StockInfo[]>("query_stock_info", {}).then(res => {
-  //   console.log(res);
-  //   store.stockInfo = res;
-  //   store.stockInfo[0].price= 1.56
-  //   console.log(store.stockInfo[0].price)
-  //   // stockInfo.value = res;
-  // }).catch(err => {
-  //   console.log(err);
-  // })
+  invoke("get_config",{}).then(res=>{
+    store.config = res;
+    console.log(store.config);
+  }).catch(err => {
+    console.error(err);
+    errorNotification( "读取配置失败");
+  })
 })
 </script>
 

@@ -4,7 +4,7 @@ appenders:
     kind: console
     filters:
       - kind: threshold
-        level: info,error
+        level: INFO
     encoder:
       #     https://docs.rs/log4rs/0.8.3/log4rs/encode/pattern/index.html
       # {d(%Y-%m-%d %H:%M:%S)}是格式化时间为：2024-02-12 16:48:58
@@ -18,19 +18,19 @@ appenders:
     path: "log/server.log"
     filters:
       - kind: threshold
-        level: error
+        level: ERROR
     encoder:
       pattern: "{d(%Y-%m-%d %H:%M:%S)} {h({l})} {f} line:{L} - {m}{n}"
 root:
-  level: info
+  level: INFO
   appenders:
     - stdout
     - server
 loggers:
   app::backend::db:
-    level: info
+    level: INFO
   app::requests:
-    level: info
+    level: INFO
     appenders:
       - requests
     additive: false

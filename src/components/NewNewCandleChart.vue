@@ -2,7 +2,7 @@
 import {invoke} from "@tauri-apps/api/core";
 import {nextTick, onMounted, ref, watch} from "vue";
 import * as echarts from "echarts/core";
-import {Graphic, PaintState, StockData, StockLiveData, TransactionRecord} from "../type.ts";
+import {Graphic, PaintState, StockData, StockLiveData, TransactionRecord,Config} from "../type.ts";
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {EChartsType} from "echarts";
 import {store} from "../store.ts";
@@ -72,6 +72,22 @@ watch(() => store.stockinfoG,async (newValue: any) => {
     await updateChart();
     // myChart.setOption({})
   }
+},{deep:true})
+
+watch(() => store.config,async (newValue:Config) => {
+  console.log("config变化了",newValue);
+  myChart.setOption({
+    dataZoom: [
+      {
+        type: 'inside',
+        start: newValue.display_config.k_show_begin,// 开始展示的位置，85%处开始
+      },
+    ],
+    series: [{
+      name: '买卖点',
+      symbolSize: newValue.display_config.bs_size,
+    }]
+  });
 },{deep:true})
 
 
@@ -1074,15 +1090,13 @@ function init_option(){
     },
     grid: [
       {//上下两个图表的位置
-        // left: '4%',
         left: '3%',
-        // right: '3%',
         right: '4%',
         height: '65%'
       },
       {
-        left: '4%',
-        right: '3%',
+        left: '3%',
+        right: '4%',
         top: '75%',
         height: '15%'
       }
@@ -1144,7 +1158,7 @@ function init_option(){
       {
         type: 'inside',
         xAxisIndex: [0, 1],
-        start: 85,// 开始展示的位置，85%处开始
+        start: store.config.display_config.k_show_begin,// 开始展示的位置，85%处开始
         end: 100,
         zoomOnMouseWheel: "ctrl",// 启用鼠标滚轮触发缩放
         zoomLock: true
@@ -1303,7 +1317,8 @@ function init_option(){
             // return "path://M102.4 0h819.2a102.4 102.4 0 0 1 102.4 102.4v819.2a102.4 102.4 0 0 1-102.4 102.4H102.4a102.4 102.4 0 0 1-102.4-102.4V102.4a102.4 102.4 0 0 1 102.4-102.4z m434.176 204.8c-60.6208 0-110.592 13.1072-149.0944 39.3216a133.4272 133.4272 0 0 0-64.7168 118.784c0 49.152 22.1184 86.8352 67.1744 113.0496 18.8416 9.8304 63.8976 26.2144 134.3488 47.5136 65.536 18.8416 107.3152 32.768 123.6992 42.5984 38.5024 20.48 58.1632 49.152 58.1632 86.016 0 31.1296-14.7456 55.7056-44.2368 73.728-29.4912 18.0224-68.8128 27.0336-116.3264 27.0336-52.4288 0-91.7504-11.4688-118.784-32.768-29.4912-23.7568-47.5136-61.44-53.248-112.2304H307.2c4.9152 72.0896 30.3104 125.3376 76.1856 160.5632 39.3216 29.4912 93.3888 44.2368 162.2016 44.2368 69.632 0 124.5184-14.7456 165.4784-43.4176 40.96-29.4912 61.44-70.4512 61.44-121.2416 0-53.248-24.576-94.208-72.9088-123.6992-24.576-14.7456-75.3664-33.5872-152.3712-56.5248-56.5248-16.384-92.5696-28.672-107.3152-36.864-33.5872-18.0224-49.9712-41.7792-49.9712-71.2704 0-33.5872 13.9264-58.1632 41.7792-74.5472 24.576-14.7456 58.1632-21.2992 101.5808-21.2992 47.5136 0 84.3776 9.8304 110.592 31.1296 25.3952 20.48 41.7792 51.6096 49.152 94.208h66.3552c-5.7344-61.44-27.8528-108.1344-67.1744-139.264C654.5408 219.5456 602.112 204.8 536.576 204.8z"
           }
         },
-        symbolSize: 13,
+        // symbolSize: 13,
+        symbolSize: store.config.display_config.bs_size,
         // itemStyle: {
         //   color: function(params) {
         //     return params.data[4].includes("买入") ? 'red' : 'rgba(18,150,219,1)';

@@ -102,7 +102,11 @@ async function getIntradayChartImg(code:string){
   </div>
 
 </template>
-
+<style>
+.detail .el-drawer__body{
+  padding:0;
+}
+</style>
 <style scoped>
 .detail{
   width: 100%;
@@ -141,7 +145,7 @@ async function getIntradayChartImg(code:string){
   background-color: #0f0f0f; /* 设置背景色 */
 }
 :deep(.mask-layer){
-  /*width: 740px !important;*/
-  width: 840px !important;
+  /*width: 840px !important;*/
+  width: 870px !important;
 }
 </style>
