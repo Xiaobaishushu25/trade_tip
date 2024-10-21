@@ -2,12 +2,12 @@ use crate::app_errors::AppResult;
 use crate::CURRENT_DIR;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
+use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::PathBuf;
-use std::{fs};
 
-#[derive(Debug,Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
     display_config: DisplayConfig,
     data_config: DataConfig,
@@ -105,18 +105,22 @@ fn check_config_file(path: &str, current_dir: &str) -> AppResult<Config> {
     Ok(config)
 }
 
-#[derive(Debug,Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DisplayConfig {
     a_extend: bool,
-    bs_size:i32,//BS点的大小
-    k_show_begin:i32,//K线显示百分比
+    bs_size: i32,      //BS点的大小
+    k_show_begin: i32, //K线显示百分比
 }
 impl Default for DisplayConfig {
     fn default() -> Self {
-        DisplayConfig { a_extend: false, bs_size: 14, k_show_begin: 85 }
+        DisplayConfig {
+            a_extend: false,
+            bs_size: 14,
+            k_show_begin: 85,
+        }
     }
 }
-#[derive(Debug,Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DataConfig {
     update_freq: i32,
     box_num: i32,

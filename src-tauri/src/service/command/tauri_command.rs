@@ -4,12 +4,15 @@ use crate::config::config::Config;
 use crate::dtos::graphic_dto::GraphicDTO;
 use crate::dtos::stock_dto::{StockInfoG, StockLiveData};
 use crate::entities::prelude::{Graphic, StockData, StockGroup, StockInfo, TransactionRecord};
-use crate::service::command::handle::{handle_and_save_record, handle_delete_stock, handle_new_stock, handle_stock_livedata};
+use crate::service::command::handle::{
+    handle_and_save_record, handle_delete_stock, handle_new_stock, handle_stock_livedata,
+};
 use crate::service::curd::graphic_curd::GraphicCurd;
 use crate::service::curd::group_stock_relation_curd::GroupStockRelationCurd;
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_group_curd::StockGroupCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
+use crate::service::curd::transaction_record_curd::TransactionRecordCurd;
 use crate::service::curd::update_all_day_k;
 use crate::service::http::REQUEST;
 use crate::{get_close_prices, MyState, UPDATEING};
@@ -21,7 +24,6 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::{Emitter, State};
 use tokio::time::sleep;
-use crate::service::curd::transaction_record_curd::TransactionRecordCurd;
 
 #[tauri::command]
 pub async fn update_live_state<'r>(
@@ -524,68 +526,60 @@ pub async fn query_intraday_chart_img<'r>(
 #[tauri::command]
 pub async fn query_transaction_records() -> Result<Vec<TransactionRecord>, String> {
     info!("查询交易记录");
-    match TransactionRecordCurd::query_by_num(100).await{
+    match TransactionRecordCurd::query_by_num(100).await {
         Ok(data) => Ok(data),
-        Err(e) => {
-            handle_error("读取交易记录文件失败", e.to_string())
-        }
+        Err(e) => handle_error("读取交易记录文件失败", e.to_string()),
     }
 }
 ///查询指定股票的交易记录。
 #[tauri::command]
-pub async fn query_transaction_records_by_code(code: String) -> Result<Vec<TransactionRecord>, String> {
-    match TransactionRecordCurd::query_by_code(code.clone()).await{
+pub async fn query_transaction_records_by_code(
+    code: String,
+) -> Result<Vec<TransactionRecord>, String> {
+    match TransactionRecordCurd::query_by_code(code.clone()).await {
         Ok(data) => Ok(data),
-        Err(e) => {
-            handle_error("查询交易记录失败", e.to_string())
-        }
+        Err(e) => handle_error("查询交易记录失败", e.to_string()),
     }
 }
 ///读取新增的交易记录文件，并保存到数据库中，成功保存后返回新增的交易记录数据。
 #[tauri::command]
 pub async fn read_save_transaction_records(path: String) -> Result<Vec<TransactionRecord>, String> {
-    match handle_and_save_record(path).await{
+    match handle_and_save_record(path).await {
         Ok(data) => Ok(data),
-        Err(e) => {
-            handle_error("读取、保存交易记录文件失败", e.to_string())
-        }
+        Err(e) => handle_error("读取、保存交易记录文件失败", e.to_string()),
     }
 }
 #[tauri::command]
 pub async fn update_transaction_record(record: TransactionRecord) -> Result<(), String> {
     info!("更新交易记录:{:?}", record);
-    match TransactionRecordCurd::update(record).await{
+    match TransactionRecordCurd::update(record).await {
         Ok(_) => Ok(()),
-        Err(e) => {
-            handle_error("更新交易记录失败", e.to_string())
-        }
+        Err(e) => handle_error("更新交易记录失败", e.to_string()),
     }
 }
 #[tauri::command]
-pub async fn delete_transaction_record_by_primary(date:String,time:String,code:String) -> Result<(), String> {
-    match TransactionRecordCurd::delete_by_primary_key(date,time,code).await{
+pub async fn delete_transaction_record_by_primary(
+    date: String,
+    time: String,
+    code: String,
+) -> Result<(), String> {
+    match TransactionRecordCurd::delete_by_primary_key(date, time, code).await {
         Ok(_) => Ok(()),
-        Err(e) => {
-            handle_error("删除交易记录失败", e.to_string())
-        }
+        Err(e) => handle_error("删除交易记录失败", e.to_string()),
     }
 }
 #[tauri::command]
 pub async fn delete_all_transaction_records() -> Result<(), String> {
-    match TransactionRecordCurd::delete_all().await{
+    match TransactionRecordCurd::delete_all().await {
         Ok(_) => Ok(()),
-        Err(e) => {
-            handle_error("删除交易记录失败", e.to_string())
-        }
+        Err(e) => handle_error("删除交易记录失败", e.to_string()),
     }
 }
 #[tauri::command]
 pub async fn save_transaction_records(path: String) -> Result<(), String> {
-    match TransactionRecordCurd::save_to_file(path).await{
+    match TransactionRecordCurd::save_to_file(path).await {
         Ok(_) => Ok(()),
-        Err(e) => {
-            handle_error("导出交易记录失败", e.to_string())
-        }
+        Err(e) => handle_error("导出交易记录失败", e.to_string()),
     }
 }
 

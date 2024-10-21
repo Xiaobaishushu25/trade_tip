@@ -12,10 +12,19 @@ mod service;
 mod utils;
 
 use crate::app_errors::AppResult;
-use crate::cache::config_state::ConfigState;
 use crate::cache::intraday_chart_cache::IntradayChartCache;
+use crate::config::config::Config;
 use crate::entities::init_db_coon;
-use crate::service::command::tauri_command::{add_stock_info, create_group, delete_graphic_by_group_id, delete_graphic_by_id, delete_group, exit_app, get_response, query_all_groups, query_box, query_graphic_by_code, query_groups_by_code, query_intraday_chart_img, query_live_stock_data_by_code, query_live_stocks_data_by_group_name, query_stock_info, query_stocks_by_group_name, query_stocks_day_k_limit, remove_stock_from_group, save_graphic, update_groups, update_live_state, update_stock_groups, update_stock_hold, read_save_transaction_records, query_transaction_records, update_transaction_record, query_transaction_records_by_code, delete_transaction_record_by_primary, delete_all_transaction_records, save_transaction_records, get_config};
+use crate::service::command::tauri_command::{
+    add_stock_info, create_group, delete_all_transaction_records, delete_graphic_by_group_id,
+    delete_graphic_by_id, delete_group, delete_transaction_record_by_primary, exit_app, get_config,
+    get_response, query_all_groups, query_box, query_graphic_by_code, query_groups_by_code,
+    query_intraday_chart_img, query_live_stock_data_by_code, query_live_stocks_data_by_group_name,
+    query_stock_info, query_stocks_by_group_name, query_stocks_day_k_limit,
+    query_transaction_records, query_transaction_records_by_code, read_save_transaction_records,
+    remove_stock_from_group, save_graphic, save_transaction_records, update_groups,
+    update_live_state, update_stock_groups, update_stock_hold, update_transaction_record,
+};
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
 use crate::service::http::init_http;
@@ -24,8 +33,8 @@ use std::collections::HashMap;
 use std::env;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, LazyLock, Mutex};
+use tauri::Manager;
 use tokio::task::JoinHandle;
-use crate::config::config::Config;
 
 ///是否需要实时更新
 pub static UPDATEING: AtomicBool = AtomicBool::new(true);
@@ -127,6 +136,12 @@ async fn main() {
 
     // let config = Config::load();
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
+            error!("the app is already running, args: {:?}, cwd: {}", args, cwd);
+            let _ = app.get_webview_window("main")
+                .expect("no main window")
+                .set_focus();
+        }))
         .plugin(tauri_plugin_dialog::init())
         // .manage(MyState{task:Mutex::new(None)})
         .manage(state)

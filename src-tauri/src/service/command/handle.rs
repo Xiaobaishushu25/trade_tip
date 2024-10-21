@@ -1,3 +1,4 @@
+use crate::app_errors::AppError::AnyHow;
 use crate::app_errors::{AppError, AppResult};
 use crate::dtos::stock_dto::StockLiveData;
 use crate::entities::init_db_coon;
@@ -7,14 +8,13 @@ use crate::service::curd::graphic_curd::GraphicCurd;
 use crate::service::curd::group_stock_relation_curd::GroupStockRelationCurd;
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
+use crate::service::curd::transaction_record_curd::TransactionRecordCurd;
 use crate::service::http::{init_http, REQUEST};
 use crate::utils::stock_util::{calculate_ago_with_num, compute_mul_ma, compute_single_ma};
 use anyhow::anyhow;
+use log::{error, info};
 use std::collections::HashMap;
 use std::sync::Arc;
-use log::{error, info};
-use crate::app_errors::AppError::AnyHow;
-use crate::service::curd::transaction_record_curd::TransactionRecordCurd;
 
 ///处理并保存股票数据
 /// 需要先根据code创建表，然后处理日线数据（主要是计算ma60）
@@ -93,43 +93,52 @@ pub async fn handle_stock_livedata(
 ///以下区域是历史交易数据处理函数
 /// 处理和保存交易记录
 /// 读取csv文件，然后查询数据库中最新记录，然后只保存最新记录之后的数据并返回。
-/// 
-pub(crate) async fn handle_and_save_record(path:String) -> AppResult<Vec<TransactionRecord>> {
+///
+pub(crate) async fn handle_and_save_record(path: String) -> AppResult<Vec<TransactionRecord>> {
     let mut pending_data = TransactionRecordCurd::read_csv_file(&path).await?;
     //把pending_data中的数据按日期升序排序
     // pending_data.sort_by(|a, b| a.date.cmp(&b.date));
     pending_data.reverse();
-    
+
     // pending_data.sort_by(|a, b| b.date.cmp(&a.date));
-    let truncated_data = if let Some(latest_record) = TransactionRecordCurd::query_latest_record().await?{
-        let latest_key = (latest_record.date.clone(), latest_record.time.clone(), latest_record.code.clone());
-        // 找到最新记录的索引
-        let latest_index = pending_data.iter().position(|record| {
-            let key = (record.date.clone(), record.time.clone(), record.code.clone());
-            key == latest_key
-        });
-        if let Some(index) = latest_index {
-            // 只保留最新记录之后的数据
-            info!("最新记录是：{:?}", latest_record);
-            &pending_data[index + 1..]
+    let truncated_data =
+        if let Some(latest_record) = TransactionRecordCurd::query_latest_record().await? {
+            let latest_key = (
+                latest_record.date.clone(),
+                latest_record.time.clone(),
+                latest_record.code.clone(),
+            );
+            // 找到最新记录的索引
+            let latest_index = pending_data.iter().position(|record| {
+                let key = (
+                    record.date.clone(),
+                    record.time.clone(),
+                    record.code.clone(),
+                );
+                key == latest_key
+            });
+            if let Some(index) = latest_index {
+                // 只保留最新记录之后的数据
+                info!("最新记录是：{:?}", latest_record);
+                &pending_data[index + 1..]
+            } else {
+                info!("没有找到最新记录");
+                // 如果没有找到最新记录，则保留所有数据
+                &pending_data
+            }
         } else {
-            info!("没有找到最新记录");
-            // 如果没有找到最新记录，则保留所有数据
+            info!("目前没有交易记录");
+            // 如果没有最新记录，则保留所有数据
             &pending_data
-        }
-    }else {
-        info!("目前没有交易记录");
-        // 如果没有最新记录，则保留所有数据
-        &pending_data
-    };
+        };
     info!("处理待插入的交易记录：{:?}", truncated_data);
     //如果插入出错，则返回错误，不会走到Ok(truncated_data.to_vec())返回数据。
-    match TransactionRecordCurd::insert(truncated_data.to_vec()).await{
+    match TransactionRecordCurd::insert(truncated_data.to_vec()).await {
         Ok(_) => {
             let mut data = truncated_data.to_vec();
             data.reverse(); //需要再倒序，不然返给前端的是反的。
             Ok(data)
-        },
+        }
         Err(e) => {
             error!("待处理的全部交易记录：{:?}", pending_data);
             error!("当前待插入的交易记录：{:?}", truncated_data);
@@ -138,7 +147,6 @@ pub(crate) async fn handle_and_save_record(path:String) -> AppResult<Vec<Transac
     }
     // Ok(truncated_data.to_vec())
 }
-
 
 #[tokio::test]
 async fn test_handle_new_stock() {

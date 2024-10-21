@@ -1,15 +1,15 @@
-use sea_orm::ColumnTrait;
-use sea_orm::QueryFilter;
 use crate::app_errors::AppResult;
-use csv::{ReaderBuilder, Writer, WriterBuilder};
-use encoding_rs::{Encoding, GBK};
-use std::fs::File;
-use std::io::{BufReader, Read};
-use log::{error, info};
-use sea_orm::{ActiveModelTrait, EntityTrait, QueryOrder, QuerySelect};
-use crate::entities::{init_db_coon, open_db_log};
 use crate::entities::prelude::{TransactionRecord, TransactionRecords};
 use crate::entities::transaction_record::{ActiveModel, Column};
+use crate::entities::{init_db_coon, open_db_log};
+use csv::{ReaderBuilder, Writer, WriterBuilder};
+use encoding_rs::{Encoding, GBK};
+use log::{error, info};
+use sea_orm::ColumnTrait;
+use sea_orm::QueryFilter;
+use sea_orm::{ActiveModelTrait, EntityTrait, QueryOrder, QuerySelect};
+use std::fs::File;
+use std::io::{BufReader, Read};
 // 读取 CSV 文件并解析为 TransactionRecord 结构体
 pub struct TransactionRecordCurd;
 impl TransactionRecordCurd {
@@ -35,7 +35,7 @@ impl TransactionRecordCurd {
         //     // 将 GBK 字节流转换为 UTF-8
         //     let (decoded_string, _, _) = GBK.decode(&buffer);
         //     decoded_string.to_string()
-        // }else { 
+        // }else {
         //     //由buffer构造字符串;
         //     String::from_utf8(buffer).unwrap()
         // };
@@ -78,10 +78,22 @@ impl TransactionRecordCurd {
             .has_headers(false) // 禁用默认表头
             .from_writer(file);
         // 写入表头
-        wtr.write_record(["成交日期", "成交时间", "证券代码", "证券名称", "委托方向", "成交数量", "成交均价", "成交金额", "备注"]).map_err(|e| anyhow::anyhow!("csv write header error: {}", e))?;
+        wtr.write_record([
+            "成交日期",
+            "成交时间",
+            "证券代码",
+            "证券名称",
+            "委托方向",
+            "成交数量",
+            "成交均价",
+            "成交金额",
+            "备注",
+        ])
+        .map_err(|e| anyhow::anyhow!("csv write header error: {}", e))?;
         let transaction_records = TransactionRecordCurd::query_all().await?;
         for model in transaction_records {
-            wtr.serialize(model).map_err(|e| anyhow::anyhow!("csv serialize error: {}", e))?;
+            wtr.serialize(model)
+                .map_err(|e| anyhow::anyhow!("csv serialize error: {}", e))?;
         }
         wtr.flush()?;
         Ok(())
@@ -91,7 +103,11 @@ impl TransactionRecordCurd {
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
-        let transaction_records = TransactionRecords::find().order_by_desc(Column::Date).limit(num).all(db).await?;
+        let transaction_records = TransactionRecords::find()
+            .order_by_desc(Column::Date)
+            .limit(num)
+            .all(db)
+            .await?;
         Ok(transaction_records)
     }
     ///查询所有历史交易数据，按照日期降序排列
@@ -99,7 +115,10 @@ impl TransactionRecordCurd {
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
-        let transaction_records = TransactionRecords::find().order_by_desc(Column::Date).all(db).await?;
+        let transaction_records = TransactionRecords::find()
+            .order_by_desc(Column::Date)
+            .all(db)
+            .await?;
         Ok(transaction_records)
     }
     ///查询指定代码的历史交易数据，按照日期降序排列
@@ -107,7 +126,11 @@ impl TransactionRecordCurd {
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
-        let transaction_records = TransactionRecords::find().filter(Column::Code.eq(code)).order_by_desc(Column::Date).all(db).await?;
+        let transaction_records = TransactionRecords::find()
+            .filter(Column::Code.eq(code))
+            .order_by_desc(Column::Date)
+            .all(db)
+            .await?;
         Ok(transaction_records)
     }
     ///查询数据库中最新一条交易记录
@@ -115,7 +138,10 @@ impl TransactionRecordCurd {
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
-        let transaction_record = TransactionRecords::find().order_by_desc(Column::Date).one(db).await?;
+        let transaction_record = TransactionRecords::find()
+            .order_by_desc(Column::Date)
+            .one(db)
+            .await?;
         Ok(transaction_record)
     }
     /// 插入历史交易记录
@@ -129,7 +155,9 @@ impl TransactionRecordCurd {
                 // .map(|model| ActiveModel::from(model))https://rust-lang.github.io/rust-clippy/master/index.html#redundant_closure
                 .map(ActiveModel::from)
                 .collect::<Vec<_>>(),
-        ).exec(db).await?;
+        )
+        .exec(db)
+        .await?;
         Ok(())
     }
     pub async fn update(transaction_record: TransactionRecord) -> AppResult<()> {
@@ -147,7 +175,9 @@ impl TransactionRecordCurd {
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
-        TransactionRecords::delete_by_id((date, time, code)).exec(db).await?;
+        TransactionRecords::delete_by_id((date, time, code))
+            .exec(db)
+            .await?;
         Ok(())
     }
     /// 删除所有交易记录
@@ -181,7 +211,9 @@ async fn test_transaction_record_curd() {
     // let vec = TransactionRecordCurd::read_csv_file("C:\\Users\\Xbss\\Desktop\\Table_973.csv").await.unwrap();
     // println!("{:?}", vec);
     // let vec = TransactionRecordCurd::read_csv_file("C:\\Users\\Xbss\\Desktop\\Table_4638.csv").await.unwrap();
-    let vec = TransactionRecordCurd::read_csv_file("C:\\Users\\Xbss\\Desktop\\Table_7991.csv").await.unwrap();
+    let vec = TransactionRecordCurd::read_csv_file("C:\\Users\\Xbss\\Desktop\\Table_7991.csv")
+        .await
+        .unwrap();
     println!("{:?}", vec);
 }
 #[tokio::test]
@@ -199,7 +231,9 @@ async fn test_insert_transaction_record() {
         remark: Some("测试".to_string()),
         num: 0,
     };
-    TransactionRecordCurd::insert(vec![transaction_record.clone()]).await.unwrap();
+    TransactionRecordCurd::insert(vec![transaction_record.clone()])
+        .await
+        .unwrap();
 }
 #[tokio::test]
 async fn test_update_transaction_record() {
@@ -216,7 +250,9 @@ async fn test_update_transaction_record() {
         remark: Some("测试".to_string()),
         num: 0,
     };
-    TransactionRecordCurd::update(transaction_record.clone()).await.unwrap();
+    TransactionRecordCurd::update(transaction_record.clone())
+        .await
+        .unwrap();
 }
 #[tokio::test]
 async fn test_read_file() {
@@ -249,5 +285,7 @@ async fn test_read_file() {
 async fn test_save_to_file() {
     init_db_coon().await;
     let path = "G:\\APP\\金融助手\\log\\transaction_record.csv";
-    TransactionRecordCurd::save_to_file(path.to_string()).await.unwrap();
+    TransactionRecordCurd::save_to_file(path.to_string())
+        .await
+        .unwrap();
 }

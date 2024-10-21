@@ -23,7 +23,7 @@ use chrono::{Datelike, Utc};
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, DeriveEntityModel, Serialize,Deserialize)]
+#[derive(Clone, Debug, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "transaction_record")]
 pub struct Model {
     /// 主键，由日期、时间、证券代码组成
@@ -60,9 +60,8 @@ fn default_date() -> String {
     format!("{}-{}-{}", today.year(), today.month(), today.day())
 }
 
-
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation{}
+pub enum Relation {}
 // impl Related<super::group_stock_relation::Entity> for crate::entities::stock_info::Entity {
 //     fn to() -> RelationDef {
 //         crate::entities::stock_info::Relation::GroupStockRs.def()
