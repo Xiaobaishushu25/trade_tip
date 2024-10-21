@@ -107,10 +107,11 @@ fn check_config_file(path: &str, current_dir: &str) -> AppResult<Config> {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DisplayConfig {
     a_extend: bool,
+    bs_size:i32,//BS点的大小
 }
 impl Default for DisplayConfig {
     fn default() -> Self {
-        DisplayConfig { a_extend: false }
+        DisplayConfig { a_extend: false, bs_size: 14 }
     }
 }
 #[derive(Debug, Serialize, Deserialize)]
