@@ -14,8 +14,8 @@ use crate::service::curd::stock_group_curd::StockGroupCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
 use crate::service::curd::transaction_record_curd::TransactionRecordCurd;
 use crate::service::curd::update_all_day_k;
-use crate::service::http::REQUEST;
-use crate::{get_close_prices, MyState, UPDATEING};
+use crate::service::http::{init_http, REQUEST};
+use crate::{get_close_prices, MyState, IS_MARKET_OPEN, UPDATEING};
 use log::{error, info};
 use std::collections::HashMap;
 use std::process::exit;
@@ -46,7 +46,6 @@ pub async fn update_all_stock_day_k() -> Result<String, String> {
         Ok(_) => Ok("更新成功".to_string()),
         Err(e) => {
             handle_error("更新日线数据失败", e.to_string())
-            // error!("更新日线数据失败:{}",e);
             // Err(format!("更新日线数据失败:{}",e.to_string()))
         }
     }
@@ -330,7 +329,7 @@ pub async fn query_graphic_by_code(code: String) -> Result<Vec<GraphicDTO>, Stri
 /// code:因为graphic有可能是空数组，所以必须传入。
 #[tauri::command]
 pub async fn save_graphic(code: String, graphic: Vec<GraphicDTO>) -> Result<(), String> {
-    info!("保存图形元素:{:?}", graphic);
+    // info!("保存图形元素:{:?}", graphic);
     if graphic.is_empty() {
         return Ok(());
     }
@@ -432,6 +431,9 @@ pub async fn query_live_stock_data_by_code<'r>(
 }
 /// 查询分组内多个股票的实时数据
 /// 先查询分组内的所有股票代码
+/// todo：目前是仅根据UPDATEING的值判断是否需要请求实时数据的，本来想加上是否开市(IS_MARKET_OPEN)的判断,
+/// 但是由于是否开市是提前初始化的，如果加上的话会导致第一次请求就被取消，无法第一次更新股票表格的价格导致空白。
+/// 如果要加上判断开市还需要一个是否初始化过的变量。
 #[tauri::command]
 pub async fn query_live_stocks_data_by_group_name<'r>(
     state: State<'r, MyState>,
@@ -439,6 +441,10 @@ pub async fn query_live_stocks_data_by_group_name<'r>(
     app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
     info!("查询实时数据:{}", group_name);
+    // if !IS_MARKET_OPEN.load(Ordering::Relaxed) {
+    //     info!("市场未开市,不进行查询操作！");
+    //     return Ok(());
+    // }
     //查询分组内的所有股票代码
     let result = if group_name == "持有" {
         StockInfoCurd::query_all_hold_only_code().await
@@ -459,8 +465,8 @@ pub async fn query_live_stocks_data_by_group_name<'r>(
             let handle = tokio::spawn(async move {
                 let history_close_price = history_close_price;
                 loop {
-                    let x = UPDATEING.load(Ordering::Relaxed);
-                    if x {
+                    let need_update = UPDATEING.load(Ordering::Relaxed);
+                    if need_update {
                         match REQUEST.get().unwrap().get_live_stock_data(&codes).await {
                             Ok(mut stock_data_list) => {
                                 match handle_stock_livedata(
@@ -588,6 +594,11 @@ pub async fn get_config(state: State<'_, Mutex<Config>>) -> Result<Config, Strin
     let mutex_guard = state.lock().unwrap();
     Ok((*mutex_guard).clone())
 }
+///获取当前是否是交易时间
+#[tauri::command]
+pub async fn get_is_market_open() -> bool {
+    IS_MARKET_OPEN.load(Ordering::Relaxed)
+}
 
 #[tauri::command]
 pub async fn exit_app() {
@@ -599,4 +610,20 @@ pub async fn exit_app() {
 fn handle_error<T>(tip: &str, e: String) -> Result<T, String> {
     error!("{}:{}", tip, e); //查询股票分时图失败:Network Error: net::ERR_CONNECTION_RESET
     Err(format!("{}:{}", tip, e))
+}
+#[tokio::test]
+async fn test_market_is_open() {
+    init_http().await;
+    let response1 = REQUEST.get().unwrap().get("https://qt.gtimg.cn/q=sz159992").await.unwrap();
+    let string1 = response1.text().await.unwrap();
+    println!("{:?}", string1);
+    sleep(Duration::from_secs(1)).await;
+    let response2 = REQUEST.get().unwrap().get("https://qt.gtimg.cn/q=sz159992").await.unwrap();
+    let string2 = response2.text().await.unwrap();
+    println!("{:?}", string2);
+    if string1==string2 {
+        println!("market is closed");
+    }else {
+        println!("market is open");
+    }
 }

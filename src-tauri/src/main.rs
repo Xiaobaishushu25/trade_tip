@@ -27,17 +27,21 @@ use crate::service::command::tauri_command::{
 };
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
-use crate::service::http::init_http;
+use crate::service::http::{init_http, REQUEST};
 use log::{error, info};
 use std::collections::HashMap;
 use std::env;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, LazyLock, Mutex};
+use std::time::Duration;
 use tauri::Manager;
 use tokio::task::JoinHandle;
+use tokio::time::sleep;
 
 ///是否需要实时更新
 pub static UPDATEING: AtomicBool = AtomicBool::new(true);
+///是否开市，这个本来是打算用于K线图界面是否绘制最新数据K线的，但是如果处于交易日的中午，用这个无法绘制当天的最新数据，所以暂时还没用上。
+pub static IS_MARKET_OPEN: AtomicBool = AtomicBool::new(true);
 // pub static NOTICE: Mutex<Option<Vec<String>>> = Mutex::new(None);
 pub static NOTICE: Mutex<Option<String>> = Mutex::new(None);
 pub static CURRENT_DIR: LazyLock<String> = LazyLock::new(|| {
@@ -211,9 +215,9 @@ async fn main() {
 async fn init_app() {
     //todo 日志配置应该不需要放在外面的文件夹中，应该打包进二进制。
     log4rs::init_file("./data/log4rs.yaml", Default::default()).unwrap();
-    // log4rs::init_file("./log4rs.yaml", Default::default()).unwrap();
     init_db_coon().await;
     init_http().await;
+    // judge_market_open().await;
 }
 async fn update() {
     match crate::service::curd::update_all_day_k().await {
@@ -232,4 +236,19 @@ async fn update() {
                 .replace(format!("更新日线数据失败:{}", e.to_string()));
         }
     };
+}
+///判断是否开市,先发起一个请求，然后sleep 1秒，再发起一个请求，如果两个请求的返回值不一样，则证明开市了，否则证明闭市了。
+async fn judge_market_open() {
+    let response1 = REQUEST.get().unwrap().get("https://qt.gtimg.cn/q=sz159992").await.unwrap();
+    let string1 = response1.text().await.unwrap();
+    sleep(Duration::from_secs(1)).await;
+    let response2 = REQUEST.get().unwrap().get("https://qt.gtimg.cn/q=sz159992").await.unwrap();
+    let string2 = response2.text().await.unwrap();
+    if string1==string2 {
+        println!("market is closed");
+        IS_MARKET_OPEN.store(false, Ordering::Relaxed);
+    }else {
+        println!("market is open");
+        IS_MARKET_OPEN.store(true, Ordering::Relaxed);
+    }
 }

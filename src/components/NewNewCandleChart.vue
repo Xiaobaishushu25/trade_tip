@@ -507,10 +507,11 @@ function updateLiveData(live_data:Record<string, StockLiveData>){
       color = 'green';
       borderColor = 'green';
     }
-    if(stockData.categoryData[len]!=nowDate &&!marketisClose //如果不是今天的数据，且不是收盘时刻
-        // &&stockData.values[len][1]!=newData.price //如果最新价格不是前一天的收盘价
-        // &&stockData.values[len][2]!=newData.low  //如果最新低价不是前一天的最低价
-        // &&stockData.values[len][3]!=newData.high //如果最新高价不是前一天的最高价
+    // if(stockData.categoryData[len]!=nowDate &&!marketisClose //如果不是今天的数据，且不是收盘时刻
+    if(stockData.categoryData[len]!=nowDate  //如果不是今天的数据，且不是收盘时刻
+        &&stockData.values[len][1]!=newData.price //如果最新价格不是前一天的收盘价
+        &&stockData.values[len][2]!=newData.low  //如果最新低价不是前一天的最低价
+        &&stockData.values[len][3]!=newData.high //如果最新高价不是前一天的最高价
     ){
       // console.log("不是一天的数据，更新");
       stockData.categoryData.push(nowDate);
@@ -739,7 +740,8 @@ async function query_stocks_day_k_limit(){
         }
         data.unshift(leastData)
       }else {
-        marketisClose = true;
+        // console.log("最新数据和第一个数据的开盘，收盘，最高，最低一致，不插入最新数据");
+        // marketisClose = true;
       }
       // const leastData = {
       //   date:nowDate,

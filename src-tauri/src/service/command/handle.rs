@@ -1,5 +1,5 @@
 use crate::app_errors::AppError::AnyHow;
-use crate::app_errors::{AppError, AppResult};
+use crate::app_errors::{AppResult};
 use crate::dtos::stock_dto::StockLiveData;
 use crate::entities::init_db_coon;
 use crate::entities::prelude::{StockInfo, TransactionRecord};
