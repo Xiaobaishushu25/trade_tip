@@ -1,6 +1,6 @@
 use crate::app_errors::AppError::AnyHow;
 use crate::app_errors::AppResult;
-use chrono::{Local, NaiveDate};
+use chrono::{Local, NaiveDate, NaiveTime};
 use std::str::FromStr;
 
 ///根据给定的num，和收盘价列表计算Ma num日均线，数据不足的地方填None；保留三位小数。
@@ -47,8 +47,10 @@ pub async fn compute_mul_ma(mas: Vec<usize>, now_price: f64, close_prices: &Vec<
     result
 }
 ///根据输入的股票代码判断是沪市（sh）还是深市（sz）的
+/// code:股票代码，如000001
+/// return:市场代码，如sh
 pub fn get_market_by_code(code: &str) -> AppResult<String> {
-    return if code.starts_with("15")
+    if code.starts_with("15")
         || code.starts_with("000")
         || code.starts_with("002")
         || code.starts_with("300")
@@ -64,7 +66,12 @@ pub fn get_market_by_code(code: &str) -> AppResult<String> {
         Ok("sh".into()) //上海
     } else {
         Err(AnyHow(anyhow::anyhow!("无法判断代码:{code}的市场")))
-    };
+    }
+}
+///判断当前是否是交易时间
+/// todo: 目前没有实现 http://ifzq.gtimg.cn/appstock/app/kline/mkline?param=sz159967,m1,,673
+pub fn judge_market_is_open() -> AppResult<bool> {
+    Ok(false)
 }
 ///计算当前时间和给定的日期之间的天数差
 pub fn calculate_ago_with_num(year: i32, month: u32, day: u32) -> i32 {
@@ -79,6 +86,15 @@ pub fn calculate_ago_with_str(str: &str) -> i32 {
     let now = Local::now().naive_local().date();
     let date = NaiveDate::from_str(str).unwrap();
     now.signed_duration_since(date).num_days() as i32
+}
+///计算当前时间和给定的时间之间的分钟差
+/// target_time: 时间字符串，如"15:30"
+pub fn calculate_ago_minutes(target_time:&str) -> i64 {
+    let target_time = NaiveTime::parse_from_str(target_time, "%H:%M").unwrap();
+    // 获取当前的日期和时间
+    let now = Local::now().time();
+    let delta = now - target_time;
+    delta.num_minutes()
 }
 #[tokio::test]
 async fn test_compute_ma() {
@@ -97,4 +113,9 @@ async fn test_calculate_day_num() {
 fn test_parse_date() {
     println!("{:?}", NaiveDate::from_str("2024-04-26"));
     println!("{:?}", calculate_ago_with_str("2024-04-24"));
+}
+#[test]
+fn test_calculate_minutes() {
+    let i = calculate_ago_minutes("15:30");
+    println!("{}", i);
 }

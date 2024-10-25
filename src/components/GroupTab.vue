@@ -146,7 +146,7 @@ function judgeTab(activeName:string){
       </el-tab-pane>
     </el-tabs>
   </div>
-  <el-dialog v-model="dialogVisible" :show-close="false" :draggable="true" width="250" align-center style="padding: 0">
+  <el-dialog v-model="dialogVisible" :show-close="false" :draggable=true width="250" align-center style="padding: 0">
     <template #header="{ }">
       <div class="my-header">
         <label style="font-size: 14px;margin-left: 15px;font-family:sans-serif">分组管理(可拖拽排序)</label>

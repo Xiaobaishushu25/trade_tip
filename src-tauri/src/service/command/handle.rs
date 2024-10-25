@@ -10,11 +10,12 @@ use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
 use crate::service::curd::transaction_record_curd::TransactionRecordCurd;
 use crate::service::http::{init_http, REQUEST};
-use crate::utils::stock_util::{calculate_ago_with_num, compute_mul_ma, compute_single_ma};
+use crate::utils::stock_util::{calculate_ago_minutes, calculate_ago_with_num, compute_mul_ma, compute_single_ma};
 use anyhow::anyhow;
 use log::{error, info};
 use std::collections::HashMap;
 use std::sync::Arc;
+use chrono::{Local, NaiveDateTime, NaiveTime};
 
 ///处理并保存股票数据
 /// 需要先根据code创建表，然后处理日线数据（主要是计算ma60）
@@ -147,7 +148,64 @@ pub(crate) async fn handle_and_save_record(path: String) -> AppResult<Vec<Transa
     }
     // Ok(truncated_data.to_vec())
 }
-
+/// 处理股票，判断能不能做t，如果能做t，则返回up或者down，否则返回normal。
+/// return: Vec<(code, status)> ，其中status为up或者down或者normal
+/// 策略：取当天9：30（价格a）至10:00（价格b）之间的数据
+///     若a<b，且大部分时间股价在均线（分时线也有一个均线）上，若10:00后突破其中最高价，则可以买入。
+///     若a>b，且大部分时间股价在均线（分时线也有一个均线）下，若10:00后跌破其中最低价，则可以卖出。
+/// 由于均线不好搞，我直接用一个函数let line = |x: f64| first + slope * x;来作为均线。
+/// 判断标准是：70%的时间股价在均线上方，且b相较于a涨了0.1%以上，则视为up。
+///          70%的时间股价在均线下方，且b相较于a跌了0.1%以上，则视为down。
+pub async fn handle_can_t(codes: Vec<String>) -> AppResult<Vec<(String, String)>> {
+    let mut can_t = Vec::with_capacity(codes.len());
+    let start_date_time = Local::now()
+        .date_naive()
+        .and_time(NaiveTime::from_hms_opt(9, 30, 0).unwrap());
+    let end_date_time = Local::now()
+        .date_naive()
+        .and_time(NaiveTime::from_hms_opt(10, 0, 0).unwrap());
+    let count = calculate_ago_minutes("9:30") as u32;
+    let frequency = 1;
+    for code in codes {
+        let stock_data = REQUEST
+            .get()
+            .unwrap()
+            .get_price_min_tx(&code, count, frequency)
+            .await?;
+        let vec: Vec<(NaiveDateTime, f64)> = stock_data
+            .iter()
+            .map(|item| (item.time, item.close))
+            .filter(|(time, _)| start_date_time <= *time && *time < end_date_time)
+            .collect::<Vec<_>>();
+        if vec.len() < 2 {
+            can_t.push((code.clone(), "normal".into()));
+            continue;
+        }
+        let first = vec.first().unwrap().1;
+        let last = vec.last().unwrap().1;
+        let num = vec.len();
+        let percentage_change = ((last - first) / first) * 100.0;
+        println!("first: {:?}, last: {:?}, num: {:?}, percentage_change: {:?}%", first, last, num, percentage_change);
+        let slope = (last - first) / (num as f64);
+        let line = |x: f64| first + slope * x;
+        let res_count = vec.iter()
+            .enumerate()
+            .filter(|(i, &(_, close))| {
+                let x = *i as f64;
+                close > line(x)
+            })
+            .count();
+        println!("res_count: {}", res_count);
+        if (res_count as f64)/(num as f64) > 0.7&&percentage_change > 0.1 {
+            can_t.push((code.clone(), "up".into()));
+        }else if (res_count as f64)/(num as f64) < 0.3&&percentage_change < 0.1 {
+            can_t.push((code.clone(), "down".into()));
+        }else {
+            can_t.push((code.clone(), "normal".into()));
+        }
+    }
+    Ok(can_t)
+}
 #[tokio::test]
 async fn test_handle_new_stock() {
     init_http().await;
@@ -168,4 +226,9 @@ async fn test_handle() {
     let data = stock_data.get(code).unwrap();
     println!("{:?}", data);
     // compute_live_ma(code,data.price).await.unwrap();
+}
+#[tokio::test]
+async fn test_handle_can_t() {
+    init_http().await;
+    println!("{:?}", handle_can_t(vec!["159967".into()]).await.unwrap());
 }

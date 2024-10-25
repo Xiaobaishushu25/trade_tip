@@ -4,7 +4,7 @@ use crate::entities::transaction_record::{ActiveModel, Column};
 use crate::entities::{init_db_coon, open_db_log};
 use csv::{ReaderBuilder, Writer, WriterBuilder};
 use encoding_rs::{Encoding, GBK};
-use log::{error, info};
+use log::{info};
 use sea_orm::ColumnTrait;
 use sea_orm::QueryFilter;
 use sea_orm::{ActiveModelTrait, EntityTrait, QueryOrder, QuerySelect};

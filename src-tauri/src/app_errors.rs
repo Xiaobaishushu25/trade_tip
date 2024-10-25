@@ -18,6 +18,8 @@ pub enum AppError {
     SqlxError(#[from] sea_orm::DbErr),
     #[error("std::num::ParseFloatError:`{0}`")]
     ParseNumError(#[from] std::num::ParseFloatError),
+    #[error("chrono::ParseError:`{0}`")]
+    ParseError(#[from] chrono::ParseError)
     // #[error("http::ParseError:`{0}`")]
     // ParseError(#[from] ParseError),
     // #[error("sea_orm::DbErr:Error:`{0}`")]

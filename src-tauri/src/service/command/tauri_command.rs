@@ -4,9 +4,7 @@ use crate::config::config::Config;
 use crate::dtos::graphic_dto::GraphicDTO;
 use crate::dtos::stock_dto::{StockInfoG, StockLiveData};
 use crate::entities::prelude::{Graphic, StockData, StockGroup, StockInfo, TransactionRecord};
-use crate::service::command::handle::{
-    handle_and_save_record, handle_delete_stock, handle_new_stock, handle_stock_livedata,
-};
+use crate::service::command::handle::{handle_and_save_record, handle_can_t, handle_delete_stock, handle_new_stock, handle_stock_livedata};
 use crate::service::curd::graphic_curd::GraphicCurd;
 use crate::service::curd::group_stock_relation_curd::GroupStockRelationCurd;
 use crate::service::curd::stock_data_curd::StockDataCurd;
@@ -115,13 +113,10 @@ pub async fn query_stocks_by_group_name(name: String) -> Result<Vec<StockInfoG>,
     if name == "持有" {
         return match StockInfoCurd::query_all_hold_info().await {
             Ok(more_infos) => {
-                // // info!("查询持有分组成功:{:?}",more_infos);
                 Ok(more_infos)
             }
             Err(e) => {
                 handle_error("查询持有分组失败", e.to_string())
-                // error!("查询失败:{}",e);
-                // Err(e.to_string())
             }
         };
     }
@@ -593,6 +588,16 @@ pub async fn save_transaction_records(path: String) -> Result<(), String> {
 pub async fn get_config(state: State<'_, Mutex<Config>>) -> Result<Config, String> {
     let mutex_guard = state.lock().unwrap();
     Ok((*mutex_guard).clone())
+}
+///判断是否可以做T
+///codes:股票代码列表
+/// 返回值：Vec<(股票代码,status)>，status为up或者down或者normal
+#[tauri::command]
+pub async fn judge_can_t(codes: Vec<String>) -> Result<Vec<(String, String)>, String> {
+    match handle_can_t(codes).await{
+        Ok(data) => Ok(data),
+        Err(e) => handle_error("判断是否可以做t失败", e.to_string()),
+    }
 }
 ///获取当前是否是交易时间
 #[tauri::command]

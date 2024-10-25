@@ -2,7 +2,7 @@
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {PaintState} from "../type.ts";
 import {emit} from "@tauri-apps/api/event";
-import { ref} from "vue";
+import {ref} from "vue";
 
 
 const activeButton = ref("button0"); // 用于跟踪哪个按钮被点击
@@ -14,7 +14,6 @@ async function sendPaintState(state:PaintState = PaintState.Null) {
   await emit('paint', {state});
   activeButton.value = 'button' + state; // 假设你的按钮有对应的CSS类名
 }
-
 </script>
 
 

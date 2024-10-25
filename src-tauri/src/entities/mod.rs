@@ -16,6 +16,7 @@ pub mod stock_info;
 ///这个mod文件主要是定义了数据库相关的结构体。
 pub mod table;
 pub mod transaction_record;
+pub mod stock_data_time;
 
 // pub static DB:OnceLock<DatabaseConnection> = OnceLock::new();
 pub static DB: OnceCell<DatabaseConnection> = OnceCell::const_new();

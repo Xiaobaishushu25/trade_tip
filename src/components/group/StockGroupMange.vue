@@ -34,7 +34,7 @@ watch(() => props.showDialog, (_) => {
 <!--    <StockGroupSelect :code="code" :name="name" @hideDialog="hideDialog"></StockGroupSelect>-->
 <!--  </el-dialog>-->
 
-  <el-dialog v-model="dialogFormVisible" :show-close="false" draggable="true" width="320" align-center style="padding: 0">
+  <el-dialog v-model="dialogFormVisible" :show-close="false" :draggable=true width="320" align-center style="padding: 0">
     <template #header="{ }">
       <div class="my-header">
         <div>

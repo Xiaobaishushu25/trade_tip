@@ -2,11 +2,12 @@
 import {nextTick, onMounted, ref,Ref, watch,onBeforeUnmount,reactive} from "vue";
 import {RowData, StockInfoG, StockLiveData} from "../type.ts";
 import {invoke} from "@tauri-apps/api/core";
-import {listen} from "@tauri-apps/api/event";
+import {emit, listen} from "@tauri-apps/api/event";
 import StockGroupMange from "./group/StockGroupMange.vue";
 import {useRouter} from "vue-router";
 import {store} from "../store.ts";
 import {errorNotification, successNotification} from "../utils.ts";
+import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 
 // defineProps<{groupName: string, stocks:StockInfoG[]}>({
 const props = defineProps({
@@ -63,13 +64,21 @@ watch(() => props.stocks_change, (_) => {
   }
 });
 onMounted(() => {
-  console.log(props.groupName)
   calculateTableHeight();
   updateStockInfoG();
   window.addEventListener('resize', calculateTableHeight);
   listen("live_stock_data", ({payload }) => {
     if (props.activeName == props.groupName){
       updateLiveData(payload);
+    }
+  })
+})
+listen("select-stock-detail", ({payload}) => {
+  console.log(payload);
+  StockInfoGs.value.find((item:StockInfoG) => {
+    if (item.code === payload.code){
+      clickRow(item,null);
+      return true;
     }
   })
 })
@@ -372,6 +381,40 @@ function divideBox(price: number, down: number, up: number): [string,string,unde
     return ["中轨区","normal",undefined];
   }
 }
+import { Window } from "@tauri-apps/api/window"
+async function judgeCanT(){
+  let codes = StockInfoGs.value.map(stockInfo => stockInfo.code)
+  invoke("judge_can_t", {codes: codes}).then(async res => {
+    // 构建新的集合
+    const combinedData = res.map(([code, trend]) => {
+      const stock = StockInfoGs.value.find(stockInfo => stockInfo.code === code);
+      return {
+        code: code,
+        name: stock ? stock.name : '', // 获取对应的name
+        trend: trend // 从res获取的trend
+      };
+    });
+    const combinedDataString = encodeURIComponent(JSON.stringify(combinedData));
+    const appWindow = new Window('cant')
+    const webview = new WebviewWindow('cant', {
+      // url: '/#/cant',
+      url: `/#/cant?combinedData=${combinedDataString}`, // 传递 serialized combinedData
+      center: true,
+      title: '趋势判断',
+      width: 330,
+      height: 500,
+      decorations: false,
+      resizable: true,
+      dragDropEnabled: false,
+      visible: false,
+      alwaysOnTop: true,
+    });
+    await webview.show()
+  }).catch(err => {
+    console.log(err);
+    // errorNotification(err)
+  })
+}
 </script>
 
 <template>
@@ -455,6 +498,7 @@ function divideBox(price: number, down: number, up: number): [string,string,unde
     </context-menu>
   </div>
   <StockGroupMange :name="options.name" :code="options.code" :show-dialog="showGroupManage"></StockGroupMange>
+  <el-button class="floating-button" plain @click="judgeCanT">T</el-button>
 </template>
 
 <style >
@@ -511,5 +555,11 @@ function divideBox(price: number, down: number, up: number): [string,string,unde
 /* 显示绿色呼吸灯 */
 .green-breath {
   animation: greenBreath 1s infinite;
+}
+.floating-button {
+  position: fixed;
+  bottom: 110px; /* 调整距离底部的距离 */
+  right: 60px; /* 调整距离右边的距离 */
+  z-index: 1000;
 }
 </style>

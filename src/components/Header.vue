@@ -138,7 +138,6 @@ function back(){
   transform: scale(0.9);
   transform-origin: center;
   stroke-width: 20;
-
 }
 #stage-button{
   display: flex;

@@ -6,7 +6,8 @@
     "main",
     "tool",
     "setting",
-    "record"
+    "record",
+    "cant"
   ],
   "permissions": [
     "core:path:default",

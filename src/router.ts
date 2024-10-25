@@ -10,6 +10,7 @@ import DataDetail from "./components/StockData/DataDetail.vue";
 import MainLayout from "./components/MainLayout.vue";
 import Setting from "./components/Setting.vue";
 import TransactionRecord from "./components/TransactionRecord.vue";
+import CanT from "./components/CanT.vue";
 
 const routes: Array<RouteRecordRaw> = [
     // 主界面的路由
@@ -45,6 +46,13 @@ const routes: Array<RouteRecordRaw> = [
     {
         path: '/record',
         component: TransactionRecord, // 工具界面的布局组件
+    },
+    {
+        // path: '/cant',
+        // component: CanT,
+        path: '/cant',
+        component: CanT,
+        props: route => ({ combinedData: route.query.combinedData })
     },
 ]
 

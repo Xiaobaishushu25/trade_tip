@@ -8,6 +8,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     CandleChart: typeof import('./src/components/CandleChart.vue')['default']
+    CanT: typeof import('./src/components/CanT.vue')['default']
     DataDetail: typeof import('./src/components/StockData/DataDetail.vue')['default']
     Detail: typeof import('./src/components/StockData/Detail.vue')['default']
     DisPlay: typeof import('./src/components/settingComponents/DisPlay.vue')['default']

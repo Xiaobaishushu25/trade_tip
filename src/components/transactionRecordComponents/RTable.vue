@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {StockInfoG, TransactionRecord} from "../../type.ts";
+import {TransactionRecord} from "../../type.ts";
 import {ref,reactive, watch,onMounted,nextTick,} from "vue";
 import {invoke} from "@tauri-apps/api/core";
 import {emit} from "@tauri-apps/api/event";
@@ -51,18 +51,6 @@ async function deleteAllRecords() {
   filteredRecords.value = transactionRecords;
   selectedCode = '0';
 }
-// async function addRecords(records: TransactionRecord[]) {
-//   console.log("表格收到了数据")
-//   console.log(records)
-//   transactionRecords.push(...records);
-//   console.log(transactionRecords)
-//   if (selectedCode!== '0'){
-//     filteredRecords.value.push(records.filter(record => record.code === selectedCode));
-//   }else {
-//     filteredRecords.value = transactionRecords;
-//   }
-//   console.log(filteredRecords.value)
-// }
 async function addRecords(records: TransactionRecord[]) {
   // 从前面插入数据到 transactionRecords
   transactionRecords.unshift(...records);

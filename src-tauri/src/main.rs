@@ -23,7 +23,7 @@ use crate::service::command::tauri_command::{
     query_stock_info, query_stocks_by_group_name, query_stocks_day_k_limit,
     query_transaction_records, query_transaction_records_by_code, read_save_transaction_records,
     remove_stock_from_group, save_graphic, save_transaction_records, update_groups,
-    update_live_state, update_stock_groups, update_stock_hold, update_transaction_record,
+    update_live_state, update_stock_groups, update_stock_hold, update_transaction_record,judge_can_t,
 };
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
@@ -206,6 +206,7 @@ async fn main() {
             delete_all_transaction_records,
             save_transaction_records,
             get_config,
+            judge_can_t,
             exit_app
         ])
         .run(tauri::generate_context!())
@@ -237,18 +238,18 @@ async fn update() {
         }
     };
 }
-///判断是否开市,先发起一个请求，然后sleep 1秒，再发起一个请求，如果两个请求的返回值不一样，则证明开市了，否则证明闭市了。
-async fn judge_market_open() {
-    let response1 = REQUEST.get().unwrap().get("https://qt.gtimg.cn/q=sz159992").await.unwrap();
-    let string1 = response1.text().await.unwrap();
-    sleep(Duration::from_secs(1)).await;
-    let response2 = REQUEST.get().unwrap().get("https://qt.gtimg.cn/q=sz159992").await.unwrap();
-    let string2 = response2.text().await.unwrap();
-    if string1==string2 {
-        println!("market is closed");
-        IS_MARKET_OPEN.store(false, Ordering::Relaxed);
-    }else {
-        println!("market is open");
-        IS_MARKET_OPEN.store(true, Ordering::Relaxed);
-    }
-}
+// ///判断是否开市,先发起一个请求，然后sleep 1秒，再发起一个请求，如果两个请求的返回值不一样，则证明开市了，否则证明闭市了。
+// async fn judge_market_open() {
+//     let response1 = REQUEST.get().unwrap().get("https://qt.gtimg.cn/q=sz159992").await.unwrap();
+//     let string1 = response1.text().await.unwrap();
+//     sleep(Duration::from_secs(1)).await;
+//     let response2 = REQUEST.get().unwrap().get("https://qt.gtimg.cn/q=sz159992").await.unwrap();
+//     let string2 = response2.text().await.unwrap();
+//     if string1==string2 {
+//         println!("market is closed");
+//         IS_MARKET_OPEN.store(false, Ordering::Relaxed);
+//     }else {
+//         println!("market is open");
+//         IS_MARKET_OPEN.store(true, Ordering::Relaxed);
+//     }
+// }
