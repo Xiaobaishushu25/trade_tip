@@ -27,13 +27,14 @@ import {ref, watch} from "vue";
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {saveWindowState, StateFlags} from "@tauri-apps/plugin-window-state";
 import FUn from "./settingComponents/FUn.vue";
+import {invoke} from "@tauri-apps/api/core";
+import {store} from "../store.ts";
 async function window_minimize(){
   await WebviewWindow.getCurrent().minimize()
 }
 async function window_close(){
-  // await WebviewWindow.getCurrent().hide()
-  // const ALL_WITHOUT_VISIBLE = StateFlags.ALL & ~StateFlags.VISIBLE;
-  // await saveWindowState(ALL_WITHOUT_VISIBLE);
+  //todo 这里能拿到config吗？
+  await invoke('save_config',{config:store.config})
   await saveWindowState(StateFlags.ALL);
   await WebviewWindow.getCurrent().close();
 }

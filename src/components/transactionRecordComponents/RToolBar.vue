@@ -66,7 +66,7 @@ async function deleteAll() {
 <!--  <el-button plain @click.left="emit('clearFilter')">取消筛选</el-button>-->
   <el-button plain @click.left="exportData">导出全部数据</el-button>
   <el-button plain @click.left="importData">导入数据</el-button>
-  <el-button plain @click.left="dialogVisible = true">全部删除</el-button>
+  <el-button plain  @click.left="dialogVisible = true">全部删除</el-button>
   <el-dialog
       v-model="dialogVisible"
       title="删除"

@@ -6,9 +6,10 @@ import {onMounted} from "vue";
 import {store} from "./store.ts"
 import {invoke} from "@tauri-apps/api/core";
 import {errorNotification} from "./utils.ts";
+import {listen} from "@tauri-apps/api/event";
 
 // const stockInfo = ref<StockInfo[]>([]);
-onMounted(()=>{
+onMounted(async ()=>{
   //https://router.vuejs.org/zh/guide/advanced/composition-api.html#%E5%9C%A8-setup-%E4%B8%AD%E8%AE%BF%E9%97%AE%E8%B7%AF%E7%94%B1%E5%92%8C%E5%BD%93%E5%89%8D%E8%B7%AF%E7%94%B1
   window.addEventListener("contextmenu",  (e) => {e.preventDefault()},false);
   window.addEventListener('blur', ()=>{
@@ -19,11 +20,17 @@ onMounted(()=>{
   })
   invoke("get_config",{}).then(res=>{
     store.config = res;
-    console.log(store.config);
+    let jsonComponent = JSON.stringify(store.config);
+    localStorage.setItem('config', jsonComponent);
   }).catch(err => {
     console.error(err);
     errorNotification( "读取配置失败");
   })
+  await listen("disPlay_update", (data)=>{
+    console.log(data.payload);
+    store.config.display_config = data.payload;
+    console.log(store.config);
+  });
 })
 </script>
 

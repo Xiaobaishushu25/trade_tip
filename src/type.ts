@@ -128,4 +128,4 @@ interface Config {
 }
 
 export { PaintState }; // 导出枚举值
-export type { StockLiveData,StockGroup,StockInfoG,StockData,Graphic,RowData,TransactionRecord,Config };
+export type { StockLiveData,StockGroup,StockInfoG,StockData,Graphic,RowData,TransactionRecord,DisplayConfig,DataConfig,Config };

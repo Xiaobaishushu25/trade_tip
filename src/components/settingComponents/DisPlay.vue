@@ -1,10 +1,21 @@
 <script setup lang="ts">
-import {onMounted,ref,watch} from "vue";
-import {store} from "../../store.ts";
+import {onMounted, onBeforeMount,ref,watch} from "vue";
+import {DisplayConfig} from "../../type.ts";
+import {emit} from "@tauri-apps/api/event";
 //todo 由于设置窗口是一个单独的webview，读不到另一个webview的store，所以需要通过emit等来获取store
+
+const disConfig = ref<DisplayConfig>();
 const aExtend = ref<boolean>(false);
 const num = ref<number>(10);
-function handleUpdateBsSize(){}
+onBeforeMount(()=>{ //注意onMounted在组件挂载后（即template已经渲染）执行，所以这里要用onBeforeMount
+  const storedObjectString = localStorage.getItem('config');
+  const myObjectFromStorage = JSON.parse(storedObjectString);
+  disConfig.value = myObjectFromStorage.display_config;
+})
+function handleUpdateDisConfig(){
+  emit("disPlay_update",disConfig.value)
+}
+
 </script>
 
 <template>
@@ -24,12 +35,14 @@ function handleUpdateBsSize(){}
         <div class="setting-row-container">
           <label class="label-text">B/S点大小:</label>
 <!--          <el-input-number v-model="store.config.display_config.bs_size" :min="5" :max="30" :step="1" class="custom-input" @change="handleUpdateBsSize" />-->
-          <el-input-number v-model="num" :min="5" :max="30" :step="1" class="custom-input" @change="handleUpdateBsSize" />
+<!--          <el-input-number v-model="disConfig.bs_size" :min="5" :max="30" :step="1" class="custom-input" @change="handleUpdateDisConfig" />-->
+          <el-slider v-model="disConfig.bs_size" :min="5" :max="30" style="width: 30%" @change="handleUpdateDisConfig"/>
         </div>
         <el-divider style="margin: 5px" />
         <div class="setting-row-container">
           <label class="label-text">默认从?开始显示K线(%):</label>
-          <el-input-number v-model="num" :min="0" :max="99" :step="1" class="custom-input" @change="handleUpdateBsSize" />
+          <el-slider v-model="disConfig.k_show_begin" :min="0" :max="95" style="width: 30%" @change="handleUpdateDisConfig"/>
+<!--          <el-input-number v-model="num" :min="0" :max="99" :step="1" class="custom-input" @change="handleUpdateDisConfig" />-->
         </div>
         <el-divider style="margin: 5px" />
         <label class="label-text">总是将标价线段延伸到图表的右边界:</label>

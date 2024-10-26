@@ -32,15 +32,28 @@ impl Config {
             }
         }
     }
-    pub async fn update(&mut self, config: Config) -> AppResult<()> {
-        match save_config(&config).await {
-            Ok(_) => {
-                info!("save config success");
-                *self = config;
-                Ok(())
-            }
-            Err(e) => Err(e),
-        }
+    pub async fn update(&mut self, config: Config) {
+        *self = config;
+        // match save_config(&config).await {
+        //     Ok(_) => {
+        //         info!("save config success");
+        //         *self = config;
+        //         Ok(())
+        //     }
+        //     Err(e) => Err(e),
+        // }
+    }
+    /**
+    * 保存配置文件
+    */
+    pub async fn save_to_file(&self) -> AppResult<()> {
+        let path = format!("{}/data/config", CURRENT_DIR.clone());
+        let mut config_file = OpenOptions::new()
+            .write(true) // 以写入模式打开文件
+            .truncate(true) // 清空文件内容
+            .open(path)?;
+        config_file.write_all(serde_json::to_string(self)?.as_bytes())?;
+        Ok(())
     }
 }
 // impl Default for Config {
@@ -66,18 +79,18 @@ impl Config {
 //         }
 //     }
 // }
-/**
- * 保存配置文件
- */
-async fn save_config(config: &Config) -> AppResult<()> {
-    let path = format!("{}/data/config", CURRENT_DIR.clone());
-    let mut config_file = OpenOptions::new()
-        .write(true) // 以写入模式打开文件
-        .truncate(true) // 清空文件内容
-        .open(path)?;
-    config_file.write_all(serde_json::to_string(config)?.as_bytes())?;
-    Ok(())
-}
+// /**
+//  * 保存配置文件
+//  */
+// pub async fn save_config_to_file(config: &Config) -> AppResult<()> {
+//     let path = format!("{}/data/config", CURRENT_DIR.clone());
+//     let mut config_file = OpenOptions::new()
+//         .write(true) // 以写入模式打开文件
+//         .truncate(true) // 清空文件内容
+//         .open(path)?;
+//     config_file.write_all(serde_json::to_string(config)?.as_bytes())?;
+//     Ok(())
+// }
 fn check_config_file(path: &str, current_dir: &str) -> AppResult<Config> {
     let mut config_file: File = if PathBuf::from(path).exists() {
         info!("配置存在");

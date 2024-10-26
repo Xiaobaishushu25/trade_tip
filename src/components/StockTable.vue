@@ -381,9 +381,9 @@ function divideBox(price: number, down: number, up: number): [string,string,unde
     return ["中轨区","normal",undefined];
   }
 }
-let isloading = true;
+let isLoading = ref(false);
 async function judgeCanT(){
-  isloading = true;
+  isLoading.value = true;
   let codes = StockInfoGs.value.map(stockInfo => stockInfo.code)
   invoke("judge_can_t", {codes: codes}).then(async res => {
     // 构建新的集合
@@ -414,11 +414,10 @@ async function judgeCanT(){
     await webview.once('tauri://created', async function () {
       await webview.show()
     });
-
-    isloading = false;
+    isLoading.value = false;
     // await webview.show()
   }).catch(err => {
-    isloading = false;
+    isLoading.value = false;
     console.log(err);
     // errorNotification(err)
   })
@@ -504,9 +503,9 @@ async function judgeCanT(){
 <!--        <context-menu-item label="Item2" @click="onMenuClick(3)" />-->
 <!--      </context-menu-group>-->
     </context-menu>
+    <el-button class="floating-button" plain :loading="isLoading"  @click="judgeCanT">T</el-button>
   </div>
   <StockGroupMange :name="options.name" :code="options.code" :show-dialog="showGroupManage"></StockGroupMange>
-  <el-button class="floating-button" plain  @click="judgeCanT">T</el-button>
 </template>
 
 <style >
@@ -565,9 +564,9 @@ async function judgeCanT(){
   animation: greenBreath 1s infinite;
 }
 .floating-button {
-  position: fixed;
-  bottom: 110px; /* 调整距离底部的距离 */
-  right: 60px; /* 调整距离右边的距离 */
-  z-index: 1000;
+  position: fixed!important;
+  z-index: 3000;
+  bottom: 130px;
+  right: 50px;
 }
 </style>

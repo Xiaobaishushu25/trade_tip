@@ -1,6 +1,5 @@
-use crate::cache::config_state::ConfigState;
 use crate::cache::intraday_chart_cache::IntradayChartCache;
-use crate::config::config::Config;
+use crate::config::config::{Config};
 use crate::dtos::graphic_dto::GraphicDTO;
 use crate::dtos::stock_dto::{StockInfoG, StockLiveData};
 use crate::entities::prelude::{Graphic, StockData, StockGroup, StockInfo, TransactionRecord};
@@ -500,16 +499,16 @@ pub async fn query_live_stocks_data_by_group_name<'r>(
         }
     }
 }
-#[tauri::command]
-pub async fn save_config<'r>(
-    config_state: State<'r, ConfigState>,
-    config: Config,
-) -> Result<(), String> {
-    match config_state.update_config(config).await {
-        Ok(_) => Ok(()),
-        Err(e) => handle_error("更新配置文件失败", e.to_string()),
-    }
-}
+// #[tauri::command]
+// pub async fn save_config<'r>(
+//     config_state: State<'r, ConfigState>,
+//     config: Config,
+// ) -> Result<(), String> {
+//     match config_state.update_config(config).await {
+//         Ok(_) => Ok(()),
+//         Err(e) => handle_error("更新配置文件失败", e.to_string()),
+//     }
+// }
 #[tauri::command]
 pub async fn query_intraday_chart_img<'r>(
     state: State<'r, IntradayChartCache>,
@@ -588,6 +587,18 @@ pub async fn save_transaction_records(path: String) -> Result<(), String> {
 pub async fn get_config(state: State<'_, Mutex<Config>>) -> Result<Config, String> {
     let mutex_guard = state.lock().unwrap();
     Ok((*mutex_guard).clone())
+}
+#[tauri::command]
+pub async fn save_config(config: Config) -> Result<(), String> {
+    match config.save_to_file().await{
+        Ok(_) => Ok(()),
+        Err(e) => handle_error("保存配置文件失败", e.to_string()),
+    }
+    // let mutex_guard = state.lock().unwrap();
+    // match *mutex_guard.save_to_file().await{
+    //     Ok(_) => Ok(()),
+    //     Err(e) => handle_error("保存配置文件失败", e.to_string()),
+    // }
 }
 ///判断是否可以做T
 ///codes:股票代码列表

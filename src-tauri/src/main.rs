@@ -23,7 +23,8 @@ use crate::service::command::tauri_command::{
     query_stock_info, query_stocks_by_group_name, query_stocks_day_k_limit,
     query_transaction_records, query_transaction_records_by_code, read_save_transaction_records,
     remove_stock_from_group, save_graphic, save_transaction_records, update_groups,
-    update_live_state, update_stock_groups, update_stock_hold, update_transaction_record,judge_can_t,
+    update_live_state, update_stock_groups, update_stock_hold, update_transaction_record, judge_can_t,
+    save_config,
 };
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
@@ -204,6 +205,7 @@ async fn main() {
             delete_all_transaction_records,
             save_transaction_records,
             get_config,
+            save_config,
             judge_can_t,
             exit_app
         ])
