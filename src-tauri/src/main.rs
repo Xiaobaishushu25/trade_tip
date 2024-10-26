@@ -27,16 +27,14 @@ use crate::service::command::tauri_command::{
 };
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
-use crate::service::http::{init_http, REQUEST};
+use crate::service::http::{init_http};
 use log::{error, info};
 use std::collections::HashMap;
 use std::env;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool};
 use std::sync::{Arc, LazyLock, Mutex};
-use std::time::Duration;
 use tauri::Manager;
 use tokio::task::JoinHandle;
-use tokio::time::sleep;
 
 ///是否需要实时更新
 pub static UPDATEING: AtomicBool = AtomicBool::new(true);

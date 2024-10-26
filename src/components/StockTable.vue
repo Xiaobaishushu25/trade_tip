@@ -381,8 +381,9 @@ function divideBox(price: number, down: number, up: number): [string,string,unde
     return ["中轨区","normal",undefined];
   }
 }
-import { Window } from "@tauri-apps/api/window"
+let isloading = true;
 async function judgeCanT(){
+  isloading = true;
   let codes = StockInfoGs.value.map(stockInfo => stockInfo.code)
   invoke("judge_can_t", {codes: codes}).then(async res => {
     // 构建新的集合
@@ -405,11 +406,17 @@ async function judgeCanT(){
       decorations: false,
       resizable: true,
       dragDropEnabled: false,
-      // visible: false,
+      visible: false,
       alwaysOnTop: true,
     });
+    await webview.once('tauri://created', async function () {
+      await webview.show()
+    });
+
+    isloading = false;
     // await webview.show()
   }).catch(err => {
+    isloading = false;
     console.log(err);
     // errorNotification(err)
   })
@@ -497,7 +504,7 @@ async function judgeCanT(){
     </context-menu>
   </div>
   <StockGroupMange :name="options.name" :code="options.code" :show-dialog="showGroupManage"></StockGroupMange>
-  <el-button class="floating-button" plain @click="judgeCanT">T</el-button>
+  <el-button class="floating-button" plain  @click="judgeCanT">T</el-button>
 </template>
 
 <style >

@@ -14,6 +14,7 @@ use crate::utils::stock_util::{calculate_ago_minutes, calculate_ago_with_num, co
 use anyhow::anyhow;
 use log::{error, info};
 use std::collections::HashMap;
+use std::ops::Sub;
 use std::sync::Arc;
 use chrono::{Local, NaiveDateTime, NaiveTime};
 
@@ -161,9 +162,12 @@ pub async fn handle_can_t(codes: Vec<String>) -> AppResult<Vec<(String, String)>
     let start_date_time = Local::now()
         .date_naive()
         .and_time(NaiveTime::from_hms_opt(9, 30, 0).unwrap());
+    //获得start_date_time的前一天
+    let start_date_time = start_date_time.sub(chrono::Duration::days(1));
     let end_date_time = Local::now()
         .date_naive()
         .and_time(NaiveTime::from_hms_opt(10, 0, 0).unwrap());
+    let end_date_time = end_date_time.sub(chrono::Duration::days(1));
     let count = calculate_ago_minutes("9:30") as u32;
     let frequency = 1;
     for code in codes {
@@ -230,5 +234,5 @@ async fn test_handle() {
 #[tokio::test]
 async fn test_handle_can_t() {
     init_http().await;
-    println!("{:?}", handle_can_t(vec!["159967".into()]).await.unwrap());
+    println!("{:?}", handle_can_t(vec!["516780".into()]).await.unwrap());
 }

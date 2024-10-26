@@ -169,7 +169,6 @@ onMounted(async ()=>{
     // const selected = params.selected[params.name]; // 获取选中的状态
     // console.log(selected); // { 'K线': true, 'MA5': false, ... }
     const selected = params.selected; // 获取选中的状态
-    console.log(selected); // 打印所有图例的状态
     // 检查“图线”的选中状态
     const isGraphicSelected = selected['图线'];
     if (isGraphicSelected) {

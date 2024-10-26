@@ -7,7 +7,7 @@ use crate::service::http::{init_http, REQUEST};
 use crate::utils::stock_util::{calculate_ago_minutes, get_market_by_code};
 use anyhow::{anyhow, Context};
 use bytes::Bytes;
-use chrono::{Local, NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::{Local, NaiveDateTime, NaiveTime};
 use log::info;
 use reqwest::header::HeaderMap;
 use reqwest::Client;
