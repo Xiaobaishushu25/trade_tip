@@ -395,10 +395,12 @@ async function judgeCanT(){
         trend: trend // 从res获取的trend
       };
     });
-    const combinedDataString = encodeURIComponent(JSON.stringify(combinedData));
+    let jsonComponent = JSON.stringify(combinedData);
+    localStorage.setItem('trendData', jsonComponent);
+    // const combinedDataString = encodeURIComponent(jsonComponent);
     const webview = new WebviewWindow('cant', {
-      // url: '/#/cant',
-      url: `/#/cant?combinedData=${combinedDataString}`, // 传递 serialized combinedData
+      url: '/#/cant',
+      // url: `/#/cant?combinedData=${combinedDataString}`, // 传递 serialized combinedData
       center: true,
       title: '趋势判断',
       width: 330,

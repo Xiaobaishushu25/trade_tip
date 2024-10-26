@@ -48,11 +48,12 @@ const routes: Array<RouteRecordRaw> = [
         component: TransactionRecord, // 工具界面的布局组件
     },
     {
-        // path: '/cant',
-        // component: CanT,
         path: '/cant',
         component: CanT,
-        props: route => ({ combinedData: route.query.combinedData })
+        //用路由传参简单的参数还好，但是复杂的可能会过长，不如用localStorage
+        // path: '/cant',
+        // component: CanT,
+        // props: route => ({ combinedData: route.query.combinedData })
     },
 ]
 

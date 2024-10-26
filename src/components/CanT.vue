@@ -8,28 +8,32 @@ import {emit} from "@tauri-apps/api/event";
 
 // 接收路由参数
 // const router = useRouter();
-const route = useRoute(); // 使用 useRoute 获取当前路由信息，注意，是 useRoute 而不是 useRouter。useRouter 用于导航，而 useRoute 用于访问当前路由的信息
-const combinedData = ref(route.query.combinedData || ''); // 从查询参数中获取数据
+// const route = useRoute(); // 使用 useRoute 获取当前路由信息，注意，是 useRoute 而不是 useRouter。useRouter 用于导航，而 useRoute 用于访问当前路由的信息
+// const combinedData = ref(route.query.combinedData || ''); // 从查询参数中获取数据
 
 // 用于存储表格数据
 const tableData = ref([]);
 
-// 计算属性，解析 combinedData
-const parsedCombinedData = computed(() => {
-  try {
-    let data = JSON.parse(decodeURIComponent(combinedData.value)); // 解析为原始数据格式
-    return data; // 返回解析后的数据
-  } catch (error) {
-    console.error('Failed to parse combinedData:', error);
-    return null; // 或者返回一个默认值
-  }
-});
+// // 计算属性，解析 combinedData
+// const parsedCombinedData = computed(() => {
+//   try {
+//     let data = JSON.parse(decodeURIComponent(combinedData.value)); // 解析为原始数据格式
+//     return data; // 返回解析后的数据
+//   } catch (error) {
+//     console.error('Failed to parse combinedData:', error);
+//     return null; // 或者返回一个默认值
+//   }
+// });
 
 // 在组件挂载后更新表格数据
 onMounted(() => {
-  if (parsedCombinedData.value) {
-    tableData.value = parsedCombinedData.value; // 更新 tableData
-  }
+  const storedObjectString = localStorage.getItem('trendData');
+  console.log(storedObjectString);
+  const myObject = JSON.parse(storedObjectString);
+  tableData.value = myObject;
+  // if (parsedCombinedData.value) {
+  //   tableData.value = parsedCombinedData.value; // 更新 tableData
+  // }
 });
 
 const tableRowClassName = ({row}: {
