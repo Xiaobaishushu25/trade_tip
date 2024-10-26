@@ -2,11 +2,10 @@
 import {onMounted, onBeforeMount,ref,watch} from "vue";
 import {DisplayConfig} from "../../type.ts";
 import {emit} from "@tauri-apps/api/event";
-//todo 由于设置窗口是一个单独的webview，读不到另一个webview的store，所以需要通过emit等来获取store
+//todo 由于设置窗口是一个单独的webview，读不到另一个webview的store，所以需要通过别的方式获取配置
 
 const disConfig = ref<DisplayConfig>();
 const aExtend = ref<boolean>(false);
-const num = ref<number>(10);
 onBeforeMount(()=>{ //注意onMounted在组件挂载后（即template已经渲染）执行，所以这里要用onBeforeMount
   const storedObjectString = localStorage.getItem('config');
   const myObjectFromStorage = JSON.parse(storedObjectString);
@@ -15,7 +14,6 @@ onBeforeMount(()=>{ //注意onMounted在组件挂载后（即template已经渲�
 function handleUpdateDisConfig(){
   emit("disPlay_update",disConfig.value)
 }
-
 </script>
 
 <template>

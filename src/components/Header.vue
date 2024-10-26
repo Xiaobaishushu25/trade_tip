@@ -79,6 +79,7 @@ async function window_close(){
   // await WebviewWindow.getCurrent().hide()
   // const ALL_WITHOUT_VISIBLE = StateFlags.ALL & ~StateFlags.VISIBLE;
   // await saveWindowState(ALL_WITHOUT_VISIBLE);
+  await invoke('save_config',{config:store.config})
   console.log("退出程序");
   await saveWindowState(StateFlags.ALL);
   await invoke('exit_app', {})

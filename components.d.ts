@@ -12,6 +12,7 @@ declare module 'vue' {
     DataDetail: typeof import('./src/components/StockData/DataDetail.vue')['default']
     Detail: typeof import('./src/components/StockData/Detail.vue')['default']
     DisPlay: typeof import('./src/components/settingComponents/DisPlay.vue')['default']
+    DragTest: typeof import('./src/components/DragTest.vue')['default']
     ElAutocomplete: typeof import('element-plus/es')['ElAutocomplete']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCard: typeof import('element-plus/es')['ElCard']
