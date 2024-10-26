@@ -395,7 +395,6 @@ async function judgeCanT(){
       };
     });
     const combinedDataString = encodeURIComponent(JSON.stringify(combinedData));
-    const appWindow = new Window('cant')
     const webview = new WebviewWindow('cant', {
       // url: '/#/cant',
       url: `/#/cant?combinedData=${combinedDataString}`, // 传递 serialized combinedData
@@ -406,10 +405,10 @@ async function judgeCanT(){
       decorations: false,
       resizable: true,
       dragDropEnabled: false,
-      visible: false,
+      // visible: false,
       alwaysOnTop: true,
     });
-    await webview.show()
+    // await webview.show()
   }).catch(err => {
     console.log(err);
     // errorNotification(err)

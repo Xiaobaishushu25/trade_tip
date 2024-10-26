@@ -44,9 +44,9 @@ async function open_record(){
     decorations: false,
     resizable: true,
     dragDropEnabled: false,
-    visible: false,
+    // visible: false,
   });
-  await webview.show()
+  // await webview.show()
 }
 async function open_setting(){
   const webview = new WebviewWindow('setting', {
@@ -60,15 +60,16 @@ async function open_setting(){
     decorations: false,
     resizable: true,
     dragDropEnabled: false,
-    visible: false,
+    // visible: false,
   });
+  // await webview.show()
+
   // await webview.once('tauri://created', function () {
   //   console.log("webview successfully created")
   // });
   // await webview.once('tauri://error', function (e) {
   //   console.log("an error happened creating the webview", e)
   // });
-  await webview.show()
   // // const appWindow = await WebviewWindow.getByLabel('setting')
   // console.log(webview)
   // await webview?.show()
