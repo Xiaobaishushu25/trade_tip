@@ -1,7 +1,28 @@
 <script setup lang="ts">
-import {onMounted,ref,watch} from "vue";
+import {onBeforeMount, onMounted, ref, watch} from "vue";
+import {DataConfig} from "../../type.ts";
+import {emit} from "@tauri-apps/api/event";
+import {invoke} from "@tauri-apps/api/core";
+import {errorNotification, successNotification} from "../../utils.ts";
 const updateFreq = ref(5)
 const boxNum = ref(3)
+
+const dataConfig = ref<DataConfig>();
+onBeforeMount(()=>{ //注意onMounted在组件挂载后（即template已经渲染）执行，所以这里要用onBeforeMount
+  const storedObjectString = localStorage.getItem('config');
+  const myObjectFromStorage = JSON.parse(storedObjectString);
+  dataConfig.value = myObjectFromStorage.data_config;
+})
+async function handleUpdateDataConfig(){
+  //虽然这个配置在前端界面用不上，但是还是与Display设置统一逻辑，全部发送出去用来修改全局存储中的配置，这样保存时直接整个覆盖掉就行。
+  await emit("data_config_update", dataConfig.value);
+  await invoke("update_data_config", {dataConfig: dataConfig.value}).then((_) => {
+    successNotification("更新数据配置成功");
+  }).catch((error) => {
+    console.log(error);
+    errorNotification(`更新数据配置失败：${error}`);
+  });
+}
 const handleBoxNum = (value: number) => {
   console.log(value)
 }
@@ -23,6 +44,15 @@ const handleUpdateFreq = (value: number) => {
         <div class="setting-row-container">
           <label class="label-text">箱体分区数量：</label>
           <el-input-number v-model="boxNum" :min="3" :max="8" class="custom-input" @change="handleBoxNum" />
+        </div>
+        <el-divider style="margin: 5px" />
+        <div class="setting-row-container">
+          <label class="label-text">日内做T上涨阈值：</label>
+          <el-input-number v-model="dataConfig.up_t_trigger" :min="0.1" :max="20" :step="0.1" class="custom-input" style="width: 120px" @change="handleUpdateDataConfig" />
+        </div>
+        <div class="setting-row-container">
+          <label class="label-text">日内做T下跌阈值：</label>
+          <el-input-number v-model="dataConfig.down_t_trigger" :min="0.1" :max="20" :step="0.1" class="custom-input" style="width: 120px" @change="handleUpdateDataConfig" />
         </div>
       </el-card>
       <label class="title">蜡烛图</label>

@@ -1,5 +1,5 @@
 use crate::cache::intraday_chart_cache::IntradayChartCache;
-use crate::config::config::{Config};
+use crate::config::config::{Config, DataConfig};
 use crate::dtos::graphic_dto::GraphicDTO;
 use crate::dtos::stock_dto::{StockInfoG, StockLiveData};
 use crate::entities::prelude::{Graphic, StockData, StockGroup, StockInfo, TransactionRecord};
@@ -589,6 +589,13 @@ pub async fn get_config(state: State<'_, Mutex<Config>>) -> Result<Config, Strin
     Ok((*mutex_guard).clone())
 }
 #[tauri::command]
+pub async fn update_data_config(data_config:DataConfig,state: State<'_, Mutex<Config>>) -> Result<(), String> {
+    info!("更新数据配置:{:?}", data_config);
+    let mut mutex_guard = state.lock().unwrap();
+    mutex_guard.data_config = data_config;
+    Ok(())
+}
+#[tauri::command]
 pub async fn save_config(config: Config) -> Result<(), String> {
     match config.save_to_file().await{
         Ok(_) => Ok(()),
@@ -604,8 +611,14 @@ pub async fn save_config(config: Config) -> Result<(), String> {
 ///codes:股票代码列表
 /// 返回值：Vec<(股票代码,status)>，status为up或者down或者normal
 #[tauri::command]
-pub async fn judge_can_t(codes: Vec<String>) -> Result<Vec<(String, String)>, String> {
-    match handle_can_t(codes).await{
+pub async fn judge_can_t(codes: Vec<String>,config: State<'_, Mutex<Config>>) -> Result<Vec<(String, String)>, String> {
+
+    let data_config = {
+        let guard = config.lock().unwrap();
+        guard.data_config.clone()
+    };
+    info!("判断是否可以做t:{:?}",data_config);
+    match handle_can_t(codes,&data_config).await{
         Ok(data) => Ok(data),
         Err(e) => handle_error("判断是否可以做t失败", e.to_string()),
     }

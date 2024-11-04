@@ -120,6 +120,8 @@ interface DisplayConfig{
 interface DataConfig{
     update_freq: number,
     box_num:number,
+    up_t_trigger:number,
+    down_t_trigger:number,
 }
 
 interface Config {

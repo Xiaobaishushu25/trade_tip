@@ -31,6 +31,11 @@ onMounted(async ()=>{
     store.config.display_config = data.payload;
     console.log(store.config);
   });
+  await listen("data_config_update", (data)=>{
+    console.log(data.payload);
+    store.config.data_config = data.payload;
+  });
+
 })
 </script>
 

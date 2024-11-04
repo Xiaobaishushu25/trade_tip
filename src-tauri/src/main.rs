@@ -24,7 +24,7 @@ use crate::service::command::tauri_command::{
     query_transaction_records, query_transaction_records_by_code, read_save_transaction_records,
     remove_stock_from_group, save_graphic, save_transaction_records, update_groups,
     update_live_state, update_stock_groups, update_stock_hold, update_transaction_record, judge_can_t,
-    save_config,
+    save_config,update_data_config,
 };
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
@@ -205,6 +205,7 @@ async fn main() {
             delete_all_transaction_records,
             save_transaction_records,
             get_config,
+            update_data_config,
             save_config,
             judge_can_t,
             exit_app
@@ -214,7 +215,7 @@ async fn main() {
     info!("ui end");
 }
 async fn init_app() {
-    //todo 日志配置应该不需要放在外面的文件夹中，应该打包进二进制。
+    //todo 日志配置应该不需要放在外面的文件夹中，应该打包进二进制。不然第一次启动时无法找到日志配置文件，导致无法启动。
     log4rs::init_file("./data/log4rs.yaml", Default::default()).unwrap();
     init_db_coon().await;
     init_http().await;

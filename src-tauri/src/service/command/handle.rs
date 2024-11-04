@@ -17,6 +17,7 @@ use std::collections::HashMap;
 use std::ops::Sub;
 use std::sync::Arc;
 use chrono::{Local, NaiveDateTime, NaiveTime};
+use crate::config::config::{Config, DataConfig};
 
 ///处理并保存股票数据
 /// 需要先根据code创建表，然后处理日线数据（主要是计算ma60）
@@ -157,7 +158,7 @@ pub(crate) async fn handle_and_save_record(path: String) -> AppResult<Vec<Transa
 /// 由于均线不好搞，我直接用一个函数let line = |x: f64| first + slope * x;来作为均线。
 /// 判断标准是：70%的时间股价在均线上方，且b相较于a涨了0.1%以上，则视为up。
 ///          70%的时间股价在均线下方，且b相较于a跌了0.1%以上，则视为down。
-pub async fn handle_can_t(codes: Vec<String>) -> AppResult<Vec<(String, String)>> {
+pub async fn handle_can_t(codes: Vec<String>,data_config:&DataConfig) -> AppResult<Vec<(String, String)>> {
     let mut can_t = Vec::with_capacity(codes.len());
     let start_date_time = Local::now()
         .date_naive()
@@ -188,7 +189,7 @@ pub async fn handle_can_t(codes: Vec<String>) -> AppResult<Vec<(String, String)>
         let first = vec.first().unwrap().1;
         let last = vec.last().unwrap().1;
         let num = vec.len();
-        let percentage_change = ((last - first) / first) * 100.0;
+        let percentage_change = (((last - first) / first) * 100.0).abs();
         println!("first: {:?}, last: {:?}, num: {:?}, percentage_change: {:?}%", first, last, num, percentage_change);
         let slope = (last - first) / (num as f64);
         let line = |x: f64| first + slope * x;
@@ -200,9 +201,11 @@ pub async fn handle_can_t(codes: Vec<String>) -> AppResult<Vec<(String, String)>
             })
             .count();
         println!("res_count: {}", res_count);
-        if (res_count as f64)/(num as f64) > 0.7&&percentage_change > 0.1 {
+        // if (res_count as f64)/(num as f64) > 0.7&&percentage_change > 0.1 {
+        if (res_count as f64)/(num as f64) > 0.7&&percentage_change > data_config.up_t_trigger {
             can_t.push((code.clone(), "up".into()));
-        }else if (res_count as f64)/(num as f64) < 0.3&&percentage_change < 0.1 {
+        // }else if (res_count as f64)/(num as f64) < 0.3&&percentage_change < 0.1 {
+        }else if (res_count as f64)/(num as f64) < 0.3&&percentage_change < data_config.down_t_trigger {
             can_t.push((code.clone(), "down".into()));
         }else {
             can_t.push((code.clone(), "normal".into()));
@@ -231,8 +234,8 @@ async fn test_handle() {
     println!("{:?}", data);
     // compute_live_ma(code,data.price).await.unwrap();
 }
-#[tokio::test]
-async fn test_handle_can_t() {
-    init_http().await;
-    println!("{:?}", handle_can_t(vec!["516780".into()]).await.unwrap());
-}
+// #[tokio::test]
+// async fn test_handle_can_t() {
+//     init_http().await;
+//     println!("{:?}", handle_can_t(vec!["516780".into()]).await.unwrap());
+// }

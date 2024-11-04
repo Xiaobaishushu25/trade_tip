@@ -11,8 +11,8 @@ onBeforeMount(()=>{ //注意onMounted在组件挂载后（即template已经渲�
   const myObjectFromStorage = JSON.parse(storedObjectString);
   disConfig.value = myObjectFromStorage.display_config;
 })
-function handleUpdateDisConfig(){
-  emit("disPlay_update",disConfig.value)
+async function handleUpdateDisConfig(){
+  await emit("disPlay_update",disConfig.value)
 }
 </script>
 

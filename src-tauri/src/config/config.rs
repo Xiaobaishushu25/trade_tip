@@ -10,7 +10,7 @@ use std::path::PathBuf;
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
     display_config: DisplayConfig,
-    data_config: DataConfig,
+    pub data_config: DataConfig,
 }
 impl Config {
     /**
@@ -128,21 +128,25 @@ impl Default for DisplayConfig {
     fn default() -> Self {
         DisplayConfig {
             a_extend: false,
-            bs_size: 14,
+            bs_size: 13,
             k_show_begin: 85,
         }
     }
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DataConfig {
-    update_freq: i32,
-    box_num: i32,
+    pub update_freq: i32,
+    pub box_num: i32,
+    pub up_t_trigger:f64, //日内做多阈值，九点半至十点涨幅超过该值则做多
+    pub down_t_trigger:f64, //日内做空阈值，九点半至十点跌幅超过该值则做空
 }
 impl Default for DataConfig {
     fn default() -> Self {
         DataConfig {
             update_freq: 30,
             box_num: 5,
+            up_t_trigger: 0.3,
+            down_t_trigger: 0.3,
         }
     }
 }
