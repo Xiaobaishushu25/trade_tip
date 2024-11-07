@@ -3,7 +3,7 @@ use crate::entities::init_db_coon;
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
 use crate::service::http::{init_http, REQUEST};
-use crate::utils::stock_util::{calculate_ago_with_str, compute_single_ma};
+use crate::utils::stock_util::{calculate_ago_days_with_str, compute_single_ma};
 use log::info;
 
 pub mod graphic_curd;
@@ -12,6 +12,7 @@ pub mod stock_data_curd;
 pub mod stock_group_curd;
 pub mod stock_info_curd;
 pub mod transaction_record_curd;
+pub mod position_curd;
 
 /// 更新所有股票的日k数据
 pub async fn update_all_day_k() -> AppResult<()> {
@@ -20,7 +21,7 @@ pub async fn update_all_day_k() -> AppResult<()> {
         //只有大于1天的才要更新，正常情况下今天的ma数据是么有的，所以最新的就是前一天的，ago应该是1，大于1的说明需要更新
         match StockDataCurd::query_latest(&code).await? {
             Some(latest_data) => {
-                let num = calculate_ago_with_str(&latest_data.date);
+                let num = calculate_ago_days_with_str(&latest_data.date);
                 info!(
                     "{}最新的日期是{:?},距今天的天数是{:?}",
                     code, latest_data.date, num

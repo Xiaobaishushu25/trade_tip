@@ -40,9 +40,12 @@ impl HttpRequest {
             .await?;
         Ok(result)
     }
-    ///注意，这个接口返回的数据只有5、10、20、30日均线的数据。
+    /// 获取股票历史日线数据1
+    ///注意，这个接口返回的均线数据只有5、10、20、30日均线的数据。
     /// 注意：获取的数据是按照日期从旧到新排列的
+    /// code是股票代码（eg：000001）,注意，不要带市场标识，自动判断
     /// num是一共需要获取的数据条数
+    /// 返回值是一个Vec<StockData>，里面包含了股票的日K线数据。
     pub async fn get_stock_day_data(&self, code: &str, num: i32) -> AppResult<Vec<StockData>> {
         let url = format!("https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol={}{code}&scale=240&ma=5,10,20,30&datalen={num}",get_market_by_code(code)?);
         println!("{:?}", url);
@@ -54,12 +57,21 @@ impl HttpRequest {
             .json::<Vec<StockData>>()
             .await
             .with_context(|| format!("发生错误了:{}", url))?;
-        // let stock_data = result.json::<Vec<StockData>>().await.with_context(||{error!("发生错误了:{}",url);format!("请求url:{}",url)})?;
-        // let stock_data = result.json::<Vec<StockData>>().await?;
-        // let closes = stock_data.iter().map(|item| item.close).collect::<Vec<f64>>();
-        // let vec = compute_ma(5, closes).await;
-        // println!("{:?}", vec);
-        // println!("{:?}", stock_data);
+        Ok(stock_data)
+    }
+    /// 获取股票历史日线数据2
+    /// 注意：获取的数据是按照日期从旧到新排列的，这个接口不返回均线数据。
+    /// code是股票代码（eg：sh000001）,注意，需要带市场标识！！
+    /// num是一共需要获取的数据条数
+    /// 返回值是一个Vec<StockData>，里面包含了股票的日线数据。
+    pub async fn get_stock_day_data_with_market(&self, code: &str, num: i32) -> AppResult<Vec<StockData>> {
+        let url = format!("https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol={code}&scale=240&datalen={num}");
+        println!("{:?}", url);
+        let result = self.client.get(url.clone()).send().await?;
+        let stock_data = result
+            .json::<Vec<StockData>>()
+            .await
+            .with_context(|| format!("发生错误了:{}", url))?;
         Ok(stock_data)
     }
     // pub async fn get_live_stock_data(&self,codes:Vec<&str>)->AppResult<HashMap<String,StockLiveData>> {
@@ -127,7 +139,7 @@ impl HttpRequest {
         // let ts: u32 = frequency.trim_end_matches('d').parse().unwrap_or(1);
         let code_with_market = format!("{}{}", get_market_by_code(code)?, code);
         let url = format!("http://ifzq.gtimg.cn/appstock/app/kline/mkline?param={code_with_market},m{frequency},,{count}");
-        info!("Fetching stock data from {}", url);
+        info!("Fetching min stock data from {}", url);
         let resp = self.get(&url).await?.text().await?;
         let json: Value = serde_json::from_str(&resp)?;
         // 把json数据解析，放https://www.json.cn/这里面结构一看一目了然

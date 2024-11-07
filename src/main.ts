@@ -6,6 +6,8 @@ import router from './router.ts'
 import VueShortKey from 'vue3-shortkey';
 import '@imengyu/vue3-context-menu/lib/vue3-context-menu.css'
 import ContextMenu from '@imengyu/vue3-context-menu'
+import ElementPlus from 'element-plus'
+import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import {
     ToolboxComponent,
     TooltipComponent,
@@ -50,4 +52,4 @@ import InlineSvg from 'vue-inline-svg';
 let app = createApp(App);
 app.component('inline-svg', InlineSvg);
 
-app.use(ContextMenu).use(VueShortKey).use(router).mount('#app')
+app.use(ElementPlus, { locale: zhCn, }).use(ContextMenu).use(VueShortKey).use(router).mount('#app')

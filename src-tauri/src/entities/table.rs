@@ -1,6 +1,6 @@
 use crate::app_errors::AppResult;
 use crate::entities::group_stock_relation::Relation::StockInfos;
-use crate::entities::prelude::{Graphics, GroupStockRs, StockGroups, TransactionRecords};
+use crate::entities::prelude::{Graphics, GroupStockRs, Positions, StockGroups, TransactionRecords};
 use crate::entities::stock_data::{Column, Entity, TableName};
 use crate::entities::{init_db_coon, open_db_log, stock_group, stock_info, DB};
 use crate::service::curd::stock_group_curd::StockGroupCurd;
@@ -220,6 +220,13 @@ async fn test_create_transaction_records() {
     open_db_log().await;
     init_db_coon().await;
     let result = create_table(&DB.get().unwrap(), TransactionRecords).await;
+    println!("{result:?}")
+}
+#[tokio::test]
+async fn test_create_position() {
+    open_db_log().await;
+    init_db_coon().await;
+    let result = create_table(&DB.get().unwrap(), Positions).await;
     println!("{result:?}")
 }
 

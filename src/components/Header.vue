@@ -32,6 +32,24 @@ async function changeUpdateState(){
   await invoke('update_live_state',{groupName:store.activeGroup,liveState:!live_state.value});
   live_state.value = !live_state.value;
 }
+async function open_position(){
+  const webview = new WebviewWindow('position', {
+    url: '/#/position',
+    center: true,
+    title: '仓位变化',
+    width: 900,
+    height: 700,
+    minWidth: 800,
+    minHeight: 625,
+    decorations: false,
+    resizable: true,
+    dragDropEnabled: false,
+    visible: false,
+  });
+  await webview.once('tauri://created', async function () {
+    await webview.show()
+  });
+}
 async function open_record(){
   const webview = new WebviewWindow('record', {
     url: '/#/record',
@@ -96,6 +114,9 @@ function back(){
     <img src="../assets/icon.png" width="25" height="25" alt="Logo Image" style="margin-left: 5px;margin-right: 10px;user-select: none">
     <Search></Search>
     <div id="stage-button">
+      <el-tooltip content="仓位变化" placement="bottom" effect="light" :show-arrow="false">
+        <inline-svg src="../assets/svg/position.svg" class="window-button back position" @click.left="open_position"></inline-svg>
+      </el-tooltip>
       <el-tooltip content="交易记录" placement="bottom" effect="light" :show-arrow="false">
         <inline-svg src="../assets/svg/record.svg" class="window-button back record" @click.left="open_record"></inline-svg>
       </el-tooltip>
@@ -129,6 +150,11 @@ function back(){
 }
 .window-button{/*去掉加上tooltip后出现的黑色边框*/
   outline: none !important;
+}
+.position path{
+  transform: scale(0.8);
+  transform-origin: center;
+  stroke-width: 40;
 }
 .record path{
   transform: scale(0.9);

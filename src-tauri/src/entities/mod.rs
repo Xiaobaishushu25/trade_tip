@@ -17,6 +17,7 @@ pub mod stock_info;
 pub mod table;
 pub mod transaction_record;
 pub mod stock_data_time;
+mod postion;
 
 // pub static DB:OnceLock<DatabaseConnection> = OnceLock::new();
 pub static DB: OnceCell<DatabaseConnection> = OnceCell::const_new();

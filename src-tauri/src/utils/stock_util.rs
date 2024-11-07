@@ -73,15 +73,23 @@ pub fn get_market_by_code(code: &str) -> AppResult<String> {
 pub fn judge_market_is_open() -> AppResult<bool> {
     Ok(false)
 }
-///计算当前时间和给定的日期之间的天数差
-pub fn calculate_ago_with_num(year: i32, month: u32, day: u32) -> i32 {
+///计算当前时间和给定的日期之间的天数差1
+/// 注意：如果输入日期是当天，则返回0
+/// year: 年份
+/// month: 月份
+/// day: 日
+/// return: 天数差
+pub fn calculate_ago_days_with_num(year: i32, month: u32, day: u32) -> i32 {
     // 获取当前系统时间
     let now = Local::now().naive_local().date();
     // let date = NaiveDate::from_ymd_opt(2020, 1, 1).unwrap();
     let date = NaiveDate::from_ymd_opt(year, month, day).unwrap();
     now.signed_duration_since(date).num_days() as i32
 }
-pub fn calculate_ago_with_str(str: &str) -> i32 {
+///计算给定日期字符串距离当前日期的天数差2，并返回该差值（以天数为单位)
+/// 注意：如果输入日期是当天，则返回0
+/// str: 日期字符串，如"2024-04-26"
+pub fn calculate_ago_days_with_str(str: &str) -> i32 {
     // 获取当前系统时间
     let now = Local::now().naive_local().date();
     let date = NaiveDate::from_str(str).unwrap();
@@ -107,12 +115,13 @@ async fn test_get_market_by_code() {
 }
 #[tokio::test]
 async fn test_calculate_day_num() {
-    println!("{}", calculate_ago_with_num(2020, 1, 1));
+    println!("{}", calculate_ago_days_with_num(2020, 1, 1));
+    println!("{}", calculate_ago_days_with_str("2024-11-08".into()));
 }
 #[test]
 fn test_parse_date() {
     println!("{:?}", NaiveDate::from_str("2024-04-26"));
-    println!("{:?}", calculate_ago_with_str("2024-04-24"));
+    println!("{:?}", calculate_ago_days_with_str("2024-04-24"));
 }
 #[test]
 fn test_calculate_minutes() {

@@ -2,7 +2,7 @@ use crate::app_errors::AppError::AnyHow;
 use crate::app_errors::{AppResult};
 use crate::dtos::stock_dto::StockLiveData;
 use crate::entities::init_db_coon;
-use crate::entities::prelude::{StockInfo, TransactionRecord};
+use crate::entities::prelude::{Position, Positions, StockInfo, TransactionRecord};
 use crate::entities::table::create_table_with_dyn_name;
 use crate::service::curd::graphic_curd::GraphicCurd;
 use crate::service::curd::group_stock_relation_curd::GroupStockRelationCurd;
@@ -10,7 +10,7 @@ use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
 use crate::service::curd::transaction_record_curd::TransactionRecordCurd;
 use crate::service::http::{init_http, REQUEST};
-use crate::utils::stock_util::{calculate_ago_minutes, calculate_ago_with_num, compute_mul_ma, compute_single_ma};
+use crate::utils::stock_util::{calculate_ago_minutes, calculate_ago_days_with_num, compute_mul_ma, compute_single_ma, calculate_ago_days_with_str};
 use anyhow::anyhow;
 use log::{error, info};
 use std::collections::HashMap;
@@ -18,9 +18,10 @@ use std::ops::Sub;
 use std::sync::Arc;
 use chrono::{Local, NaiveDateTime, NaiveTime};
 use crate::config::config::{Config, DataConfig};
+use crate::service::curd::position_curd::PositionCurd;
 
 ///处理并保存股票数据
-/// 需要先根据code创建表，然后处理日线数据（主要是计算ma60）
+/// 需要先根据code创建表，然后处理日线数据（主要是计算ma60，因为直接请求的日线数据没有ma60）
 pub(crate) async fn handle_and_save_stock_data(create_need: bool, code: &str) -> AppResult<()> {
     // async fn handle_and_save_stock_data(create_need:bool,code:&str,num:i32,date:Option<String>) ->AppResult<()>{
     if create_need {
@@ -32,7 +33,7 @@ pub(crate) async fn handle_and_save_stock_data(create_need: bool, code: &str) ->
     let mut stock_data = REQUEST
         .get()
         .unwrap()
-        .get_stock_day_data(&code, calculate_ago_with_num(2020, 1, 1) - 300)
+        .get_stock_day_data(&code, calculate_ago_days_with_num(2020, 1, 1) - 300)
         .await?;
     // let mut stock_data = REQUEST.get().unwrap().get_stock_day_data(&code, num).await?;
     //stock_data中的ma60是None，手动计算一下。
@@ -102,7 +103,6 @@ pub(crate) async fn handle_and_save_record(path: String) -> AppResult<Vec<Transa
     //把pending_data中的数据按日期升序排序
     // pending_data.sort_by(|a, b| a.date.cmp(&b.date));
     pending_data.reverse();
-
     // pending_data.sort_by(|a, b| b.date.cmp(&a.date));
     let truncated_data =
         if let Some(latest_record) = TransactionRecordCurd::query_latest_record().await? {
@@ -213,6 +213,25 @@ pub async fn handle_can_t(codes: Vec<String>,data_config:&DataConfig) -> AppResu
     }
     Ok(can_t)
 }
+/// 处理持仓，插入数据库。
+pub async fn handle_insert_position(date: String, position: f64) -> AppResult<Position> {
+    let days = calculate_ago_days_with_str(date.as_str())+1;
+    let mut position = Position::new(date.clone(), position);
+    let mut index_map: HashMap<&str, &str> = HashMap::new();
+    index_map.insert("sh", "sh000001");        // 上证指数
+    index_map.insert("sz", "sz399001");        // 深证成指
+    index_map.insert("cyb", "sz399006");       // 创业板指
+    index_map.insert("sz50", "sh000016");      // 上证50
+    index_map.insert("hs300", "sh000300");     // 沪深300
+    index_map.insert("zz500", "sh000905");     // 中证500
+    for (key, value) in &index_map {
+        let k_data = REQUEST.get().unwrap().get_stock_day_data_with_market(value, days).await?;
+        let data = k_data.iter().find(|item| item.date == date).ok_or(anyhow!("没有找到{}的数据",date))?;
+        position.set_field(key, data.close);
+    }
+    PositionCurd::insert_position(position.clone()).await?;
+    Ok(position)
+}
 #[tokio::test]
 async fn test_handle_new_stock() {
     init_http().await;
@@ -234,8 +253,8 @@ async fn test_handle() {
     println!("{:?}", data);
     // compute_live_ma(code,data.price).await.unwrap();
 }
-// #[tokio::test]
-// async fn test_handle_can_t() {
-//     init_http().await;
-//     println!("{:?}", handle_can_t(vec!["516780".into()]).await.unwrap());
-// }
+#[tokio::test]
+async fn test_handle_insert_position() {
+    init_http().await;
+    handle_insert_position("2024-11-07".into(), 10000.0).await.unwrap();
+}

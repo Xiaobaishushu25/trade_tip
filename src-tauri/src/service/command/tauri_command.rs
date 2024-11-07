@@ -3,7 +3,7 @@ use crate::config::config::{Config, DataConfig};
 use crate::dtos::graphic_dto::GraphicDTO;
 use crate::dtos::stock_dto::{StockInfoG, StockLiveData};
 use crate::entities::prelude::{Graphic, StockData, StockGroup, StockInfo, TransactionRecord};
-use crate::service::command::handle::{handle_and_save_record, handle_can_t, handle_delete_stock, handle_new_stock, handle_stock_livedata};
+use crate::service::command::handle::{handle_and_save_record, handle_can_t, handle_delete_stock, handle_insert_position, handle_new_stock, handle_stock_livedata};
 use crate::service::curd::graphic_curd::GraphicCurd;
 use crate::service::curd::group_stock_relation_curd::GroupStockRelationCurd;
 use crate::service::curd::stock_data_curd::StockDataCurd;
@@ -601,18 +601,12 @@ pub async fn save_config(config: Config) -> Result<(), String> {
         Ok(_) => Ok(()),
         Err(e) => handle_error("保存配置文件失败", e.to_string()),
     }
-    // let mutex_guard = state.lock().unwrap();
-    // match *mutex_guard.save_to_file().await{
-    //     Ok(_) => Ok(()),
-    //     Err(e) => handle_error("保存配置文件失败", e.to_string()),
-    // }
 }
 ///判断是否可以做T
 ///codes:股票代码列表
 /// 返回值：Vec<(股票代码,status)>，status为up或者down或者normal
 #[tauri::command]
 pub async fn judge_can_t(codes: Vec<String>,config: State<'_, Mutex<Config>>) -> Result<Vec<(String, String)>, String> {
-
     let data_config = {
         let guard = config.lock().unwrap();
         guard.data_config.clone()
@@ -621,6 +615,20 @@ pub async fn judge_can_t(codes: Vec<String>,config: State<'_, Mutex<Config>>) ->
     match handle_can_t(codes,&data_config).await{
         Ok(data) => Ok(data),
         Err(e) => handle_error("判断是否可以做t失败", e.to_string()),
+    }
+}
+///插入持仓数据
+/// date:日期（“YYYY-MM-DD”）
+/// position_num:持仓百分比
+/// 如果插入成功，返回Ok(())，同时emit一个position_change事件，payload为插入的持仓数据
+#[tauri::command]
+pub async fn insert_position(app_handle: tauri::AppHandle, date: String, position_num: f64) -> Result<(), String> {
+    match handle_insert_position(date, position_num).await{
+        Ok(position) => {
+            app_handle.emit("position_change", position).unwrap();
+            Ok(())
+        },
+        Err(e) => handle_error("插入持仓失败", e.to_string()),
     }
 }
 ///获取当前是否是交易时间

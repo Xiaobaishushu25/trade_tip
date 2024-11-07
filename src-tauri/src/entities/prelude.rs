@@ -21,3 +21,7 @@ pub use super::graphic::Model as Graphic;
 pub use super::transaction_record::ActiveModel as ActiveTransactionRecord;
 pub use super::transaction_record::Entity as TransactionRecords;
 pub use super::transaction_record::Model as TransactionRecord;
+
+pub use super::postion::ActiveModel as ActivePosition;
+pub use super::postion::Entity as Positions;
+pub use super::postion::Model as Position;
