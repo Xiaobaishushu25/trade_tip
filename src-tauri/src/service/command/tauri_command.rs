@@ -620,12 +620,12 @@ pub async fn judge_can_t(codes: Vec<String>,config: State<'_, Mutex<Config>>) ->
 ///插入持仓数据
 /// date:日期（“YYYY-MM-DD”）
 /// position_num:持仓百分比
-/// 如果插入成功，返回Ok(())，同时emit一个position_change事件，payload为插入的持仓数据
+/// 如果插入成功，返回Ok(())，同时emit一个position_change事件，payload为(bool,Position)，布尔表示插入(true)/更新(false)，Position表示持仓数据
 #[tauri::command]
 pub async fn insert_position(app_handle: tauri::AppHandle, date: String, position_num: f64) -> Result<(), String> {
     match handle_insert_position(date, position_num).await{
-        Ok(position) => {
-            app_handle.emit("position_change", position).unwrap();
+        Ok(data) => {
+            app_handle.emit("position_change", data).unwrap();
             Ok(())
         },
         Err(e) => handle_error("插入持仓失败", e.to_string()),
