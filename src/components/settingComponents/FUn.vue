@@ -48,18 +48,26 @@ const handleUpdateFreq = (value: number) => {
               <inline-svg src="../assets/svg/what.svg" class="what"></inline-svg>
             </el-tooltip>
             <label class="label-text">:</label>
-<!--            <el-input-number v-model="boxNum" :min="3" :max="8" class="custom-input" @change="handleBoxNum" />-->
           </div>
-<!--          <label class="label-text">箱体分区数量：</label>-->
-          <el-input-number v-model="boxNum" :min="3" :max="8" class="custom-input" @change="handleBoxNum" />
+          <el-input-number v-model="dataConfig.box_num" :min="3" :max="15" class="custom-input" @change="handleUpdateDataConfig" />
         </div>
         <el-divider style="margin: 5px" />
         <div class="setting-row-container">
-          <label class="label-text">日内做T上涨阈值：</label>
+          <div class="row-no-padding">
+            <label class="label-text">日内做T上涨阈值</label>
+            <el-tooltip content="如果当日9:00-10:00价格涨幅超过此值，则初步认为当日可以做t。">
+              <inline-svg src="../assets/svg/what.svg" class="what"></inline-svg>
+            </el-tooltip>
+            <label class="label-text">:</label>
+          </div>
           <el-input-number v-model="dataConfig.up_t_trigger" :min="0.1" :max="20" :step="0.1" class="custom-input" style="width: 120px" @change="handleUpdateDataConfig" />
         </div>
         <div class="setting-row-container">
-          <label class="label-text">日内做T下跌阈值：</label>
+          <label class="label-text">日内做T下跌阈值</label>
+          <el-tooltip content="如果当日9:00-10:00价格跌幅超过此值，则初步认为当日可以做t。">
+            <inline-svg src="../assets/svg/what.svg" class="what"></inline-svg>
+          </el-tooltip>
+          <label class="label-text">:</label>
           <el-input-number v-model="dataConfig.down_t_trigger" :min="0.1" :max="20" :step="0.1" class="custom-input" style="width: 120px" @change="handleUpdateDataConfig" />
         </div>
       </el-card>

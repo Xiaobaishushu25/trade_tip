@@ -102,7 +102,7 @@ onMounted(async () => {
         type: 'value',
         name: '指标值',
         position: 'left',
-        min: (value) => Math.floor(value.min * 0.9), // 向下取整，留出 10% 的下边距
+        min: (value) => Math.floor(value.min * 0.5), // 向下取整，留出 10% 的下边距
         max: (value) => Math.ceil(value.max * 1.1)   // 向上取整，留出 10% 的上边距
         // boundaryGap: ['20%', '20%'],
       },
@@ -111,7 +111,7 @@ onMounted(async () => {
         name: '仓位(%)',
         position: 'right',
         min: 0,
-        max: 100
+        max: 110
       }
     ],
     series: [

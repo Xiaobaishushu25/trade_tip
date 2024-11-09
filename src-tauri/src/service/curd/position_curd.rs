@@ -15,6 +15,7 @@ impl PositionCurd {
         Ok(())
     }
     pub async fn insert_many_positions(positions: Vec<Position>) -> AppResult<()> {
+        assert_ne!(positions.len(), 0);
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;

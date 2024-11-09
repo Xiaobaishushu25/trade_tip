@@ -367,7 +367,8 @@ function comparePriceWithBox(price: number,boxes:number[]): [string,string,numbe
 function divideBox(price: number, down: number, up: number): [string,string,undefined] {
   const range = up - down;
   //todo 这里的数值应该是可配置的
-  const eachPart = range / 8.0;
+  // const eachPart = range / 8.0;
+  const eachPart = range / store.config.data_config.box_num;
 
   const lowerBound = down;
   const middleLowerBound = down + eachPart;

@@ -107,6 +107,9 @@ pub async fn update_all_position() -> AppResult<()> {
                 .iter()
                 .filter(|item| item.date > latest_date) // 过滤出日期在 latest_date 之后的数据
                 .collect::<Vec<_>>();
+            if data_after_latest_date.is_empty() {
+                return Ok(());
+            }
             //将数据插入到need_insert_data中，如果目前还不存在，就新建，否则就直接设置字段值
             for item in data_after_latest_date {
                 if let Some(data) = need_insert_data.get_mut(&item.date){
