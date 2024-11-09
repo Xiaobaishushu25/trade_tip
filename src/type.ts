@@ -128,6 +128,15 @@ interface Config {
     display_config: DisplayConfig,
     data_config: DataConfig,
 }
-
+interface Position{
+    date: string;        // Primary key, no auto-increment
+    position: number;    // 当前仓位
+    sh: number;          // 上证指数，代码缩写：sh
+    sz: number;          // 深证成指，代码缩写：sz
+    cyb: number;         // 创业板指，拼音缩写：cyb
+    sz50: number;        // 上证50，拼音缩写：sz50
+    hs300: number;       // 沪深300指数，拼音缩写：hs300
+    zz500: number;
+}
 export { PaintState }; // 导出枚举值
-export type { StockLiveData,StockGroup,StockInfoG,StockData,Graphic,RowData,TransactionRecord,DisplayConfig,DataConfig,Config };
+export type { StockLiveData,StockGroup,StockInfoG,StockData,Graphic,RowData,TransactionRecord,DisplayConfig,DataConfig,Config,Position };

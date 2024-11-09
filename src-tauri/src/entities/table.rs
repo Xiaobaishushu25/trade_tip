@@ -175,6 +175,7 @@ pub async fn create_all_need_table(db: &DatabaseConnection) {
     let _ = create_table(db, StockGroups).await;
     let _ = create_table(db, GroupStockRs).await;
     let _ = create_table(db, TransactionRecords).await;
+    let _ = create_table(db, Positions).await;
     StockGroupCurd::insert_init(db).await.unwrap();
 }
 #[tokio::test]

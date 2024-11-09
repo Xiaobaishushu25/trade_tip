@@ -2,7 +2,7 @@
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {saveWindowState, StateFlags} from "@tauri-apps/plugin-window-state";
 import PositionChart from "./PositionComponents/PositionChart.vue";
-import PositionInsert from "./PositionComponents/PositionInsert.vue";
+import PositionInsert from "./PositionComponents/PositionUpdate.vue";
 
 async function window_minimize(){
   await WebviewWindow.getCurrent().minimize()

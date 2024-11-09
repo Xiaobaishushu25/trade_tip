@@ -1,34 +1,43 @@
 <script setup lang="ts">
 import {listen} from "@tauri-apps/api/event";
-import {onMounted,ref} from "vue";
+import {onBeforeMount,onMounted,ref} from "vue";
 import * as echarts from "echarts/core";
+import {invoke} from "@tauri-apps/api/core";
+import {Position} from "../../type.ts";
+import {errorNotification} from "../../utils.ts";
 
 const positionChart = ref(null)
 // const chartData = ref([])
-const data = ref([
-  {
-    date: '2024-11-01',
-    position: 50,
-    sh: 3500,
-    sz: 14000,
-    cyb: 2500,
-    sz50: 3000,
-    hs300: 4000,
-    zz500: 5000
-  },
-  {
-    date: '2024-11-02',
-    position: 55,
-    sh: 3550,
-    sz: 14200,
-    cyb: 2550,
-    sz50: 3050,
-    hs300: 4050,
-    zz500: 5050
-  },
-  // 继续添加数据...
-]);
-
+const data = ref<Position[]>([])
+// const data = ref([
+//   {
+//     date: '2024-11-01',
+//     position: 50,
+//     sh: 3500,
+//     sz: 14000,
+//     cyb: 2500,
+//     sz50: 3000,
+//     hs300: 4000,
+//     zz500: 5000
+//   },
+//   {
+//     date: '2024-11-02',
+//     position: 55,
+//     sh: 3550,
+//     sz: 14200,
+//     cyb: 2550,
+//     sz50: 3050,
+//     hs300: 4050,
+//     zz500: 5050
+//   },
+//   // 继续添加数据...
+// ]);
+onBeforeMount(async () => {
+  invoke<Position[]>('query_all_positions',{}).then(_data =>{
+    console.log(_data)
+    data.value = _data
+  }).catch(e => {errorNotification(`查询历史持仓数据出错${e}`)})
+})
 // 使用ECharts来初始化图表
 onMounted(async () => {
   let unlistenPositionUpdate = await listen("position_change", ({payload }) => {
