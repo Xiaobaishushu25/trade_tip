@@ -214,24 +214,24 @@ async fn init_app() {
     init_http().await;
     // judge_market_open().await;
 }
-async fn update() {
-    match service::curd::update_all_day_k().await {
-        Ok(_) => {
-            info!("更新日线数据成功");
-            NOTICE
-                .lock()
-                .unwrap()
-                .replace("更新日线数据成功".to_string());
-        }
-        Err(e) => {
-            error!("更新日线数据失败:{}", e);
-            NOTICE
-                .lock()
-                .unwrap()
-                .replace(format!("更新日线数据失败:{}", e.to_string()));
-        }
-    };
-}
+// async fn update() {
+//     match service::curd::update_all_day_k().await {
+//         Ok(_) => {
+//             info!("更新日线数据成功");
+//             NOTICE
+//                 .lock()
+//                 .unwrap()
+//                 .replace("更新日线数据成功".to_string());
+//         }
+//         Err(e) => {
+//             error!("更新日线数据失败:{}", e);
+//             NOTICE
+//                 .lock()
+//                 .unwrap()
+//                 .replace(format!("更新日线数据失败:{}", e.to_string()));
+//         }
+//     };
+// }
 // ///判断是否开市,先发起一个请求，然后sleep 1秒，再发起一个请求，如果两个请求的返回值不一样，则证明开市了，否则证明闭市了。
 // async fn judge_market_open() {
 //     let response1 = REQUEST.get().unwrap().get("https://qt.gtimg.cn/q=sz159992").await.unwrap();
