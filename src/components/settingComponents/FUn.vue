@@ -42,7 +42,15 @@ const handleUpdateFreq = (value: number) => {
         </div>
         <el-divider style="margin: 5px" />
         <div class="setting-row-container">
-          <label class="label-text">箱体分区数量：</label>
+          <div class="row-no-padding">
+            <label class="label-text">箱体分区数量</label>
+            <el-tooltip content="将一个箱体均等划为若干区间，其中最上面的区间是上轨区，最下面的区间是下轨区。如箱体分区数量为5，则上和下轨区间各为一份，中间三份为中轨区间。划分越精细，则上下轨区越小。">
+              <inline-svg src="../assets/svg/what.svg" class="what"></inline-svg>
+            </el-tooltip>
+            <label class="label-text">:</label>
+<!--            <el-input-number v-model="boxNum" :min="3" :max="8" class="custom-input" @change="handleBoxNum" />-->
+          </div>
+<!--          <label class="label-text">箱体分区数量：</label>-->
           <el-input-number v-model="boxNum" :min="3" :max="8" class="custom-input" @change="handleBoxNum" />
         </div>
         <el-divider style="margin: 5px" />

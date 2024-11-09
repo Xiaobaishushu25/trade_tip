@@ -119,7 +119,7 @@ onMounted(async () => {
         name: '仓位',
         type: 'bar',
         data: data.value.map(item => item.position),
-        color: '#5470c6',
+        // color: '#5470c6',
         itemStyle: {
           color: (params) => {
             const position = params.data;
@@ -131,6 +131,13 @@ onMounted(async () => {
               return '#a87728'; // 橘黄色
             }
           }
+        },
+        label: {
+          show: true,           // 显示标签
+          position: 'top',      // 标签位置在柱顶
+          formatter: '{c}',      // 显示数值
+          fontSize: 12,         // 设置字体大小
+          color: '#000'         // 标签颜色（可以根据需求调整）
         },
         yAxisIndex: 1 // 使用右侧坐标轴
       },

@@ -38,7 +38,13 @@ async function handleUpdateDisConfig(){
         </div>
         <el-divider style="margin: 5px" />
         <div class="setting-row-container">
-          <label class="label-text">默认从?开始显示K线(%):</label>
+          <div class="row-no-padding">
+            <label class="label-text">默认从?开始显示K线(%)</label>
+            <el-tooltip content="设置显示K线范围的起始百分比，例如设置为50，则表示显示50%到100%的K线">
+              <inline-svg src="../assets/svg/what.svg" class="what"></inline-svg>
+            </el-tooltip>
+            <label class="label-text">:</label>
+          </div>
           <el-slider v-model="disConfig.k_show_begin" :min="0" :max="95" style="width: 30%" @change="handleUpdateDisConfig"/>
 <!--          <el-input-number v-model="num" :min="0" :max="99" :step="1" class="custom-input" @change="handleUpdateDisConfig" />-->
         </div>
@@ -143,6 +149,10 @@ async function handleUpdateDisConfig(){
 }
 .el-card__body{
   padding: 5px;
+}
+.what{
+  width: 15px;
+  height: 15px;
 }
 </style>
 <style scoped>
