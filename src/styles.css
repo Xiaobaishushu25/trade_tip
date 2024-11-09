@@ -42,6 +42,12 @@
   align-items: center;
   gap: 20px;
 }
+.row-no-padding {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
 .column{
   display: flex;
   flex-direction: column;
