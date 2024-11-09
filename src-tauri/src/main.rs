@@ -223,7 +223,7 @@ async fn init_app() {
     // judge_market_open().await;
 }
 async fn update() {
-    match crate::service::curd::update_all_day_k().await {
+    match service::curd::update_all_day_k().await {
         Ok(_) => {
             info!("更新日线数据成功");
             NOTICE

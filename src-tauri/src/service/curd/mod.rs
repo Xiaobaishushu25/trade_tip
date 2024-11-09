@@ -65,9 +65,7 @@ pub async fn update_all_day_k() -> AppResult<()> {
                         model.ma60 = *ma60_value;
                     }
                     // println!("待插入数据{:?}",data_after_index);
-                    StockDataCurd::insert_many(&code, data_after_index.to_vec())
-                        .await
-                        .unwrap();
+                    StockDataCurd::insert_many(&code, data_after_index.to_vec()).await?;
                 }
             }
             None => {
