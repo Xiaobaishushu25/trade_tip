@@ -24,7 +24,7 @@ use crate::service::command::tauri_command::{
     query_transaction_records, query_transaction_records_by_code, read_save_transaction_records,
     remove_stock_from_group, save_graphic, save_transaction_records, update_groups,
     update_live_state, update_stock_groups, update_stock_hold, update_transaction_record, judge_can_t,
-    save_config,update_data_config,insert_position,
+    save_config,update_data_config,query_all_positions,update_position,
 };
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
@@ -89,23 +89,6 @@ impl MyState {
         self.abort_task();
         *self.live_task.lock().unwrap() = Some(task);
     }
-    // pub fn update_config(&self,config:Config){
-    //     match save_config(&self.config){
-    //         Ok(_)=>{
-    //             info!("save config success");
-    //             *self.config = config;
-    //         }
-    //         Err(e)=>{
-    //             error!("save config failed:{}",e.to_string());
-    //         }
-    //     }
-    //     // if let Ok(_) = save_config(&config){
-    //     //     info!("save config success");
-    //     //     *self.config = config;
-    //     // }else {  }
-    //     // *self.config = config;
-    //
-    // }
 }
 pub async fn get_close_prices(
     single_code: Option<&str>,
@@ -129,15 +112,23 @@ pub async fn get_close_prices(
 #[tokio::main]
 async fn main() {
     init_app().await;
+    //todo 下面这俩更新如果出错了在前端页面是没有提醒的，如果想要emit一个错误事件到前端的话，有可能存在前端页面还没渲染完就emit了，就收不到了；
+    // 如果弄一个本地变量保存错误信息，前端页面渲染完成后主动来invoke读取这个变量判断是否出错应该可以，但是目前懒得搞。
     tokio::spawn(async {
         info!("update stock info start");
-        update().await;
+        if let Err(e) = service::curd::update_all_day_k().await{
+            error!("update stock info failed:{}",e)
+        }
+        // update().await;
     });
-    // init_app().await;
+    tokio::spawn(async {
+        info!("update position start");
+        if let Err(e) = service::curd::update_all_position().await{
+            error!("update position failed:{}",e)
+        }
+    });
     let state = MyState::new().await;
     info!("ui start");
-
-    // let config = Config::load();
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
             error!("the app is already running, args: {:?}, cwd: {}", args, cwd);
@@ -208,7 +199,8 @@ async fn main() {
             update_data_config,
             save_config,
             judge_can_t,
-            insert_position,
+            query_all_positions,
+            update_position,
             exit_app
         ])
         .run(tauri::generate_context!())

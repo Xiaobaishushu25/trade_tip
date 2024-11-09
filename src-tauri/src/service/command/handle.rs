@@ -214,24 +214,32 @@ pub async fn handle_can_t(codes: Vec<String>,data_config:&DataConfig) -> AppResu
     Ok(can_t)
 }
 /// 处理持仓，插入数据库。
-pub async fn handle_insert_position(date: String, position: f64) -> AppResult<Position> {
-    let days = calculate_ago_days_with_str(date.as_str())+1;
-    let mut position = Position::new(date.clone(), position);
-    let mut index_map: HashMap<&str, &str> = HashMap::new();
-    index_map.insert("sh", "sh000001");        // 上证指数
-    index_map.insert("sz", "sz399001");        // 深证成指
-    index_map.insert("cyb", "sz399006");       // 创业板指
-    index_map.insert("sz50", "sh000016");      // 上证50
-    index_map.insert("hs300", "sh000300");     // 沪深300
-    index_map.insert("zz500", "sh000905");     // 中证500
-    for (key, value) in &index_map {
-        let k_data = REQUEST.get().unwrap().get_stock_day_data_with_market(value, days).await?;
-        let data = k_data.iter().find(|item| item.date == date).ok_or(anyhow!("没有找到{}的数据",date))?;
-        position.set_field(key, data.close);
-    }
-    PositionCurd::insert_position(position.clone()).await?;
-    Ok(position)
-}
+/// return: (插入true/更新false, position)
+///先尝试直接插入，如果插入失败，则更新。
+// pub async fn handle_insert_position(date: String, position: f64) -> AppResult<(bool,Position)> {
+//     let days = calculate_ago_days_with_str(date.as_str())+1;
+//     let mut position = Position::new(date.clone(), position);
+//     let mut index_map: HashMap<&str, &str> = HashMap::new();
+//     index_map.insert("sh", "sh000001");        // 上证指数
+//     index_map.insert("sz", "sz399001");        // 深证成指
+//     index_map.insert("cyb", "sz399006");       // 创业板指
+//     index_map.insert("sz50", "sh000016");      // 上证50
+//     index_map.insert("hs300", "sh000300");     // 沪深300
+//     index_map.insert("zz500", "sh000905");     // 中证500
+//     for (key, value) in &index_map {
+//         let k_data = REQUEST.get().unwrap().get_stock_day_data_with_market(value, days).await?;
+//         let data = k_data.iter().find(|item| item.date == date).ok_or(anyhow!("没有找到{}的数据",date))?;
+//         position.set_field(key, data.close);
+//     }
+//     //先尝试直接插入，如果插入失败，则更新。
+//     match PositionCurd::insert_position(position.clone()).await{
+//         Ok(_) => Ok((true,position)),
+//         Err(_) => {
+//             PositionCurd::update_position(position.clone()).await?;
+//             Ok((false,position))
+//         }
+//     }
+// }
 #[tokio::test]
 async fn test_handle_new_stock() {
     init_http().await;
@@ -253,8 +261,8 @@ async fn test_handle() {
     println!("{:?}", data);
     // compute_live_ma(code,data.price).await.unwrap();
 }
-#[tokio::test]
-async fn test_handle_insert_position() {
-    init_http().await;
-    handle_insert_position("2024-11-07".into(), 10000.0).await.unwrap();
-}
+// #[tokio::test]
+// async fn test_handle_insert_position() {
+//     init_http().await;
+//     handle_insert_position("2024-11-07".into(), 10000.0).await.unwrap();
+// }
