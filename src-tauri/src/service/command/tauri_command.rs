@@ -3,7 +3,7 @@ use crate::config::config::{Config, DataConfig};
 use crate::dtos::graphic_dto::GraphicDTO;
 use crate::dtos::stock_dto::{StockInfoG, StockLiveData};
 use crate::entities::prelude::{Graphic, Position, StockData, StockGroup, StockInfo, TransactionRecord};
-use crate::service::command::handle::{handle_and_save_record, handle_can_t, handle_delete_stock, handle_new_stock, handle_stock_livedata};
+use crate::service::command::handle::{handle_and_save_record, handle_can_t, handle_delete_stock, handle_new_stock, handle_stock_livedata, handle_update_position};
 use crate::service::curd::graphic_curd::GraphicCurd;
 use crate::service::curd::group_stock_relation_curd::GroupStockRelationCurd;
 use crate::service::curd::stock_data_curd::StockDataCurd;
@@ -633,9 +633,17 @@ pub async fn query_all_positions() -> Result<Vec<Position>, String> {
 /// 如果更新成功，返回Ok(())，同时emit一个position_change事件，payload为(String,position_num)
 #[tauri::command]
 pub async fn update_position(app_handle: tauri::AppHandle,date: String, position_num: f64) -> Result<(), String> {
-    match PositionCurd::update_position_by_id(date.clone(), position_num).await{
-        Ok(_) => {
-            app_handle.emit("position_change", (date, position_num)).unwrap();
+    match handle_update_position(date.clone(), position_num).await{
+        Ok(flag) => {
+            if flag {
+                info!("更新持仓数据成功");
+                app_handle.emit("position_update", (date, position_num)).unwrap();
+            }else {
+                //如果flag为false，则表示已经插入了一个数据，此时查询最新值必定有值，可以直接unwrap()
+                let data = PositionCurd::query_latest_position().await.unwrap().unwrap();
+                info!("插入持仓数据成功:{:?}", data);
+                app_handle.emit("position_insert", data).unwrap();
+            }
             Ok(())
         },
         Err(e) => handle_error("更新持仓失败", e.to_string()),

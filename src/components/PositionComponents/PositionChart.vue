@@ -1,37 +1,56 @@
 <script setup lang="ts">
 import {listen} from "@tauri-apps/api/event";
-import {onBeforeMount,onMounted,ref} from "vue";
+import {onBeforeMount,onMounted,ref,watch} from "vue";
 import * as echarts from "echarts/core";
 import {invoke} from "@tauri-apps/api/core";
 import {Position} from "../../type.ts";
 import {errorNotification} from "../../utils.ts";
 
 const positionChart = ref(null)
+let myChart=null;
 // const chartData = ref([])
 const data = ref<Position[]>([])
-// const data = ref([
-//   {
-//     date: '2024-11-01',
-//     position: 50,
-//     sh: 3500,
-//     sz: 14000,
-//     cyb: 2500,
-//     sz50: 3000,
-//     hs300: 4000,
-//     zz500: 5000
-//   },
-//   {
-//     date: '2024-11-02',
-//     position: 55,
-//     sh: 3550,
-//     sz: 14200,
-//     cyb: 2550,
-//     sz50: 3050,
-//     hs300: 4050,
-//     zz500: 5050
-//   },
-//   // 继续添加数据...
-// ]);
+watch(data, ()=>{
+  if(myChart==null){
+    return
+  }
+  myChart.setOption({
+    xAxis: {
+      data: data.value.map(item => item.date)
+    },
+    series: [
+      {
+        name: '仓位',
+        data: data.value.map(item => item.position),
+      },
+      {
+        name: '上证指数',
+        data: data.value.map(item => item.sh),
+      },
+      {
+        name: '深证成指',
+        data: data.value.map(item => item.sz),
+      },
+      {
+        name: '创业板指',
+        data: data.value.map(item => item.cyb),
+      },
+      {
+        name: '上证50',
+        data: data.value.map(item => item.sz50),
+      },
+      {
+        name: '沪深300',
+        data: data.value.map(item => item.hs300),
+      },
+      {
+        name: '中证500',
+        data: data.value.map(item => item.zz500),
+      }
+    ]
+  })
+}, {deep: true})
+
 onBeforeMount(async () => {
   invoke<Position[]>('query_all_positions',{}).then(_data =>{
     console.log(_data)
@@ -40,10 +59,18 @@ onBeforeMount(async () => {
 })
 // 使用ECharts来初始化图表
 onMounted(async () => {
-  let unlistenPositionUpdate = await listen("position_change", ({payload }) => {
-    console.log(payload)
+  let unlistenPositionUpdate = await listen("position_update", ({payload}) => {
+    // console.log(payload)
+    // 这个是修改的，payload是一个数组，第一个元素是日期，第二个元素是仓位
+    let olddata = data.value.find(item => item.date==payload[0])
+    olddata.position = payload[1]
   })
-  const myChart = echarts.init(positionChart.value);
+  let unlistenPositionInsert = await listen("position_insert", ({payload}) => {
+    //这个是新增的，payload是一个position对象
+    // console.log(payload)
+    data.value.push(payload)
+  })
+  myChart = echarts.init(positionChart.value);
   const option = {
     tooltip: {
       trigger: 'axis'
@@ -75,7 +102,9 @@ onMounted(async () => {
         type: 'value',
         name: '指标值',
         position: 'left',
-        boundaryGap: ['20%', '20%'],
+        min: (value) => Math.floor(value.min * 0.9), // 向下取整，留出 10% 的下边距
+        max: (value) => Math.ceil(value.max * 1.1)   // 向上取整，留出 10% 的上边距
+        // boundaryGap: ['20%', '20%'],
       },
       {
         type: 'value',
@@ -91,6 +120,18 @@ onMounted(async () => {
         type: 'bar',
         data: data.value.map(item => item.position),
         color: '#5470c6',
+        itemStyle: {
+          color: (params) => {
+            const position = params.data;
+            if (position < 40) {
+              return '#147e14'; // 绿色
+            } else if (position > 70) {
+              return '#bd4d4d'; // 红色
+            } else {
+              return '#a87728'; // 橘黄色
+            }
+          }
+        },
         yAxisIndex: 1 // 使用右侧坐标轴
       },
       {

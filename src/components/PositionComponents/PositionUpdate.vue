@@ -7,7 +7,7 @@ const date = ref(new Date());
 const position = ref();
 async function handleChange() {
   const datestr = date.value.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
-  console.log(date, position.value);
+  console.log(datestr, position.value);
   invoke("update_position", {date: datestr, positionNum: position.value}).then(_ => {
     successNotification("仓位插入成功")
   }).catch(err => {

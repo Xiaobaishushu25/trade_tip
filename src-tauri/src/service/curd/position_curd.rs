@@ -6,14 +6,14 @@ use sea_orm::ActiveValue::Set;
 
 pub struct PositionCurd;
 impl PositionCurd {
-    // pub async fn insert_position(position: Position) -> AppResult<()> {
-    //     let db = crate::entities::DB
-    //         .get()
-    //         .ok_or(anyhow::anyhow!("数据库未初始化"))?;
-    //     let active: ActivePosition = position.into();
-    //     active.insert(db).await?;
-    //     Ok(())
-    // }
+    pub async fn insert_position(position: Position) -> AppResult<()> {
+        let db = crate::entities::DB
+            .get()
+            .ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        let active: ActivePosition = position.into();
+        active.insert(db).await?;
+        Ok(())
+    }
     pub async fn insert_many_positions(positions: Vec<Position>) -> AppResult<()> {
         let db = crate::entities::DB
             .get()
@@ -67,13 +67,14 @@ impl PositionCurd {
             .one(db)
             .await?)
     }
-    ///查询所有的持仓数据（以日期降序排列，即最新数据在最前面）
+    ///查询所有的持仓数据（以日期升序排列，即最新数据在最后面）
     pub async fn query_all() -> AppResult<Vec<Position>> {
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
         Ok(Positions::find()
-            .order_by_desc(Column::Date)
+            // .order_by_desc(Column::Date)
+            .order_by_asc(Column::Date)
             .all(db)
             .await?)
     }
