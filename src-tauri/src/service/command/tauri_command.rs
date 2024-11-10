@@ -630,7 +630,7 @@ pub async fn query_all_positions() -> Result<Vec<Position>, String> {
 ///更新指定日期的持仓数据
 /// date:日期（“YYYY-MM-DD”）
 /// position_num:持仓百分比
-/// 如果更新成功，返回Ok(())，同时emit一个position_change事件，payload为(String,position_num)
+/// 如果更新成功，返回Ok(())，同时emit一个position change事件，payload为(String,position_num)
 #[tauri::command]
 pub async fn update_position(app_handle: tauri::AppHandle,date: String, position_num: f64) -> Result<(), String> {
     match handle_update_position(date.clone(), position_num).await{
@@ -680,19 +680,19 @@ fn handle_error<T>(tip: &str, e: String) -> Result<T, String> {
     error!("{}:{}", tip, e); //查询股票分时图失败:Network Error: net::ERR_CONNECTION_RESET
     Err(format!("{}:{}", tip, e))
 }
-#[tokio::test]
-async fn test_market_is_open() {
-    init_http().await;
-    let response1 = REQUEST.get().unwrap().get("https://qt.gtimg.cn/q=sz159992").await.unwrap();
-    let string1 = response1.text().await.unwrap();
-    println!("{:?}", string1);
-    sleep(Duration::from_secs(1)).await;
-    let response2 = REQUEST.get().unwrap().get("https://qt.gtimg.cn/q=sz159992").await.unwrap();
-    let string2 = response2.text().await.unwrap();
-    println!("{:?}", string2);
-    if string1==string2 {
-        println!("market is closed");
-    }else {
-        println!("market is open");
-    }
-}
+// #[tokio::test]
+// async fn test_market_is_open() {
+//     init_http().await;
+//     let response1 = REQUEST.get().unwrap().get("https://qt.gtimg.cn/q=sz159992").await.unwrap();
+//     let string1 = response1.text().await.unwrap();
+//     println!("{:?}", string1);
+//     sleep(Duration::from_secs(1)).await;
+//     let response2 = REQUEST.get().unwrap().get("https://qt.gtimg.cn/q=sz159992").await.unwrap();
+//     let string2 = response2.text().await.unwrap();
+//     println!("{:?}", string2);
+//     if string1==string2 {
+//         println!("market is closed");
+//     }else {
+//         println!("market is open");
+//     }
+// }
