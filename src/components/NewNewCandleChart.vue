@@ -1381,7 +1381,7 @@ async function enableRegionSelection() {
   myChart.getZr().on('mousedown', function(event) {
     // 开始拖拽
     if(isDragging){return;}
-    //不知道为什么在松开鼠标触发mouseup后又会立刻触发一次mousedown和mouseup
+    //不知道为什么在松开鼠标的过程触发mouseup后又会立刻触发一次mousedown和mouseup，所以加上判断，如果有矩形选区就不再触发mousedown
     if(rect != null)return;
     const startDataPoint = myChart.convertFromPixel('grid', [event.offsetX, event.offsetY]); // 获取初始位置的数据点坐标
     start = myChart.convertToPixel('grid', [startDataPoint[0], startDataPoint[1]]);
