@@ -136,7 +136,7 @@ defineExpose({ codeFilter, deleteAllRecords, addRecords})
     <el-table-column prop="price" label="成交价格" class-name="right-cell" style="font-size: 14px" width="70" />
     <el-table-column prop="amount" label="成交金额" sortable class-name="right-cell" style="font-size: 14px" width="90" />
 <!--    <el-table-column prop="remark" label="备注" :formatter="remarkFormatter" style="font-size: 14px" width="160" />-->
-    <el-table-column prop="remark" label="备注"  style="font-size: 14px" width="160" >
+    <el-table-column prop="remark" label="备注"  style="font-size: 14px" width="150" >
       <template #default="scope">
         <!-- 判断为编辑状态 -->
         <el-input

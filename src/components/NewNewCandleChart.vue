@@ -769,6 +769,7 @@ async function query_stocks_day_k_limit(){
     myChart.setOption(init_option(),true);
     // console.log(myChart.getOption());
     myChart.resize();
+    enableRegionSelection();
     chartIsInit = true;
     return;
     // myChart.hideLoading();
@@ -1371,6 +1372,73 @@ function init_option(){
     ],
   }
 }
+//*********这块是右键区间统计的相关代码↓
+let rect: echarts.graphic.Rect = null; // 矩形选区
+async function enableRegionSelection() {
+  let isDragging = false;  // 标记是否正在拖拽
+  let start = [];
+  let end = [];
+  myChart.getZr().on('mousedown', function(event) {
+    // 开始拖拽
+    if(isDragging){return;}
+    //不知道为什么在松开鼠标触发mouseup后又会立刻触发一次mousedown和mouseup
+    if(rect != null)return;
+    const startDataPoint = myChart.convertFromPixel('grid', [event.offsetX, event.offsetY]); // 获取初始位置的数据点坐标
+    start = myChart.convertToPixel('grid', [startDataPoint[0], startDataPoint[1]]);
+    // start = [event.offsetX, event.offsetY]; // 获取初始位置的数据点坐标
+    isDragging = true;
+    console.log('mousedown,isDragging:{}',isDragging)
+    // 只在 mousedown 时绑定一次 mousemove 和 mouseup 事件
+    myChart.getZr().on('mousemove', handleMouseMove);
+    myChart.getZr().on('mouseup', handleMouseUp);
+    // currentCount = 1;
+  });
+  function handleMouseMove(event) {
+    if (!isDragging) return;  // 如果没有正在拖拽，就不处理
+    myChart.getZr().remove(rect);
+    rect = getRect(start, [event.offsetX, event.offsetY])
+    myChart.getZr().add(rect);
+  }
+
+  function handleMouseUp(event) {
+    console.log(isDragging)
+    if (!isDragging) return;
+    // 获取鼠标松开时的数据点坐标
+    const endDataPoint = myChart.convertFromPixel('grid', [event.offsetX, event.offsetY]);
+    end = myChart.convertToPixel('grid', [endDataPoint[0], endDataPoint[1]]);//[1472.9417999999998, 376]
+    myChart.getZr().remove(rect);
+    console.log("remove")
+    rect = getRect(start, end)
+    console.log(rect);
+    myChart.getZr().add(rect);
+    console.log("add")
+    // console.log('松开时数据点坐标:', endDataPoint);
+    // 结束拖拽
+    isDragging = false;
+    console.log(`mouseup,isDragging:{}`,isDragging)
+    // 移除事件监听器，防止重复绑定
+    myChart.getZr().off('mousemove', handleMouseMove);
+    myChart.getZr().off('mouseup', handleMouseUp);
+  }
+}
+function getRect(start, end) {
+  const width = Math.abs(end[0] - start[0]);
+  const height = Math.abs(end[1] - start[1]);
+  return new echarts.graphic.Rect({
+    shape: {
+      x: Math.min(start[0], end[0]),
+      y: Math.min(start[1], end[1]),
+      width: width,
+      height: height,
+    },
+    style: {
+      fill: 'rgba(0, 0, 0, 0.2)',
+      stroke: '#0fe1c150',
+      lineWidth: 2,
+    },
+  });
+}
+//*********这块是右键区间统计的相关代码↑
 //*********这块是左右键切换tooltip的相关代码↓
 let currentIndex = - 1; // 当前索引
 // 监听键盘事件
@@ -1473,18 +1541,6 @@ async function showPaintTool(){
   await appWindow?.show()
 }
 
-// function deleteGraphic(id:string){
-//   invoke('delete_graphic_by_id',{id:id}).then(()=>{
-//     successNotification("删除成功");
-//     //从列表中删除id为id的图形
-//     const index = graphicData.value.findIndex((item:any)=>item.id === id);
-//     if (index !== -1) {
-//       graphicData.value.splice(index, 1);
-//     }
-//   }).catch((e)=>{
-//     errorNotification(e.toString())
-//   })
-// }
 let isEditingGraphic = false;
 const editStartX = ref(0);
 const editEndX = ref(0);
