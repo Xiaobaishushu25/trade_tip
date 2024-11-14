@@ -1373,17 +1373,21 @@ function init_option(){
   }
 }
 //*********这块是右键区间统计的相关代码↓
-let rect: echarts.graphic.Rect = null; // 矩形选区
+let rect: echarts.graphic.Rect|null = null; // 矩形选区
+const selectDialogVisible = ref(false);
 async function enableRegionSelection() {
   let isDragging = false;  // 标记是否正在拖拽
   let start = [];
   let end = [];
+  let startIndex = 0;
+  let endIndex = 0;
   myChart.getZr().on('mousedown', function(event) {
     // 开始拖拽
     if(isDragging){return;}
     //不知道为什么在松开鼠标的过程触发mouseup后又会立刻触发一次mousedown和mouseup，所以加上判断，如果有矩形选区就不再触发mousedown
     if(rect != null)return;
     const startDataPoint = myChart.convertFromPixel('grid', [event.offsetX, event.offsetY]); // 获取初始位置的数据点坐标
+    startIndex = startDataPoint[0];
     start = myChart.convertToPixel('grid', [startDataPoint[0], startDataPoint[1]]);
     // start = [event.offsetX, event.offsetY]; // 获取初始位置的数据点坐标
     isDragging = true;
@@ -1405,6 +1409,7 @@ async function enableRegionSelection() {
     if (!isDragging) return;
     // 获取鼠标松开时的数据点坐标
     const endDataPoint = myChart.convertFromPixel('grid', [event.offsetX, event.offsetY]);
+    endIndex = endDataPoint[0];
     end = myChart.convertToPixel('grid', [endDataPoint[0], endDataPoint[1]]);//[1472.9417999999998, 376]
     myChart.getZr().remove(rect);
     console.log("remove")
@@ -1412,14 +1417,65 @@ async function enableRegionSelection() {
     console.log(rect);
     myChart.getZr().add(rect);
     console.log("add")
-    // console.log('松开时数据点坐标:', endDataPoint);
     // 结束拖拽
     isDragging = false;
     console.log(`mouseup,isDragging:{}`,isDragging)
     // 移除事件监听器，防止重复绑定
     myChart.getZr().off('mousemove', handleMouseMove);
     myChart.getZr().off('mouseup', handleMouseUp);
+
+    const selectData = rawData.value.slice(startIndex, endIndex+1);
+    const selectRecords = rawRecords.value.filter(item => item.date >= rawData[startIndex].date && item.date <= rawData[endIndex].date);
+    openSelectDialog(selectData,selectRecords);
   }
+}
+function openSelectDialog(selectData,selectRecords){
+  let greaterThanCloseCount = 0; // 开盘价大于收盘价的个数
+  let equalToCloseCount = 0;    // 开盘价等于收盘价的个数
+  let lessThanCloseCount = 0;   // 开盘价小于收盘价的个数
+
+  for (let stock of selectData) {
+    if (stock.open > stock.close) {
+      greaterThanCloseCount++;
+    } else if (stock.open === stock.close) {
+      equalToCloseCount++;
+    } else {
+      lessThanCloseCount++;
+    }
+  }
+  console.log(`开盘价大于收盘价的个数: ${greaterThanCloseCount}`);
+  console.log(`开盘价等于收盘价的个数: ${equalToCloseCount}`);
+  console.log(`开盘价小于收盘价的个数: ${lessThanCloseCount}`);
+  const changeRate = calculateChangeRate(selectData[0].open,selectData[selectData.length-1].close);
+  console.log(`区间涨跌幅为: ${changeRate}`);
+  let buyCount = 0;
+  let sellCount = 0;
+  let buyHandCount = 0; //买入多少手
+  let sellHandCount = 0;
+  let buyAmountSum = 0;
+  let sellAmountSum = 0;
+  for(let record of selectRecords){
+    if(record.direction == "买入"){
+      buyCount++;
+      buyHandCount += record.num;
+      buyAmountSum += record.amount;
+    }else{
+      sellCount++;
+      sellHandCount += record.num;
+      sellAmountSum += record.amount;
+    }
+  }
+  const buyAvgPrice = (buyAmountSum / buyHandCount).toFixed(3);
+  const sellAvgPrice = (sellAmountSum / sellHandCount).toFixed(3);
+  console.log(`买入次数: ${buyCount},卖出次数: ${sellCount}`);
+  console.log(`买入手数: ${buyHandCount},卖出手数: ${sellHandCount}`);
+  console.log(`买入均价: ${buyAvgPrice},卖出均价: ${sellAvgPrice}`);
+  console.log(`买入总金额：${buyAmountSum},卖出总金额:${sellAmountSum}`)
+  selectDialogVisible.value = true;
+}
+function closeSelectDialog(){
+  selectDialogVisible.value = false;
+  rect = null;
 }
 function getRect(start, end) {
   const width = Math.abs(end[0] - start[0]);
@@ -1665,6 +1721,14 @@ function deleteGroupGraphic(group_id:string){
         确定
       </el-button>
     </div>
+  </el-dialog>
+  <el-dialog v-model="selectDialogVisible"  draggable width="400" align-center style="padding: 0" class="dialog-container">
+    <template #header="{}">
+      <div class="my-header">
+        <label style="font-size: 14px;margin-left: 15px;font-family:sans-serif">区间统计</label>
+        <inline-svg src="../assets/svg/close.svg" class="small-close"  @click.left="closeSelectDialog"></inline-svg>
+      </div>
+    </template>
   </el-dialog>
 </template>
 
