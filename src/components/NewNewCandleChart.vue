@@ -252,7 +252,7 @@ onMounted(async ()=>{
   // });
 })
 onBeforeRouteLeave(async function (){
-  console.log("离开蜡烛图路由");
+  // console.log("离开蜡烛图路由");
   // myChart.off('dataZoom', updateLineOption);
   save_graphic();
   unlistenResize();
@@ -262,6 +262,7 @@ onBeforeRouteLeave(async function (){
   document.removeEventListener('wheel',wheelChangeCode);
   document.removeEventListener('keydown', unlockZoom);
   document.removeEventListener('keyup', lockZoom);
+  // myChart.getZr().off();
   // window.removeEventListener('resize', calculateTableHeight);
 })
 function handleRawData(raw: StockData[]){
@@ -1380,9 +1381,12 @@ let xAxisMin = 0; // x轴最小值
 let xAxisMax = 0; // x轴最大值
 const selectDialogVisible = ref(false);
 const selectShowData = ref();
+let currentMouseDownListener = null;
 async function enableRegionSelection() {
+  console.log("开始监听区间选择");
+  console.log("当前鼠标监听器1",currentMouseDownListener)
   let isDragging = false;  // 标记是否正在拖拽
-  let start = [];
+  let start = []; // 矩形选区的起点坐标(像素点)
   let end = [];
   let startIndex = 0;
   let endIndex = 0;
@@ -1393,13 +1397,25 @@ async function enableRegionSelection() {
   xAxisMin  = myChart.getModel().getComponent("xAxis",0).axis.scale._extent[0];
   xAxisMax  = myChart.getModel().getComponent("xAxis",0).axis.scale._extent[1];
   const endYPixel = myChart.convertToPixel('grid', [0, yAxisMin])[1];
-
-  myChart.getZr().on('mousedown', function(event) {
+  //发现第一个蜡烛图一切正常，但是切换第二个后会同时触发两次mousedown事件
+  //我尝试在蜡烛图onBeforeRouteLeave里用myChart.getZr().off();清除掉监听器，但是似乎不起作用，还是会触发两次mousedown事件
+  //后我尝试在enableRegionSelection()函数开始时用myChart.getZr().off('mousedown', handleMouseDown);清除掉监听器，但是似乎不起作用，还是会触发两次mousedown事件
+  //最后用一个currentMouseDownListener变量来记录上一次绑定的mousedown事件，在enableRegionSelection()函数中清除掉上一次的监听器，然后再绑定新的监听器
+  //这样就能解决这个问题了
+  // 移除之前的监听器（如果有）
+  if (currentMouseDownListener) {
+    myChart.getZr().off('mousedown', currentMouseDownListener);
+  }
+  currentMouseDownListener = handleMouseDown;
+  myChart.getZr().on('mousedown', currentMouseDownListener);
+  function handleMouseDown(event) {
+    // if (event.target instanceof TSpan2) return;
     if (event.event.button!== 2) return; // 只响应右键点击
     // 开始拖拽
     if(isDragging){return;}
-    //不知道为什么在松开鼠标的过程触发mouseup后又会立刻触发一次mousedown和mouseup，所以加上判断，如果有矩形选区就不再触发mousedown
-    if(rect != null)return;
+    // //不知道为什么在松开鼠标的过程触发mouseup后又会立刻触发一次mousedown和mouseup，所以加上判断，如果有矩形选区就不再触发mousedown
+    // if(rect != null)return;
+    console.log("开始选区");
     const startDataPoint = myChart.convertFromPixel('grid', [event.offsetX, event.offsetY]); // 获取初始位置的数据点坐标
     if(startDataPoint[0] < xAxisMin){
       startDataPoint[0] = xAxisMin;
@@ -1413,7 +1429,7 @@ async function enableRegionSelection() {
     // 只在 mousedown 时绑定一次 mousemove 和 mouseup 事件
     myChart.getZr().on('mousemove', handleMouseMove);
     myChart.getZr().on('mouseup', handleMouseUp);
-  });
+  }
   function handleMouseMove(event) {
     if (!isDragging) return;  // 如果没有正在拖拽，就不处理
     myChart.getZr().remove(rect);
@@ -1431,10 +1447,18 @@ async function enableRegionSelection() {
     }else if(endDataPoint[0] < xAxisMin){
       endDataPoint[0] = xAxisMin;
     }
-    // console.log("结束点的数据点坐标",endDataPoint);
-    // console.log("结束点的数据点坐标2",rawData.value[endDataPoint[0]]);
     endIndex = endDataPoint[0];
     end = myChart.convertToPixel('grid', [endDataPoint[0], endDataPoint[1]]);//[1472.9417999999998, 376]
+    if (Math.abs(end[0]-start[0]) < 5){
+      // 鼠标移动距离过小，认为是右击操作，取消选区
+      myChart.getZr().remove(rect);
+      // 结束拖拽
+      isDragging = false;
+      // 移除事件监听器，防止重复绑定
+      myChart.getZr().off('mousemove', handleMouseMove);
+      myChart.getZr().off('mouseup', handleMouseUp);
+      return;
+    }
     myChart.getZr().remove(rect);
     rect = getRect(start, [end[0], endYPixel])
     myChart.getZr().add(rect);
@@ -1443,7 +1467,6 @@ async function enableRegionSelection() {
     // 移除事件监听器，防止重复绑定
     myChart.getZr().off('mousemove', handleMouseMove);
     myChart.getZr().off('mouseup', handleMouseUp);
-
     //处理倒着划拉的情况
     if (startIndex > endIndex) {
       const temp = startIndex;
@@ -1457,6 +1480,7 @@ async function enableRegionSelection() {
   }
 }
 function openSelectDialog(selectData,selectRecords,beforeEndPrice){
+  console.log("开始区间统计");
   let greaterThanCloseCount = 0; // 开盘价大于收盘价的个数
   let equalToCloseCount = 0;    // 开盘价等于收盘价的个数
   let lessThanCloseCount = 0;   // 开盘价小于收盘价的个数
@@ -1468,7 +1492,6 @@ function openSelectDialog(selectData,selectRecords,beforeEndPrice){
     } else if (stock.open < stock.close) {
       lessThanCloseCount++;
     } else {
-      console.log('开盘价等于收盘价', stock.date);
       equalToCloseCount++;
     }
     if (stock.high > highestValue) {
@@ -1820,7 +1843,7 @@ function deleteGroupGraphic(group_id:string){
       </div>
     </template>
     <div class="column">
-      <label style="font-size: 16px;margin-left: 25px;font-family:sans-serif;font-weight: bold;">区间数据统计</label>
+      <label style="font-size: 15px;margin-left: 25px;font-family:sans-serif;font-weight: bold;">区间数据统计</label>
       <div class="row">
         <div class="row-no-padding">
           <label>起始日期：</label>
@@ -1874,7 +1897,7 @@ function deleteGroupGraphic(group_id:string){
           {{ selectShowData.changeRate }}%
         </label>
       </div>
-      <label style="font-size: 16px;margin-left: 25px;font-family:sans-serif;font-weight: bold;">区间交易统计</label>
+      <label style="font-size: 15px;margin-left: 25px;font-family:sans-serif;font-weight: bold;">区间交易统计</label>
       <div class="row">
         <div class="row-no-padding">
           <label>买入次数：</label>
