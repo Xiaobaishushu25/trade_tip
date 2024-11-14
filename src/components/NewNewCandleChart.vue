@@ -975,7 +975,7 @@ function get_line(start:number[],end:number[]){
       percent: 100
     },
     style:{
-      fill:'red',
+      stroke:'red',
     },
   })
 }
@@ -1374,14 +1374,30 @@ function init_option(){
 }
 //*********这块是右键区间统计的相关代码↓
 let rect: echarts.graphic.Rect|null = null; // 矩形选区
+let buyPriceLine: echarts.graphic.Line|null = null; // 矩形选区
+let sellPriceLine: echarts.graphic.Line|null = null; // 矩形选区
+let yAxisMin = 0; // y轴最小值
+// let yAxisMax = 0; // y轴最大值
+let xAxisMin = 0; // x轴最小值
+let xAxisMax = 0; // x轴最大值
 const selectDialogVisible = ref(false);
+
 async function enableRegionSelection() {
   let isDragging = false;  // 标记是否正在拖拽
   let start = [];
   let end = [];
   let startIndex = 0;
   let endIndex = 0;
+  //参数一，代表轴名称 y轴就是"yAxis",x轴就是"xAxis"
+//参数二，当yAxis值为数组时，也就是存在多个y轴时，代表你想求得最值的对应轴的索引，只有一个y轴可以忽略不写
+//_extent里面的索引 1代表求最大值，0代表求最小值
+  yAxisMin  = myChart.getModel().getComponent("yAxis",0).axis.scale._extent[0];
+  xAxisMin  = myChart.getModel().getComponent("xAxis",0).axis.scale._extent[0];
+  xAxisMax  = myChart.getModel().getComponent("xAxis",0).axis.scale._extent[1];
+  const endYPixel = myChart.convertToPixel('grid', [0, yAxisMin])[1];
+
   myChart.getZr().on('mousedown', function(event) {
+    if (event.event.button!== 2) return; // 只响应右键点击
     // 开始拖拽
     if(isDragging){return;}
     //不知道为什么在松开鼠标的过程触发mouseup后又会立刻触发一次mousedown和mouseup，所以加上判断，如果有矩形选区就不再触发mousedown
@@ -1389,43 +1405,42 @@ async function enableRegionSelection() {
     const startDataPoint = myChart.convertFromPixel('grid', [event.offsetX, event.offsetY]); // 获取初始位置的数据点坐标
     startIndex = startDataPoint[0];
     start = myChart.convertToPixel('grid', [startDataPoint[0], startDataPoint[1]]);
-    // start = [event.offsetX, event.offsetY]; // 获取初始位置的数据点坐标
+    start[1] = 0; // 修正坐标，避免选区太小
     isDragging = true;
-    console.log('mousedown,isDragging:{}',isDragging)
     // 只在 mousedown 时绑定一次 mousemove 和 mouseup 事件
     myChart.getZr().on('mousemove', handleMouseMove);
     myChart.getZr().on('mouseup', handleMouseUp);
-    // currentCount = 1;
   });
   function handleMouseMove(event) {
     if (!isDragging) return;  // 如果没有正在拖拽，就不处理
     myChart.getZr().remove(rect);
-    rect = getRect(start, [event.offsetX, event.offsetY])
+    rect = getRect(start, [event.offsetX, endYPixel])
     myChart.getZr().add(rect);
   }
 
   function handleMouseUp(event) {
-    console.log(isDragging)
     if (!isDragging) return;
     // 获取鼠标松开时的数据点坐标
     const endDataPoint = myChart.convertFromPixel('grid', [event.offsetX, event.offsetY]);
     endIndex = endDataPoint[0];
     end = myChart.convertToPixel('grid', [endDataPoint[0], endDataPoint[1]]);//[1472.9417999999998, 376]
     myChart.getZr().remove(rect);
-    console.log("remove")
-    rect = getRect(start, end)
-    console.log(rect);
+    rect = getRect(start, [end[0], endYPixel])
     myChart.getZr().add(rect);
-    console.log("add")
     // 结束拖拽
     isDragging = false;
-    console.log(`mouseup,isDragging:{}`,isDragging)
     // 移除事件监听器，防止重复绑定
     myChart.getZr().off('mousemove', handleMouseMove);
     myChart.getZr().off('mouseup', handleMouseUp);
 
+    //处理倒着划拉的情况
+    if (startIndex > endIndex) {
+      const temp = startIndex;
+      startIndex = endIndex;
+      endIndex = temp;
+    }
     const selectData = rawData.value.slice(startIndex, endIndex+1);
-    const selectRecords = rawRecords.value.filter(item => item.date >= rawData[startIndex].date && item.date <= rawData[endIndex].date);
+    const selectRecords = rawRecords.value.filter(item => item.date >= (rawData.value)[startIndex].date && item.date <= (rawData.value)[endIndex].date);
     openSelectDialog(selectData,selectRecords);
   }
 }
@@ -1448,35 +1463,53 @@ function openSelectDialog(selectData,selectRecords){
   console.log(`开盘价小于收盘价的个数: ${lessThanCloseCount}`);
   const changeRate = calculateChangeRate(selectData[0].open,selectData[selectData.length-1].close);
   console.log(`区间涨跌幅为: ${changeRate}`);
-  let buyCount = 0;
-  let sellCount = 0;
-  let buyHandCount = 0; //买入多少手
-  let sellHandCount = 0;
-  let buyAmountSum = 0;
-  let sellAmountSum = 0;
-  for(let record of selectRecords){
-    if(record.direction == "买入"){
-      buyCount++;
-      buyHandCount += record.num;
-      buyAmountSum += record.amount;
-    }else{
-      sellCount++;
-      sellHandCount += record.num;
-      sellAmountSum += record.amount;
+  if(selectRecords.length > 0){
+    let buyCount = 0;
+    let sellCount = 0;
+    let buyHandCount = 0; //买入多少手
+    let sellHandCount = 0;
+    let buyAmountSum = 0;
+    let sellAmountSum = 0;
+    for(let record of selectRecords){
+      if(record.direction.includes("买入")){
+        buyCount++;
+        buyHandCount += record.num;
+        buyAmountSum += record.amount;
+      }else{
+        sellCount++;
+        sellHandCount += record.num;
+        sellAmountSum += record.amount;
+      }
     }
+    const buyAvgPrice = (buyAmountSum / buyHandCount).toFixed(3);
+    const sellAvgPrice = (sellAmountSum / sellHandCount).toFixed(3);
+    buyAmountSum = buyAmountSum.toFixed(2);
+    sellAmountSum = sellAmountSum.toFixed(2);
+    console.log(`买入次数: ${buyCount},卖出次数: ${sellCount}`);
+    console.log(`买入手数: ${buyHandCount},卖出手数: ${sellHandCount}`);
+    console.log(`买入均价: ${buyAvgPrice},卖出均价: ${sellAvgPrice}`);
+    console.log(`买入总金额：${buyAmountSum},卖出总金额:${sellAmountSum}`);
+    buyPriceLine = getPriceLine(Number(buyAvgPrice),"#FF4500");
+    sellPriceLine = getPriceLine(Number(sellAvgPrice),"#008000");
+    myChart.getZr().add(buyPriceLine);
+    myChart.getZr().add(sellPriceLine);
   }
-  const buyAvgPrice = (buyAmountSum / buyHandCount).toFixed(3);
-  const sellAvgPrice = (sellAmountSum / sellHandCount).toFixed(3);
-  console.log(`买入次数: ${buyCount},卖出次数: ${sellCount}`);
-  console.log(`买入手数: ${buyHandCount},卖出手数: ${sellHandCount}`);
-  console.log(`买入均价: ${buyAvgPrice},卖出均价: ${sellAvgPrice}`);
-  console.log(`买入总金额：${buyAmountSum},卖出总金额:${sellAmountSum}`)
   selectDialogVisible.value = true;
 }
 function closeSelectDialog(){
   selectDialogVisible.value = false;
+  myChart.getZr().remove(rect);
+  myChart.getZr().remove(buyPriceLine);
+  myChart.getZr().remove(sellPriceLine);
   rect = null;
+  buyPriceLine = null;
+  sellPriceLine = null;
 }
+// watch(selectDialogVisible, (newVal) => {
+//   if (!newVal){
+//     closeSelectDialog();
+//   }
+// });
 function getRect(start, end) {
   const width = Math.abs(end[0] - start[0]);
   const height = Math.abs(end[1] - start[1]);
@@ -1488,11 +1521,29 @@ function getRect(start, end) {
       height: height,
     },
     style: {
-      fill: 'rgba(0, 0, 0, 0.2)',
-      stroke: '#0fe1c150',
-      lineWidth: 2,
+      fill: 'rgba(0, 0, 0, 0.15)',
+      stroke: 'black',
+      lineWidth: 1,
+      lineDash: [5, 2],
     },
   });
+}
+function getPriceLine(price:number,color:string){
+  const priceLineStart = myChart.convertToPixel('grid', [xAxisMin, price]);
+  const priceLineEnd = myChart.convertToPixel('grid', [xAxisMax, price]);
+  return new echarts.graphic.Line({
+    shape:{
+      x1: priceLineStart[0],
+      y1: priceLineStart[1],
+      x2: priceLineEnd[0],
+      y2: priceLineEnd[1],
+      percent: 100
+    },
+    style:{
+      stroke: color, // 使用 stroke 来设置线条颜色
+      lineWidth: 1.5, // 可设置线条宽度
+    },
+  })
 }
 //*********这块是右键区间统计的相关代码↑
 //*********这块是左右键切换tooltip的相关代码↓
@@ -1722,10 +1773,10 @@ function deleteGroupGraphic(group_id:string){
       </el-button>
     </div>
   </el-dialog>
-  <el-dialog v-model="selectDialogVisible"  draggable width="400" align-center style="padding: 0" class="dialog-container">
+  <el-dialog v-model="selectDialogVisible" :show-close="false" :modal="false" :close-on-click-modal="false" draggable width="400" align-center style="padding: 0" class="dialog-container">
     <template #header="{}">
       <div class="my-header">
-        <label style="font-size: 14px;margin-left: 15px;font-family:sans-serif">区间统计</label>
+        <label style="font-size: 14px;margin-left: 15px;font-family:sans-serif">{{store.stockinfoG.name}}区间统计</label>
         <inline-svg src="../assets/svg/close.svg" class="small-close"  @click.left="closeSelectDialog"></inline-svg>
       </div>
     </template>
