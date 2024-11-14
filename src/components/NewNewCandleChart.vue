@@ -823,11 +823,9 @@ function setZoomLock(flag:boolean){
   })
 }
 async function scrollEvent(deltaY:number){
-  if (inputVisible.value){ //当显示输入框时，不响应滚动事件
+  if (inputVisible.value||selectDialogVisible.value){ //当显示输入框时或者显示区间统计对话框时，不响应滚动事件
     return;
   }
-  //打印下面的信息
-  // console.log("滚动事件",store.stockinfoG?.code,store.stockinfoGs);
   let index = store.stockinfoGs.findIndex((item)=>item.code==store.stockinfoG?.code);
   if (index !== -1) {
     if (deltaY > 0) {
@@ -1381,7 +1379,7 @@ let yAxisMin = 0; // y轴最小值
 let xAxisMin = 0; // x轴最小值
 let xAxisMax = 0; // x轴最大值
 const selectDialogVisible = ref(false);
-
+const selectShowData = ref();
 async function enableRegionSelection() {
   let isDragging = false;  // 标记是否正在拖拽
   let start = [];
@@ -1403,6 +1401,11 @@ async function enableRegionSelection() {
     //不知道为什么在松开鼠标的过程触发mouseup后又会立刻触发一次mousedown和mouseup，所以加上判断，如果有矩形选区就不再触发mousedown
     if(rect != null)return;
     const startDataPoint = myChart.convertFromPixel('grid', [event.offsetX, event.offsetY]); // 获取初始位置的数据点坐标
+    if(startDataPoint[0] < xAxisMin){
+      startDataPoint[0] = xAxisMin;
+    }else if(startDataPoint[0] > xAxisMax){
+      startDataPoint[0] = xAxisMax;
+    }
     startIndex = startDataPoint[0];
     start = myChart.convertToPixel('grid', [startDataPoint[0], startDataPoint[1]]);
     start[1] = 0; // 修正坐标，避免选区太小
@@ -1422,6 +1425,14 @@ async function enableRegionSelection() {
     if (!isDragging) return;
     // 获取鼠标松开时的数据点坐标
     const endDataPoint = myChart.convertFromPixel('grid', [event.offsetX, event.offsetY]);
+    //鼠标拉倒外面的时候，判断一下是否超出范围
+    if(endDataPoint[0] > xAxisMax){
+      endDataPoint[0] = xAxisMax;
+    }else if(endDataPoint[0] < xAxisMin){
+      endDataPoint[0] = xAxisMin;
+    }
+    // console.log("结束点的数据点坐标",endDataPoint);
+    // console.log("结束点的数据点坐标2",rawData.value[endDataPoint[0]]);
     endIndex = endDataPoint[0];
     end = myChart.convertToPixel('grid', [endDataPoint[0], endDataPoint[1]]);//[1472.9417999999998, 376]
     myChart.getZr().remove(rect);
@@ -1439,37 +1450,57 @@ async function enableRegionSelection() {
       startIndex = endIndex;
       endIndex = temp;
     }
+    const beforeEndPrice = rawData.value[startIndex-1].close;
     const selectData = rawData.value.slice(startIndex, endIndex+1);
     const selectRecords = rawRecords.value.filter(item => item.date >= (rawData.value)[startIndex].date && item.date <= (rawData.value)[endIndex].date);
-    openSelectDialog(selectData,selectRecords);
+    openSelectDialog(selectData,selectRecords,beforeEndPrice);
   }
 }
-function openSelectDialog(selectData,selectRecords){
+function openSelectDialog(selectData,selectRecords,beforeEndPrice){
   let greaterThanCloseCount = 0; // 开盘价大于收盘价的个数
   let equalToCloseCount = 0;    // 开盘价等于收盘价的个数
   let lessThanCloseCount = 0;   // 开盘价小于收盘价的个数
-
+  let highestValue = selectData[0].high;
+  let lowestValue = selectData[0].low;
   for (let stock of selectData) {
     if (stock.open > stock.close) {
       greaterThanCloseCount++;
-    } else if (stock.open === stock.close) {
-      equalToCloseCount++;
-    } else {
+    } else if (stock.open < stock.close) {
       lessThanCloseCount++;
+    } else {
+      console.log('开盘价等于收盘价', stock.date);
+      equalToCloseCount++;
+    }
+    if (stock.high > highestValue) {
+      highestValue = stock.high;
+    }
+    if (stock.low < lowestValue) {
+      lowestValue = stock.low;
     }
   }
-  console.log(`开盘价大于收盘价的个数: ${greaterThanCloseCount}`);
-  console.log(`开盘价等于收盘价的个数: ${equalToCloseCount}`);
-  console.log(`开盘价小于收盘价的个数: ${lessThanCloseCount}`);
-  const changeRate = calculateChangeRate(selectData[0].open,selectData[selectData.length-1].close);
-  console.log(`区间涨跌幅为: ${changeRate}`);
+  const changeRate = calculateChangeRate(beforeEndPrice,selectData[selectData.length-1].close);
+  selectShowData.value = {
+    startDate: selectData[0].date,
+    endDate: selectData[selectData.length - 1].date,
+    greaterThanCloseCount: greaterThanCloseCount,
+    equalToCloseCount: equalToCloseCount,
+    lessThanCloseCount: lessThanCloseCount,
+    beforeEndPrice: beforeEndPrice,
+    open: selectData[0].open,
+    close: selectData[selectData.length - 1].close,
+    changeRate: changeRate,
+    highestValue: highestValue,
+    lowestValue: lowestValue,
+  }
+  let buyCount = 0;
+  let sellCount = 0;
+  let buyHandCount = 0; //买入多少手
+  let sellHandCount = 0;
+  let buyAmountSum = 0;
+  let sellAmountSum = 0;
+  let buyAvgPrice = 0;
+  let sellAvgPrice = 0;
   if(selectRecords.length > 0){
-    let buyCount = 0;
-    let sellCount = 0;
-    let buyHandCount = 0; //买入多少手
-    let sellHandCount = 0;
-    let buyAmountSum = 0;
-    let sellAmountSum = 0;
     for(let record of selectRecords){
       if(record.direction.includes("买入")){
         buyCount++;
@@ -1481,19 +1512,27 @@ function openSelectDialog(selectData,selectRecords){
         sellAmountSum += record.amount;
       }
     }
-    const buyAvgPrice = (buyAmountSum / buyHandCount).toFixed(3);
-    const sellAvgPrice = (sellAmountSum / sellHandCount).toFixed(3);
+    if(buyCount > 0){
+      buyAvgPrice = (buyAmountSum / buyHandCount).toFixed(3);
+    }
+    if(sellCount > 0){
+      sellAvgPrice = (sellAmountSum / sellHandCount).toFixed(3);
+    }
     buyAmountSum = buyAmountSum.toFixed(2);
     sellAmountSum = sellAmountSum.toFixed(2);
-    console.log(`买入次数: ${buyCount},卖出次数: ${sellCount}`);
-    console.log(`买入手数: ${buyHandCount},卖出手数: ${sellHandCount}`);
-    console.log(`买入均价: ${buyAvgPrice},卖出均价: ${sellAvgPrice}`);
-    console.log(`买入总金额：${buyAmountSum},卖出总金额:${sellAmountSum}`);
     buyPriceLine = getPriceLine(Number(buyAvgPrice),"#FF4500");
     sellPriceLine = getPriceLine(Number(sellAvgPrice),"#008000");
     myChart.getZr().add(buyPriceLine);
     myChart.getZr().add(sellPriceLine);
   }
+  selectShowData.value.buyCount = buyCount;
+  selectShowData.value.sellCount = sellCount;
+  selectShowData.value.buyHandCount = buyHandCount;
+  selectShowData.value.sellHandCount = sellHandCount;
+  selectShowData.value.buyAvgPrice = buyAvgPrice;
+  selectShowData.value.sellAvgPrice = sellAvgPrice;
+  selectShowData.value.buyAmountSum = buyAmountSum;
+  selectShowData.value.sellAmountSum = sellAmountSum;
   selectDialogVisible.value = true;
 }
 function closeSelectDialog(){
@@ -1780,6 +1819,109 @@ function deleteGroupGraphic(group_id:string){
         <inline-svg src="../assets/svg/close.svg" class="small-close"  @click.left="closeSelectDialog"></inline-svg>
       </div>
     </template>
+    <div class="column">
+      <label style="font-size: 16px;margin-left: 25px;font-family:sans-serif;font-weight: bold;">区间数据统计</label>
+      <div class="row">
+        <div class="row-no-padding">
+          <label>起始日期：</label>
+          <label class="select-content">{{selectShowData.startDate}}</label>
+        </div>
+        <div class="row-no-padding">
+          <label>终止日期：</label>
+          <label class="select-content">{{selectShowData.endDate}}</label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="row-no-padding">
+          <label>上涨天数：</label>
+          <label class="select-content" style="color: red">{{selectShowData.lessThanCloseCount}}</label>
+        </div>
+        <div class="row-no-padding">
+          <label>平盘天数：</label>
+          <label class="select-content" style="color: black">{{selectShowData.equalToCloseCount}}</label>
+        </div>
+        <div class="row-no-padding">
+          <label>下跌天数：</label>
+          <label class="select-content" style="color: green">{{selectShowData.greaterThanCloseCount}}</label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="row-no-padding">
+          <label >前收盘价：{{selectShowData.beforeEndPrice}}</label>
+        </div>
+        <div class="row-no-padding">
+          <label>开盘价：</label>
+          <label class="select-content" :style="{ color: selectShowData.open > selectShowData.close ? 'red' : 'green' }">{{selectShowData.open}}</label>
+        </div>
+        <div class="row-no-padding">
+          <label>收盘价：</label>
+          <label class="select-content" :style="{ color: selectShowData.open < selectShowData.close ? 'red' : 'green' }">{{selectShowData.close}}</label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="row-no-padding">
+          <label>最高价：</label>
+          <label style="color: red;font-weight: bold;font-size: 15px">{{selectShowData.highestValue}}</label>
+        </div>
+        <div class="row-no-padding">
+          <label>最低价：</label>
+          <label style="color: green;font-weight: bold;font-size: 15px">{{selectShowData.lowestValue}}</label>
+        </div>
+      </div>
+      <div class="row-no-label">
+        <label>涨跌幅：</label>
+        <label class="select-content" :style="{ color: selectShowData.changeRate > 0 ? 'red' : 'green',fontSize: '16px' }">
+          {{ selectShowData.changeRate }}%
+        </label>
+      </div>
+      <label style="font-size: 16px;margin-left: 25px;font-family:sans-serif;font-weight: bold;">区间交易统计</label>
+      <div class="row">
+        <div class="row-no-padding">
+          <label>买入次数：</label>
+          <label class="select-content">{{selectShowData.buyCount}}</label>
+        </div>
+        <div class="row-no-padding">
+          <label>卖出次数：</label>
+          <label class="select-content">{{selectShowData.sellCount}}</label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="row-no-padding">
+          <label>买入手数：</label>
+          <label class="select-content">{{selectShowData.buyHandCount}}</label>
+        </div>
+        <div class="row-no-padding">
+          <label>卖出手数：</label>
+          <label class="select-content">{{selectShowData.sellHandCount}}</label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="row-no-padding">
+          <label>买入均价：</label>
+          <label class="select-content" style="color: #535bf2">{{selectShowData.buyAvgPrice}}</label>
+        </div>
+        <div class="row-no-padding">
+          <label>卖出均价：</label>
+          <label class="select-content" style="color: #535bf2">{{selectShowData.sellAvgPrice}}</label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="row-no-padding">
+          <label>买入总金额：</label>
+          <label class="select-content">{{selectShowData.buyAmountSum}}</label>
+        </div>
+        <div class="row-no-padding">
+          <label>卖出总金额：</label>
+          <label class="select-content">{{selectShowData.sellAmountSum}}</label>
+        </div>
+      </div>
+      <div class="row">
+        <div class="row-no-padding">
+          <label>区间交易差额：</label>
+          <label class="select-content">{{(selectShowData.buyAmountSum-selectShowData.sellAmountSum).toFixed(2)}}</label>
+        </div>
+      </div>
+    </div>
   </el-dialog>
 </template>
 
@@ -1826,5 +1968,10 @@ function deleteGroupGraphic(group_id:string){
 }
 .mx-context-menu.flat .mx-context-menu-item{
   padding: 3px 0!important;/*10px是上和下 0px是左右;*/
+}
+
+.select-content{
+  font-size: 15px;
+  font-weight: bold;
 }
 </style>
