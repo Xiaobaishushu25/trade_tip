@@ -1383,8 +1383,6 @@ const selectDialogVisible = ref(false);
 const selectShowData = ref();
 let currentMouseDownListener = null;
 async function enableRegionSelection() {
-  console.log("开始监听区间选择");
-  console.log("当前鼠标监听器1",currentMouseDownListener)
   let isDragging = false;  // 标记是否正在拖拽
   let start = []; // 矩形选区的起点坐标(像素点)
   let end = [];
@@ -1415,7 +1413,6 @@ async function enableRegionSelection() {
     if(isDragging){return;}
     // //不知道为什么在松开鼠标的过程触发mouseup后又会立刻触发一次mousedown和mouseup，所以加上判断，如果有矩形选区就不再触发mousedown
     // if(rect != null)return;
-    console.log("开始选区");
     const startDataPoint = myChart.convertFromPixel('grid', [event.offsetX, event.offsetY]); // 获取初始位置的数据点坐标
     if(startDataPoint[0] < xAxisMin){
       startDataPoint[0] = xAxisMin;

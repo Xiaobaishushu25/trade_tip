@@ -30,6 +30,7 @@ use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
 use crate::service::http::{init_http};
 use log::{error, info};
+use log4rs::config::{Deserializers, RawConfig};
 use std::collections::HashMap;
 use std::env;
 use std::sync::atomic::{AtomicBool};
@@ -208,8 +209,11 @@ async fn main() {
     info!("ui end");
 }
 async fn init_app() {
-    //todo 日志配置应该不需要放在外面的文件夹中，应该打包进二进制。不然第一次启动时无法找到日志配置文件，导致无法启动。
-    log4rs::init_file("./data/log4rs.yaml", Default::default()).unwrap();
+    //done 日志配置应该不需要放在外面的文件夹中，应该打包进二进制。不然第一次启动时无法找到日志配置文件，导致无法启动。
+    let config_content = include_str!("../data/log4rs.yaml");
+    let config = serde_json::from_str::<RawConfig>(config_content).unwrap();
+    log4rs::init_raw_config(config).unwrap();
+    // log4rs::init_file("./data/log4rs.yaml", Default::default()).unwrap();
     init_db_coon().await;
     init_http().await;
     // judge_market_open().await;
