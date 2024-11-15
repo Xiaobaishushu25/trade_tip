@@ -986,7 +986,7 @@ function init_option(){
       top: 10,
       // left: 'left',
       left: '4%',
-      data: ['K线', 'MA5', 'MA10', 'MA20', 'MA60',"买卖点","图线"]
+      data: ['K线', 'MA5', 'MA10', 'MA20', 'MA60',"图线","买卖点"]
     },
     tooltip: {
       // trigger: 'axis',// https://echarts.apache.org/zh/option.html#grid.tooltip.trigger
