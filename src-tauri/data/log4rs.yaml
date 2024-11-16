@@ -29,8 +29,3 @@ root:
 loggers:
   app::backend::db:
     level: INFO
-  app::requests:
-    level: INFO
-    appenders:
-      - requests
-    additive: false

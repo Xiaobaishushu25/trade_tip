@@ -9,7 +9,7 @@
   <img src="https://img.shields.io/badge/pr-welcome-orange" alt="PR Welcome" style="margin-right: 10px;">
 </div>
 
-[English](README.md)&nbsp;  [简体中文](README.zh.md)
+[English](README.md)
 
 <h3>介绍</h3> 
 

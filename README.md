@@ -8,7 +8,8 @@
   <img src="https://img.shields.io/badge/pr-welcome-orange" alt="PR Welcome" style="margin-right: 10px;">
 </div>
 
-[English](README.md)&nbsp;  [简体中文](README.zh.md)
+[简体中文](README.zh.md)
+The specific version update instructions can be viewed at [update record](UpdateRecord.md).
 
 <h3>Introduction</h3>
 

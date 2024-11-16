@@ -29,12 +29,16 @@ use crate::service::command::tauri_command::{
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
 use crate::service::http::{init_http};
-use log::{error, info};
-use log4rs::config::{Deserializers, RawConfig};
+use log::{error, info, LevelFilter};
+use log4rs::config::{Appender, Root};
 use std::collections::HashMap;
 use std::env;
 use std::sync::atomic::{AtomicBool};
 use std::sync::{Arc, LazyLock, Mutex};
+use log4rs::append::console::ConsoleAppender;
+use log4rs::append::file::FileAppender;
+use log4rs::encode::pattern::PatternEncoder;
+use log4rs::filter::threshold::ThresholdFilter;
 use tauri::Manager;
 use tokio::task::JoinHandle;
 
@@ -209,14 +213,36 @@ async fn main() {
     info!("ui end");
 }
 async fn init_app() {
+    init_logger().await;
     //done 日志配置应该不需要放在外面的文件夹中，应该打包进二进制。不然第一次启动时无法找到日志配置文件，导致无法启动。
-    let config_content = include_str!("../data/log4rs.yaml");
-    let config = serde_json::from_str::<RawConfig>(config_content).unwrap();
-    log4rs::init_raw_config(config).unwrap();
+    // let config_content = include_str!("../data/log4rs.yaml");
+    // println!("config_content:{}", config_content);
+    // let config = serde_yml::from_str::<RawConfig>(config_content).unwrap();
+    // println!("config:{:?}", config);
+    // log4rs::init_raw_config(config).unwrap();
     // log4rs::init_file("./data/log4rs.yaml", Default::default()).unwrap();
     init_db_coon().await;
     init_http().await;
-    // judge_market_open().await;
+}
+async fn init_logger() {
+    // 创建一个控制台 appender
+    let stdout = ConsoleAppender::builder()
+        .encoder(Box::new(PatternEncoder::new("{d(%Y-%m-%d %H:%M:%S)} {h({l})} {f} line:{L} - {m}{n}")))
+        .build();
+    // 创建一个文件 appender
+    let file = FileAppender::builder()
+        .append(true)
+        .encoder(Box::new(PatternEncoder::new("{d(%Y-%m-%d %H:%M:%S)} {h({l})} {f} line:{L} - {m}{n}")))
+        .build("log/server.log")
+        .unwrap();
+    // 构造日志配置
+    let config = log4rs::Config::builder()
+        .appender(Appender::builder().build("stdout", Box::new(stdout)))
+        .appender(Appender::builder().filter(Box::new(ThresholdFilter::new(LevelFilter::Error))).build("server", Box::new(file)))
+        .build(Root::builder().appender("stdout").appender("server").build(LevelFilter::Info))
+        .unwrap();
+    // 初始化日志
+    log4rs::init_config(config).unwrap();
 }
 // async fn update() {
 //     match service::curd::update_all_day_k().await {

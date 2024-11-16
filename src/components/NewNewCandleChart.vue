@@ -157,6 +157,7 @@ onMounted(async ()=>{
   // await query_graphic();
   await updateChart();
   myChart.on('dataZoom', updateLineOption);
+  myChart.on('dataZoom', enableRegionSelection);
   myChart.on('click', function (params) {
     if (params.componentType === 'series' && params.seriesType === 'candlestick') {
       // 设置当前索引为被点击的索引
@@ -1382,7 +1383,7 @@ let xAxisMax = 0; // x轴最大值
 const selectDialogVisible = ref(false);
 const selectShowData = ref();
 let currentMouseDownListener = null;
-async function enableRegionSelection() {
+function enableRegionSelection() {
   let isDragging = false;  // 标记是否正在拖拽
   let start = []; // 矩形选区的起点坐标(像素点)
   let end = [];
@@ -1888,11 +1889,16 @@ function deleteGroupGraphic(group_id:string){
           <label style="color: green;font-weight: bold;font-size: 15px">{{selectShowData.lowestValue}}</label>
         </div>
       </div>
-      <div class="row-no-label">
-        <label>涨跌幅：</label>
-        <label class="select-content" :style="{ color: selectShowData.changeRate > 0 ? 'red' : 'green',fontSize: '16px' }">
-          {{ selectShowData.changeRate }}%
-        </label>
+      <div class="row">
+        <div class="row-no-padding">
+          <label >交易天数：{{selectShowData.greaterThanCloseCount+selectShowData.lessThanCloseCount+selectShowData.equalToCloseCount}}</label>
+        </div>
+        <div class="row-no-padding">
+          <label>涨跌幅：</label>
+          <label class="select-content" :style="{ color: selectShowData.changeRate > 0 ? 'red' : 'green',fontSize: '16px' }">
+            {{ selectShowData.changeRate }}%
+          </label>
+        </div>
       </div>
       <label style="font-size: 15px;margin-left: 25px;font-family:sans-serif;font-weight: bold;">区间交易统计</label>
       <div class="row">
@@ -1937,7 +1943,11 @@ function deleteGroupGraphic(group_id:string){
       </div>
       <div class="row">
         <div class="row-no-padding">
-          <label>区间交易差额：</label>
+          <label>总差手(净买入)：</label>
+          <label class="select-content">{{(selectShowData.buyHandCount-selectShowData.sellHandCount).toFixed(2)}}</label>
+        </div>
+        <div class="row-no-padding">
+          <label>总差额(净买入)：</label>
           <label class="select-content">{{(selectShowData.buyAmountSum-selectShowData.sellAmountSum).toFixed(2)}}</label>
         </div>
       </div>

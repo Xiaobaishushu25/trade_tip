@@ -1,6 +1,6 @@
 [package]
 name = "trade_tip"
-version = "0.4.6"
+version = "0.4.7"
 description = "金融助手"
 authors = ["xbss"]
 edition = "2021"
@@ -23,6 +23,7 @@ tauri-plugin-fs = "2.0.1"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_with = "3.7.0"
+#serde_yml = "0.0.12"
 #tauri-plugin-http = "2.0.0-beta.4"
 #hyper-tls = "0.6.0"
 reqwest = { version = "0.12", features = ["json"] }
