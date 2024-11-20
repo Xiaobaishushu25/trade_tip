@@ -25,6 +25,7 @@ const options = {
 let defaultRemark:string[] = []
 onMounted(async () => {
   invoke<TransactionRecord[]>('query_transaction_records',{}).then(data => {
+    data.forEach(item => {if(item.remark==null){item.remark = ''}})//重要，防止remark为null导致的的不提示问题
     addRecords(data);
   }).catch(e => {
     console.error(e)
@@ -105,12 +106,22 @@ const dbClickCell = (scope: any) => {
   state.tableRowEditIndex = scope.$index
   state.tableColumnEditIndex = scope.column.id
   nextTick(() => {
+    if (tableRowInputRef.value) {
+      // 获取焦点
+      tableRowInputRef.value.focus();
+      // done 如何主动触发提示内容,之前问题是在输入框获得焦点后，不主动触发提示内容。
+      //使用tableRowInputRef.value.suggestions = defaultRemark;强制显示提示后，只会显示一瞬间，然后马上关闭
+      //后来发现问题在于remark的内容是null导致的。
+      // 手动设置建议内容并强制显示下拉框
+      // tableRowInputRef.value.suggestions = defaultRemark;
+      // 模拟输入触发提示
+      // simulateInput();
+      // showAutocompleteSuggestions(tableRowInputRef.value);
+    }
     // 获取焦点
-    //todo 如何主动触发提示内容？？
-    tableRowInputRef.value.focus();
-    tableRowInputRef.value.suggestions = defaultRemark;
   })
 }
+
 // 表格中input取消焦点,select变化
 const onInputTableBlur = async (scope: any) => {
   store.isEditingRecord = false
@@ -122,11 +133,6 @@ const onInputTableBlur = async (scope: any) => {
     if (result!=null) {
       errorNotification(`更新备注失败：${result}`)
     }else {
-      // let changeRecord = transactionRecords.find(record => record.date === data.date && record.time === data.time && record.code === data.code);
-      // changeRecord.remark = data.remark;
-      // filteredRecords.value = transactionRecords;
-      // console.log('transactionRecords',transactionRecords);
-      // console.log('filteredRecords',filteredRecords);
       //把这个消息发给蜡烛图，让他更新买卖点
       await emit('update_record_event', data)
     }
