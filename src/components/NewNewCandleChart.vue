@@ -825,7 +825,7 @@ function setZoomLock(flag:boolean){
   })
 }
 async function scrollEvent(deltaY:number){
-  if (inputVisible.value||selectDialogVisible.value){ //当显示输入框时或者显示区间统计对话框时，不响应滚动事件
+  if (inputVisible.value||selectDialogVisible.value||store.isEditingRecord){ //当显示输入框时或者显示区间统计对话框时，不响应滚动事件
     return;
   }
   let index = store.stockinfoGs.findIndex((item)=>item.code==store.stockinfoG?.code);

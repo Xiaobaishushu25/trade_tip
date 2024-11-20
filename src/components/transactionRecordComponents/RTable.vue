@@ -5,6 +5,7 @@ import {invoke} from "@tauri-apps/api/core";
 import {emit, listen} from "@tauri-apps/api/event";
 
 import {errorNotification} from "../../utils.ts";
+import {store} from "../../store.ts";
 
 
 const tableRef = ref(null);
@@ -39,7 +40,6 @@ onMounted(async () => {
     });
   });
   await listen("update_record_event", (data)=>{
-    console.log("接收到更新事件",data);
     let payload = data.payload;
     let changeRecord = transactionRecords.find(record => record.date === payload.date && record.time === payload.time && record.code === payload.code);
     changeRecord.remark = payload.remark;
@@ -100,16 +100,20 @@ const state = reactive({
 })
 // 双击可编辑的单元格
 const dbClickCell = (scope: any) => {
+  store.isEditingRecord = true
   // 找到单个格子独有的属性 - 这里是用所在行跟列id区别显示
   state.tableRowEditIndex = scope.$index
   state.tableColumnEditIndex = scope.column.id
   nextTick(() => {
     // 获取焦点
-    tableRowInputRef.value.focus()
+    //todo 如何主动触发提示内容？？
+    tableRowInputRef.value.focus();
+    tableRowInputRef.value.suggestions = defaultRemark;
   })
 }
 // 表格中input取消焦点,select变化
 const onInputTableBlur = async (scope: any) => {
+  store.isEditingRecord = false
   state.tableRowEditIndex = undefined
   state.tableColumnEditIndex = undefined
   let data = scope.row;
@@ -179,6 +183,7 @@ defineExpose({ codeFilter, deleteAllRecords, addRecords})
             "
             style="font-size: 13px; height: 22px"
             ref="tableRowInputRef"
+            :trigger-on-focus="true"
             v-model="scope.row.remark"
             :fetch-suggestions="querySearch"
             placeholder="请输入"
@@ -190,7 +195,6 @@ defineExpose({ codeFilter, deleteAllRecords, addRecords})
             "
             @blur="onInputTableBlur(scope)"
           />
-
 <!--        <el-input-->
 <!--            v-if="-->
 <!--              state.tableRowEditIndex === scope.$index &&-->

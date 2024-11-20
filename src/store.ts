@@ -23,7 +23,8 @@ export const store:{
     boxData:Record<string, number[]>,
     isBlur:boolean,
     rowData:Map<string,RowData>,
-    config:Config
+    config:Config,
+    isEditingRecord:boolean,
 } = reactive({
     activeGroup:"",//当前选择的分组
     stockGroups:[],//当前所有的分组
@@ -32,6 +33,7 @@ export const store:{
     boxData:{},//全部的箱线图数据
     isBlur:false,//窗口是否失去焦点
     rowData:new Map(),
-    config:null//配置项
+    config:null,//配置项
+    isEditingRecord:false,//是否正在编辑记录
     // count:"",
 })

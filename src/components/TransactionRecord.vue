@@ -7,6 +7,7 @@ import {ref, watch} from "vue";
 const barRef = ref(null);
 const tableRef = ref(null);
 async function deleteAllRecords(){
+  //todo 添加一个确认弹窗
   tableRef.value?.deleteAllRecords();
 }
 async function exportRecords(records){
