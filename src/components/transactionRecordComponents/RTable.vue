@@ -2,13 +2,13 @@
 import {TransactionRecord} from "../../type.ts";
 import {ref,reactive, watch,onMounted,nextTick,} from "vue";
 import {invoke} from "@tauri-apps/api/core";
-import {emit} from "@tauri-apps/api/event";
+import {emit, listen} from "@tauri-apps/api/event";
 
 import {errorNotification} from "../../utils.ts";
 
 
 const tableRef = ref(null);
-const tableRowInputRef: any = ref(null)
+const tableRowInputRef: any = ref(null);
 
 const contextMenuShow = ref(false)
 const options = {
@@ -21,17 +21,45 @@ const options = {
   y: 200
 }
 
-onMounted(() => {
-  console.log("rtable mounted")
+let defaultRemark:string[] = []
+onMounted(async () => {
   invoke<TransactionRecord[]>('query_transaction_records',{}).then(data => {
     addRecords(data);
   }).catch(e => {
     console.error(e)
-  })
+  });
+  const storedObjectString = localStorage.getItem('config');
+  const myObjectFromStorage = JSON.parse(storedObjectString);
+  defaultRemark = myObjectFromStorage.display_config.default_remark.map(item => {
+    return {"value":item}
+  });
+  await listen("disPlay_update", (data)=>{
+    defaultRemark = data.payload.default_remark.map(item => {
+      return {"value":item}
+    });
+  });
+  await listen("update_record_event", (data)=>{
+    console.log("接收到更新事件",data);
+    let payload = data.payload;
+    let changeRecord = transactionRecords.find(record => record.date === payload.date && record.time === payload.time && record.code === payload.code);
+    changeRecord.remark = payload.remark;
+    filteredRecords.value = transactionRecords;
+    if(selectedCode!='0'){
+      codeFilter(selectedCode);
+    }
+  });
 })
 let transactionRecords: TransactionRecord[] = [];
 const filteredRecords = ref(transactionRecords);
 let selectedCode = '0';
+
+const querySearch = (queryString: string, cb: any) => {
+  const results = queryString
+    ? defaultRemark.filter(item =>item.value.includes(queryString))
+    : defaultRemark
+  cb(results)
+}
+
 const tableRowClassName = ({row}: {
   row: TransactionRecord,
 }) => {
@@ -90,6 +118,11 @@ const onInputTableBlur = async (scope: any) => {
     if (result!=null) {
       errorNotification(`更新备注失败：${result}`)
     }else {
+      // let changeRecord = transactionRecords.find(record => record.date === data.date && record.time === data.time && record.code === data.code);
+      // changeRecord.remark = data.remark;
+      // filteredRecords.value = transactionRecords;
+      // console.log('transactionRecords',transactionRecords);
+      // console.log('filteredRecords',filteredRecords);
       //把这个消息发给蜡烛图，让他更新买卖点
       await emit('update_record_event', data)
     }
@@ -139,21 +172,40 @@ defineExpose({ codeFilter, deleteAllRecords, addRecords})
     <el-table-column prop="remark" label="备注"  style="font-size: 14px" width="150" >
       <template #default="scope">
         <!-- 判断为编辑状态 -->
-        <el-input
+        <el-autocomplete
             v-if="
-              state.tableRowEditIndex === scope.$index &&
-              state.tableColumnEditIndex == scope.column.id
+            state.tableRowEditIndex === scope.$index &&
+            state.tableColumnEditIndex == scope.column.id
             "
-            style="font-size: 14px;height: 22px"
+            style="font-size: 13px; height: 22px"
             ref="tableRowInputRef"
             v-model="scope.row.remark"
+            :fetch-suggestions="querySearch"
+            placeholder="请输入"
+            class="custom-autocomplete"
             @keyup.enter="
               $event => {
                 $event.target.blur()
               }
             "
             @blur="onInputTableBlur(scope)"
-        />
+          />
+
+<!--        <el-input-->
+<!--            v-if="-->
+<!--              state.tableRowEditIndex === scope.$index &&-->
+<!--              state.tableColumnEditIndex == scope.column.id-->
+<!--            "-->
+<!--            style="font-size: 14px;height: 22px"-->
+<!--            ref="tableRowInputRef"-->
+<!--            v-model="scope.row.remark"-->
+<!--            @keyup.enter="-->
+<!--              $event => {-->
+<!--                $event.target.blur()-->
+<!--              }-->
+<!--            "-->
+<!--            @blur="onInputTableBlur(scope)"-->
+<!--        />-->
         <!-- 判断为显示状态 -->
         <p v-else  @dblclick="dbClickCell(scope)">
           {{ scope.row.remark || '双击编辑'}}
@@ -165,7 +217,7 @@ defineExpose({ codeFilter, deleteAllRecords, addRecords})
       v-model:show="contextMenuShow"
       :options="options"
   >
-    <context-menu-item label="删除" @click.left="deleteRecord" />
+    <context-menu-item label="删除(直接!)" @click.left="deleteRecord" />
   </context-menu>
 </template>
 
@@ -186,5 +238,12 @@ defineExpose({ codeFilter, deleteAllRecords, addRecords})
 }
 .el-table .right-cell {
   text-align: right; /* 或者根据需要设置为其他对齐方式 */
+}
+
+.custom-autocomplete .el-input {
+  --el-input-focus-border-color: grey!important; /* 上 右 下 左 */
+}
+.custom-autocomplete .el-input__wrapper {
+  padding: 0 0 0 2px!important; /* 上 右 下 左 */
 }
 </style>

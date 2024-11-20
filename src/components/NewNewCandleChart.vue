@@ -200,9 +200,9 @@ onMounted(async ()=>{
       updateLineOption();
     }
   });
-  unlistenRecordUpdate = await listen("update_record_event", ({payload }) => {
+  unlistenRecordUpdate = await listen("update_record_event", ({payload}) => {
     if (chartIsInit){
-      // console.log("收到交易记录更新事件",payload);先修改rawRecords，然后调用updateRecordsPaint更新图形
+      console.log("收到交易记录更新事件",payload);//先修改rawRecords，然后调用updateRecordsPaint更新图形
       //从rawRecords筛选出payload并修改，只有一个，，用find，date、time、code都一样就可以修改
       const record = rawRecords.value.find(record =>
           record.date === payload.date &&

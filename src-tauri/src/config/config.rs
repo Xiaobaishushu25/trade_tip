@@ -123,6 +123,7 @@ pub struct DisplayConfig {
     a_extend: bool,
     bs_size: i32,      //BS点的大小
     k_show_begin: i32, //K线显示百分比
+    default_remark:Vec<String>,
 }
 impl Default for DisplayConfig {
     fn default() -> Self {
@@ -130,6 +131,19 @@ impl Default for DisplayConfig {
             a_extend: false,
             bs_size: 13,
             k_show_begin: 85,
+            default_remark:vec!["跌破箱体下轨，卖出".into(), 
+                                "逼近箱体上轨，卖出".into(), 
+                                "跌破五日线，卖出".into(),
+                                "跌破十日线，卖出".into(),
+                                "跌破二十日线，卖出".into(),
+                                "突破箱体上轨，买入".into(),
+                                "逼近箱体下轨，买入".into(),
+                                "当日大跌博反弹，买入".into(),
+                                "当日做T，买入".into(),
+                                "当日做T，卖出".into(),
+                                "网格交易，买入".into(),
+                                "网格交易，卖出".into(),
+            ]
         }
     }
 }

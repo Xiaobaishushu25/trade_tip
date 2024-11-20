@@ -51,6 +51,14 @@ async function open_position(){
   });
 }
 async function open_record(){
+  const window = await WebviewWindow.getByLabel('record');
+  if (window!=null){
+    //todo bug https://github.com/tauri-apps/tauri/issues/6310
+    console.log("窗口存在")
+    await window.setFocus()//不起作用
+    // await window.hide()
+    // await window.show()
+  }
   const webview = new WebviewWindow('record', {
     url: '/#/record',
     center: true,

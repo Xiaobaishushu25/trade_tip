@@ -27,12 +27,12 @@ onMounted(async ()=>{
     errorNotification( "读取配置失败");
   })
   await listen("disPlay_update", (data)=>{
-    console.log(data.payload);
+    // console.log(data.payload);
     store.config.display_config = data.payload;
-    console.log(store.config);
+    // console.log(store.config);
   });
   await listen("data_config_update", (data)=>{
-    console.log(data.payload);
+    // console.log(data.payload);
     store.config.data_config = data.payload;
   });
 

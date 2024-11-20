@@ -116,6 +116,7 @@ interface DisplayConfig{
     a_extend: boolean,
     bs_size:number,//BS点的大小
     k_show_begin:number,//K线显示百分比
+    default_remark:string[],
 }
 interface DataConfig{
     update_freq: number,
