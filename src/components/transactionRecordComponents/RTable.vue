@@ -95,6 +95,9 @@ async function deleteRecord() {
     errorNotification("删除失败")
   })
 }
+// 新增记录
+// records: 新增记录数组
+// needEmit: 是否需要触发事件（用于两个表之间同步数据）
 async function addRecords(records: TransactionRecord[],needEmit:boolean=true) {
   // 从前面插入数据到 transactionRecords
   transactionRecords.unshift(...records);
