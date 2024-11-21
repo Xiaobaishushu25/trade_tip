@@ -40,6 +40,12 @@ onMounted(async () => {
       return {"value":item}
     });
   });
+  await listen("add_records_event", (data)=>{
+    let payload = data.payload;
+    if(transactionRecords.length!=payload.num){
+      addRecords(payload.records,false);
+    }
+  });
   await listen("update_record_event", (data)=>{
     let payload = data.payload;
     let changeRecord = transactionRecords.find(record => record.date === payload.date && record.time === payload.time && record.code === payload.code);
@@ -89,7 +95,7 @@ async function deleteRecord() {
     errorNotification("删除失败")
   })
 }
-async function addRecords(records: TransactionRecord[]) {
+async function addRecords(records: TransactionRecord[],needEmit:boolean=true) {
   // 从前面插入数据到 transactionRecords
   transactionRecords.unshift(...records);
   // 判断 selectedCode，如果不是 '0' 则过滤后赋值，否则直接赋值全部数据
@@ -99,6 +105,9 @@ async function addRecords(records: TransactionRecord[]) {
   } else {
     // 直接重新赋值整个数组来触发响应式
     filteredRecords.value = [...transactionRecords];
+  }
+  if (needEmit){
+    await emit('add_records_event',{num:records.length,records:records});
   }
 }
 const state = reactive({
