@@ -80,6 +80,15 @@ async function deleteAllRecords() {
   filteredRecords.value = transactionRecords;
   selectedCode = '0';
 }
+async function deleteRecord() {
+  invoke('delete_transaction_record_by_primary', {date: options.date, time: options.time, code: options.code}).then(data => {
+    transactionRecords = transactionRecords.filter(record => record.date !== options.date || record.time !== options.time || record.code !== options.code)
+    filteredRecords.value = transactionRecords
+  }).catch(e => {
+    console.error(e)
+    errorNotification("删除失败")
+  })
+}
 async function addRecords(records: TransactionRecord[]) {
   // 从前面插入数据到 transactionRecords
   transactionRecords.unshift(...records);
@@ -146,16 +155,6 @@ function showContextMenu(row: TransactionRecord, _: any, e: MouseEvent) {
   options.time = row.time;
   options.code = row.code;
   contextMenuShow.value=true
-}
-async function deleteRecord() {
-  invoke('delete_transaction_record_by_primary', {date: options.date, time: options.time, code: options.code}).then(data => {
-    console.log("删除成功")
-    transactionRecords = transactionRecords.filter(record => record.date !== options.date || record.time !== options.time || record.code !== options.code)
-    filteredRecords.value = transactionRecords
-  }).catch(e => {
-    console.error(e)
-    errorNotification("删除失败")
-  })
 }
 
 defineExpose({ codeFilter, deleteAllRecords, addRecords})

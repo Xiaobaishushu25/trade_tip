@@ -30,7 +30,7 @@ use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
 use crate::service::http::{init_http};
 use log::{error, info, LevelFilter};
-use log4rs::config::{Appender, Root};
+use log4rs::config::{Appender, Logger, Root};
 use std::collections::HashMap;
 use std::env;
 use std::sync::atomic::{AtomicBool};
@@ -239,6 +239,7 @@ async fn init_logger() {
     let config = log4rs::Config::builder()
         .appender(Appender::builder().build("stdout", Box::new(stdout)))
         .appender(Appender::builder().filter(Box::new(ThresholdFilter::new(LevelFilter::Error))).build("server", Box::new(file)))
+        // .logger(Logger::builder().build("tao::platform_impl::windows::event_loop::runner", LevelFilter::Off))
         .build(Root::builder().appender("stdout").appender("server").build(LevelFilter::Info))
         .unwrap();
     // 初始化日志

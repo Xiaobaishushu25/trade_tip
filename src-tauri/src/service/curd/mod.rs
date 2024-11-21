@@ -108,6 +108,7 @@ pub async fn update_all_position() -> AppResult<()> {
                 .filter(|item| item.date > latest_date) // 过滤出日期在 latest_date 之后的数据
                 .collect::<Vec<_>>();
             if data_after_latest_date.is_empty() {
+                info!("{}数据为空，不更新持仓仓位变化数据", key);
                 return Ok(());
             }
             //将数据插入到need_insert_data中，如果目前还不存在，就新建，否则就直接设置字段值

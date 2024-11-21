@@ -69,8 +69,9 @@ async function deleteAll() {
   <el-button plain  @click.left="dialogVisible = true">全部删除</el-button>
   <el-dialog
       v-model="dialogVisible"
-      title="删除"
+      title="删除全部"
       width="500"
+      top="35vh"
   >
     <span>确认要删除全部交易记录数据吗？(建议先导出备份)</span>
     <template #footer>

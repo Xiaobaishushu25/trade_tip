@@ -33,6 +33,7 @@ async function changeUpdateState(){
   live_state.value = !live_state.value;
 }
 async function open_position(){
+  await showAndFocusWindow('position')
   const webview = new WebviewWindow('position', {
     url: '/#/position',
     center: true,
@@ -51,14 +52,18 @@ async function open_position(){
   });
 }
 async function open_record(){
-  const window = await WebviewWindow.getByLabel('record');
-  if (window!=null){
-    //todo bug https://github.com/tauri-apps/tauri/issues/6310
-    console.log("窗口存在")
-    await window.setFocus()//不起作用
-    // await window.hide()
-    // await window.show()
-  }
+  await showAndFocusWindow('record')
+  // const window = await WebviewWindow.getByLabel('record');
+  // if (window!=null){
+  //   //todo bug https://github.com/tauri-apps/tauri/issues/6310
+  //   console.log("窗口存在")
+  //   await window.unminimize()
+  //   await window.setFocus()//不起作用
+  //   let isFocused = await window.isFocused()
+  //   console.log("窗口是否焦点",isFocused)
+  //   // await window.hide()
+  //   // await window.show()
+  // }
   const webview = new WebviewWindow('record', {
     url: '/#/record',
     center: true,
@@ -77,6 +82,7 @@ async function open_record(){
   });
 }
 async function open_setting(){
+  await showAndFocusWindow('setting')
   const webview = new WebviewWindow('setting', {
     url: '/#/setting',
     center: true,
@@ -93,6 +99,14 @@ async function open_setting(){
   await webview.once('tauri://created', async function () {
     await webview.show()
   });
+}
+// 显示窗口并聚焦
+async function showAndFocusWindow(label:string){
+  const window = await WebviewWindow.getByLabel(label);
+  if (window!=null) {
+    await window.unminimize()
+    await window.setFocus()
+  }
 }
 async function window_minimize(){
   // console.log("窗口是",await WebviewWindow.getCurrent().isResizable());
