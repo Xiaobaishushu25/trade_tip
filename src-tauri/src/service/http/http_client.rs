@@ -138,6 +138,7 @@ impl HttpRequest {
     ) -> AppResult<Vec<StockDataTime>> {
         // let ts: u32 = frequency.trim_end_matches('d').parse().unwrap_or(1);
         let code_with_market = format!("{}{}", get_market_by_code(code)?, code);
+        //https://ifzq.gtimg.cn/appstock/app/kline/mkline?param=sh000001,m1,,60
         let url = format!("http://ifzq.gtimg.cn/appstock/app/kline/mkline?param={code_with_market},m{frequency},,{count}");
         info!("Fetching min stock data from {}", url);
         let resp = self.get(&url).await?.text().await?;

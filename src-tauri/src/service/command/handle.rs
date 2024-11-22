@@ -12,7 +12,7 @@ use crate::service::curd::transaction_record_curd::TransactionRecordCurd;
 use crate::service::http::{init_http, REQUEST};
 use crate::utils::stock_util::{calculate_ago_minutes, calculate_ago_days_with_num, compute_mul_ma, compute_single_ma, calculate_ago_days_with_str};
 use anyhow::anyhow;
-use log::{error, info};
+use log::{error, info, warn};
 use std::collections::HashMap;
 use std::ops::Sub;
 use std::sync::Arc;
@@ -156,19 +156,21 @@ pub(crate) async fn handle_and_save_record(path: String) -> AppResult<Vec<Transa
 ///     若a<b，且大部分时间股价在均线（分时线也有一个均线）上，若10:00后突破其中最高价，则可以买入。
 ///     若a>b，且大部分时间股价在均线（分时线也有一个均线）下，若10:00后跌破其中最低价，则可以卖出。
 /// 由于均线不好搞，我直接用一个函数let line = |x: f64| first + slope * x;来作为均线。
+/// todo 用直线函数不准确，待优化
 /// 判断标准是：70%的时间股价在均线上方，且b相较于a涨了0.1%以上，则视为up。
 ///          70%的时间股价在均线下方，且b相较于a跌了0.1%以上，则视为down。
 pub async fn handle_can_t(codes: Vec<String>,data_config:&DataConfig) -> AppResult<Vec<(String, String)>> {
+    // warn!("up trigger:{:?}, down trigger:{:?}",data_config.up_t_trigger,data_config.down_t_trigger);
     let mut can_t = Vec::with_capacity(codes.len());
     let start_date_time = Local::now()
         .date_naive()
         .and_time(NaiveTime::from_hms_opt(9, 30, 0).unwrap());
     //获得start_date_time的前一天
-    let start_date_time = start_date_time.sub(chrono::Duration::days(1));
+    // let start_date_time = start_date_time.sub(chrono::Duration::days(1));
     let end_date_time = Local::now()
         .date_naive()
         .and_time(NaiveTime::from_hms_opt(10, 0, 0).unwrap());
-    let end_date_time = end_date_time.sub(chrono::Duration::days(1));
+    // let end_date_time = end_date_time.sub(chrono::Duration::days(1));
     let count = calculate_ago_minutes("9:30") as u32;
     let frequency = 1;
     for code in codes {
@@ -189,8 +191,8 @@ pub async fn handle_can_t(codes: Vec<String>,data_config:&DataConfig) -> AppResu
         let first = vec.first().unwrap().1;
         let last = vec.last().unwrap().1;
         let num = vec.len();
-        let percentage_change = (((last - first) / first) * 100.0).abs();
-        println!("first: {:?}, last: {:?}, num: {:?}, percentage_change: {:?}%", first, last, num, percentage_change);
+        // let percentage_change = (((last - first) / first) * 100.0).abs();
+        let percentage_change = ((last - first) / first) * 100.0;
         let slope = (last - first) / (num as f64);
         let line = |x: f64| first + slope * x;
         let res_count = vec.iter()
@@ -200,7 +202,7 @@ pub async fn handle_can_t(codes: Vec<String>,data_config:&DataConfig) -> AppResu
                 close > line(x)
             })
             .count();
-        println!("res_count: {}", res_count);
+        warn!("code:{:?},first: {:?}, last: {:?}, num: {:?},res_count: {:?}, percentage_change: {:?}%",code, first, last, num,res_count, percentage_change);
         // if (res_count as f64)/(num as f64) > 0.7&&percentage_change > 0.1 {
         if (res_count as f64)/(num as f64) > 0.7&&percentage_change > data_config.up_t_trigger {
             can_t.push((code.clone(), "up".into()));

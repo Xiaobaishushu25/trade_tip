@@ -70,7 +70,7 @@ const handleUpdateFreq = (value: number) => {
             </el-tooltip>
             <label class="label-text">:</label>
           </div>
-          <el-input-number v-model="dataConfig.down_t_trigger" :min="0.1" :max="20" :step="0.1" class="custom-input" style="width: 120px" @change="handleUpdateDataConfig" />
+          <el-input-number v-model="dataConfig.down_t_trigger" :min="-20" :max="-0.1" :step="0.1" class="custom-input" style="width: 120px" @change="handleUpdateDataConfig" />
         </div>
       </el-card>
       <label class="title">蜡烛图</label>

@@ -159,8 +159,8 @@ impl Default for DataConfig {
         DataConfig {
             update_freq: 30,
             box_num: 7,
-            up_t_trigger: 0.3,
-            down_t_trigger: 0.3,
+            up_t_trigger: 1.0,
+            down_t_trigger: -1.0,
         }
     }
 }
