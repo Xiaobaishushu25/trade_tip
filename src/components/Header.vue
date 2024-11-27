@@ -55,7 +55,7 @@ async function open_record(){
   await showAndFocusWindow('record')
   // const window = await WebviewWindow.getByLabel('record');
   // if (window!=null){
-  //   //todo bug https://github.com/tauri-apps/tauri/issues/6310
+  //   //linux bug https://github.com/tauri-apps/tauri/issues/6310
   //   console.log("窗口存在")
   //   await window.unminimize()
   //   await window.setFocus()//不起作用

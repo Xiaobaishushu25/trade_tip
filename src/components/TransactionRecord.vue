@@ -8,7 +8,6 @@ const barRef = ref(null);
 const tableRef = ref(null);
 const dialogVisible = ref(false)
 async function deleteAllRecords(){
-  //todo 添加一个确认弹窗
   tableRef.value?.deleteAllRecords();
   dialogVisible.value = false;
 }
