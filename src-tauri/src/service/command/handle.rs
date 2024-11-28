@@ -99,10 +99,11 @@ pub async fn handle_stock_livedata(
 /// 读取csv文件，然后查询数据库中最新记录，然后只保存最新记录之后的数据并返回。
 ///
 pub(crate) async fn handle_and_save_record(path: String) -> AppResult<Vec<TransactionRecord>> {
+    //read_csv_file已经做了排序，所以不需要再排序
     let mut pending_data = TransactionRecordCurd::read_csv_file(&path).await?;
     //把pending_data中的数据按日期升序排序
     // pending_data.sort_by(|a, b| a.date.cmp(&b.date));
-    pending_data.reverse();
+    // pending_data.reverse();
     // pending_data.sort_by(|a, b| b.date.cmp(&a.date));
     let truncated_data =
         if let Some(latest_record) = TransactionRecordCurd::query_latest_record().await? {
@@ -139,6 +140,7 @@ pub(crate) async fn handle_and_save_record(path: String) -> AppResult<Vec<Transa
     match TransactionRecordCurd::insert(truncated_data.to_vec()).await {
         Ok(_) => {
             let mut data = truncated_data.to_vec();
+            info!("插入交易记录成功：{:?}", data);
             data.reverse(); //需要再倒序，不然返给前端的是反的。
             Ok(data)
         }

@@ -41,6 +41,8 @@ onMounted(async () => {
     });
   });
   await listen("add_records_event", (data)=>{
+    //payload: {num:number,records:TransactionRecord[]}
+    //num是完整的记录的数量，records是新增记录数组
     let payload = data.payload;
     if(transactionRecords.length!=payload.num){
       addRecords(payload.records,false);
@@ -98,7 +100,9 @@ async function deleteRecord() {
 // 新增记录
 // records: 新增记录数组
 // needEmit: 是否需要触发事件（用于两个表之间同步数据）
+//needEmit携带payload有两个参数，num:完整的记录的数量（用于接收方判断是否需要更新，因为两个表都会接收到），records:新增记录数组
 async function addRecords(records: TransactionRecord[],needEmit:boolean=true) {
+  console.log("addRecords",records)
   // 从前面插入数据到 transactionRecords
   transactionRecords.unshift(...records);
   // 判断 selectedCode，如果不是 '0' 则过滤后赋值，否则直接赋值全部数据
@@ -110,7 +114,8 @@ async function addRecords(records: TransactionRecord[],needEmit:boolean=true) {
     filteredRecords.value = [...transactionRecords];
   }
   if (needEmit){
-    await emit('add_records_event',{num:records.length,records:records});
+    // await emit('add_records_event',{num:records.length,records:records});
+    await emit('add_records_event',{num:transactionRecords.length,records:records});
   }
 }
 const state = reactive({

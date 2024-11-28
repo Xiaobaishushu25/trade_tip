@@ -13,7 +13,7 @@ use std::io::{BufReader, Read};
 // 读取 CSV 文件并解析为 TransactionRecord 结构体
 pub struct TransactionRecordCurd;
 impl TransactionRecordCurd {
-    /// 读取 CSV 文件并解析为 TransactionRecord 结构体
+    /// 读取 CSV 文件并解析为 TransactionRecord 结构体（依次按照 Date、Time 和 Code 进行排序）
     /// 细数东方财富导出的CSV文件的问题：
     /// 1. 导出的CSV文件编码为GBK，需要使用 encoding_rs 库进行解码转为 UTF-8 字符串。
     /// 2. 导出的CSV文件中有些字段的值有不明空格(但是在excel看没有)，需要去除引空白字符。
@@ -59,7 +59,18 @@ impl TransactionRecordCurd {
                 model.code = extract_and_trim(&model.code); // 不知道为甚么code字段会带有引号，需要用这个函数去除引号和空白字符
                 Ok(model)
             })
-            .collect::<_>()
+            // .collect::<_>()
+            .collect::<Result<Vec<TransactionRecord>, _>>()
+            .map(|mut records| {
+                // 按照 Date、Time 和 Code 进行排序
+                records.sort_by(|a, b| {
+                    // 先比较 Date
+                    a.date.cmp(&b.date)
+                        .then_with(|| a.time.cmp(&b.time)) // 再比较 Time
+                        .then_with(|| a.code.cmp(&b.code)) // 最后比较 Code
+                });
+                records
+            })
         //将所有的结果收集到一个 Result<Vec<TransactionRecord>>，这样如果有任何错误，它会直接返回
         // Ok(csv_reader
         //     .deserialize()
@@ -134,12 +145,15 @@ impl TransactionRecordCurd {
         Ok(transaction_records)
     }
     ///查询数据库中最新一条交易记录
+    /// 依次按照 Date、Time 和 Code 进行排序
     pub async fn query_latest_record() -> AppResult<Option<TransactionRecord>> {
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
         let transaction_record = TransactionRecords::find()
             .order_by_desc(Column::Date)
+            .order_by_desc(Column::Time)
+            .order_by_desc(Column::Code)
             .one(db)
             .await?;
         Ok(transaction_record)
