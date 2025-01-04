@@ -3,7 +3,7 @@ import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
 import {saveWindowState, StateFlags} from "@tauri-apps/plugin-window-state";
 import PositionChart from "./PositionComponents/PositionChart.vue";
 import PositionInsert from "./PositionComponents/PositionUpdate.vue";
-
+/* 仓位变化界面*/
 async function window_minimize(){
   await WebviewWindow.getCurrent().minimize()
 }

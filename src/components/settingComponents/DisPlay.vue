@@ -2,7 +2,7 @@
 import {onMounted, onBeforeMount,ref,watch} from "vue";
 import {DisplayConfig} from "../../type.ts";
 import {emit} from "@tauri-apps/api/event";
-//todo 由于设置窗口是一个单独的webview，读不到另一个webview的store，所以需要通过别的方式获取配置
+//done 由于设置窗口是一个单独的webview，读不到另一个webview的store，所以需要通过别的方式获取配置
 
 const disConfig = ref<DisplayConfig>();
 const aExtend = ref<boolean>(false);

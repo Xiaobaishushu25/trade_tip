@@ -132,13 +132,14 @@ onMounted(async () => {
             }
           }
         },
-        label: {
-          show: true,           // 显示标签
-          position: 'top',      // 标签位置在柱顶
-          formatter: '{c}',      // 显示数值
-          fontSize: 12,         // 设置字体大小
-          color: '#000'         // 标签颜色（可以根据需求调整）
-        },
+        //柱子多了之后显示标签会重叠
+        // label: {
+        //   show: true,           // 显示标签
+        //   position: 'top',      // 标签位置在柱顶
+        //   formatter: '{c}',      // 显示数值
+        //   fontSize: 12,         // 设置字体大小
+        //   color: '#000'         // 标签颜色（可以根据需求调整）
+        // },
         yAxisIndex: 1 // 使用右侧坐标轴
       },
       {
