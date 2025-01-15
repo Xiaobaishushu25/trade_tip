@@ -714,8 +714,8 @@ async function query_graphic(){
   }
 }
 //定义一个变量，用来判断是否已经收盘
-let marketisClose = false;
-
+// let marketisClose = false;
+const tolerance = 1e-6; // 或者更大的容差值
 async function query_stocks_day_k_limit(){
   try {
     const data = await invoke<StockData[]>('query_stocks_day_k_limit', { code: code }); // 使用 await 等待 invoke 完成
@@ -725,7 +725,14 @@ async function query_stocks_day_k_limit(){
       //todo 有可能有bug，如果某天的开盘价、收盘价、最高价、最低价和昨天完全一致的情况，会忽略当天的数据。
       //判断最新数据和第一个数据的开盘，收盘，最高，最低是否一致，如果不一致，则插入最新数据
       //这只是初次判断，后续持续收到新数据要一直判断。
-      if (data[0].open!=liveData.open && data[0].close!=liveData.price && data[0].high!=liveData.high && data[0].low!=liveData.low){
+      console.log(data[0].open,liveData.open,data[0].close,liveData.price,data[0].high,liveData.high,data[0].low,liveData.low)
+      if (
+          Math.abs(data[0].open - liveData.open) > tolerance ||
+          Math.abs(data[0].close - liveData.price) > tolerance ||
+          Math.abs(data[0].high - liveData.high) > tolerance ||
+          Math.abs(data[0].low - liveData.low) > tolerance
+      ) {
+      // if (data[0].open!=liveData.open && data[0].close!=liveData.price && data[0].high!=liveData.high && data[0].low!=liveData.low){
         console.log("最新数据和第一个数据的开盘，收盘，最高，最低不一致，插入最新数据");
         const leastData = {
           date:nowDate,
@@ -741,7 +748,7 @@ async function query_stocks_day_k_limit(){
         }
         data.unshift(leastData)
       }else {
-        // console.log("最新数据和第一个数据的开盘，收盘，最高，最低一致，不插入最新数据");
+        console.log("最新数据和第一个数据的开盘，收盘，最高，最低一致，不插入最新数据");
         // marketisClose = true;
       }
       // const leastData = {
