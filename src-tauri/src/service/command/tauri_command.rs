@@ -18,22 +18,24 @@ use std::collections::HashMap;
 use std::process::exit;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
-use tauri::{Emitter, State};
-use tokio::time::sleep;
+use tauri::{AppHandle, Emitter, State};
+use tokio::sync::mpsc::Sender;
+use tokio::time::{sleep,Duration};
+use crate::app_errors::AppError::Tip;
 use crate::service::curd::position_curd::PositionCurd;
 
 #[tauri::command]
 pub async fn update_live_state<'r>(
     state: State<'r, MyState>,
     app_handle: tauri::AppHandle,
+    config: State<'r, Mutex<Config>>,
     group_name: String,
     live_state: bool,
 ) -> Result<(), String> {
     // info!("更新状态:{}",live_state);
     UPDATEING.store(live_state, Ordering::Relaxed);
     if live_state {
-        let _ = query_live_stocks_data_by_group_name(state, group_name, app_handle).await;
+        let _ = query_live_stocks_data_by_group_name(state,config, group_name, app_handle).await;
     }
     Ok(())
 }
@@ -50,7 +52,7 @@ pub async fn update_all_stock_day_k() -> Result<String, String> {
 }
 #[tauri::command]
 pub async fn get_response(url: String) -> Result<String, String> {
-    match REQUEST.get().unwrap().get(&url).await {
+    match REQUEST.get().unwrap().get_response(&url).await {
         Ok(response) => {
             // info!("ok");
             Ok(response.text().await.unwrap())
@@ -94,7 +96,7 @@ pub async fn query_stock_info() -> Result<Vec<StockInfo>, String> {
 
 #[tauri::command]
 pub async fn query_all_groups() -> Result<Vec<StockGroup>, String> {
-    info!("查询所有分组");
+    info!("查询所有的分组");
     match StockGroupCurd::query_all().await {
         Ok(stock_groups) => {
             // info!("查询所有分组成功:{:?}",stock_groups);
@@ -122,7 +124,7 @@ pub async fn query_stocks_by_group_name(name: String) -> Result<Vec<StockInfoG>,
     }
     match GroupStockRelationCurd::query_stocks_by_group_name(name.clone()).await {
         Ok(more_infos) => {
-            // // info!("根据分组名查询成功:{:?}",more_infos);
+            // info!("根据分组名查询成功:{:?}",more_infos);
             Ok(more_infos)
         }
         Err(e) => {
@@ -198,17 +200,20 @@ pub async fn delete_group(name: String) -> Result<i32, String> {
 #[tauri::command]
 pub async fn update_stock_groups<'r>(
     state: State<'r, MyState>,
+    config: State<'r, Mutex<Config>>,
     is_new: bool,
     code: String,
     name: String,
     group_names: Vec<String>,
+    app_handle: AppHandle
 ) -> Result<(), String> {
     info!(
         "is_new:{},code:{},name:{},group_names:{:?}",
         is_new, code, name, group_names
     );
     if is_new {
-        match handle_new_stock(&code, &name).await {
+        let use_ak_share = config.lock().unwrap().data_config.use_ak_share;
+        match handle_new_stock(&code, &name, use_ak_share).await {
             Ok(_) => {
                 match get_close_prices(Some(&code)).await {
                     Ok(prices) => state.update_history_close_price(
@@ -221,27 +226,24 @@ pub async fn update_stock_groups<'r>(
                         // return Err(format!("更新缓存失败:{}",e.to_string()));
                     }
                 }
-                info!("创建成功:{:?}", code);
+                info!("创建成功:{}", code);
             }
             Err(e) => {
-                return handle_error(&format!("创建{}失败", code), e.to_string());
-                // error!("创建失败:{}",e);
-                // return Err(e.to_string());
+                //https://docs.rs/anyhow/1.0.95/anyhow/struct.Error.html#display-representations
+                //To print causes as well using anyhow’s default formatting of causes, use the alternate selector “{:#}”.
+                // 不知道为啥么用{:#}无法打印出Caused by的信息
+                // println!("发生错误: {:#}", e);
+                //用{:?}能够打印出Caused by的信息，但是backtrace不可用，推测是thiserror的问题，单测了anyhow是可以的。
+                // println!("发生错误: {:?}", e);
+                //如果新建的过程发生了错误，直接删除这个股票（因为有可能已经添加了一些该股票的表和信息），起到一个事务的效果。
+                let _ = handle_delete_stock(&code).await;
+                let error = format!("错误：{:?}", e);
+                // error!("{}", error);
+                return handle_error(&format!("创建{}失败", code), error);
             }
         }
-    } else if group_names.is_empty() {
-        //全部没选上
-        return match handle_delete_stock(&code).await {
-            Ok(_) => {
-                // info!("删除成功:{:?}",code);
-                Ok(())
-            }
-            Err(e) => {
-                handle_error(&format!("删除{}失败", code), e.to_string())
-                // error!("删除失败:{}",e);
-                // Err(e.to_string())
-            }
-        };
+    } else if group_names.is_empty() {//全部没选上
+        return delete_stock(code.clone(),app_handle).await;
     };
     match GroupStockRelationCurd::update_groups_by_code(code.clone(), group_names).await {
         Ok(_) => {
@@ -255,13 +257,35 @@ pub async fn update_stock_groups<'r>(
         }
     }
 }
+/// 从指定分组中移除股票。
+///
+/// 该函数根据传入的股票代码 (`code`) 和分组名称 (`group_name`) 从分组中移除对应的股票。
+/// 如果分组名称为 "全部"，则会调用 `handle_delete_stock` 函数删除该股票。
+/// 否则，会调用 `GroupStockRelationCurd::delete_by_code_and_group_name` 方法从指定分组中移除股票。
+///
+/// # 参数
+/// - `code`: 股票代码，类型为 `String`。
+/// - `group_name`: 分组名称，类型为 `String`。
+///
+/// # 返回值
+/// - 成功时返回 `Ok(())`。
+/// - 失败时返回 `Err(String)`，其中包含错误信息。
+///
+/// # 错误处理
+/// - 如果删除操作失败，会调用 `handle_error` 函数记录错误信息，并返回包含错误描述的 `Err(String)`。
+///
+/// # 注意
+/// - 当 `group_name` 为 "全部" 时，会删除该股票的所有记录。
+/// - 其他情况下，仅从指定分组中移除该股票。
 #[tauri::command]
-pub async fn remove_stock_from_group(code: String, group_name: String) -> Result<(), String> {
+pub async fn remove_stock_from_group(app_handle: AppHandle,code: String, group_name: String) -> Result<(), String> {
+    if group_name == "全部" {
+        return delete_stock(code.clone(),app_handle).await;
+    }
     match GroupStockRelationCurd::delete_by_code_and_group_name(code.clone(), group_name.clone())
         .await
     {
         Ok(_) => {
-            // info!("删除成功。");
             Ok(())
         }
         Err(e) => {
@@ -271,6 +295,39 @@ pub async fn remove_stock_from_group(code: String, group_name: String) -> Result
             )
             // error!("删除失败:{}",e);
             // Err(e.to_string())
+        }
+    }
+}
+/// 删除指定股票。
+///
+/// 该函数根据传入的股票代码 (`code`) 删除对应的股票记录。
+/// 删除成功后，会通过 `app_handle` 发送一个 `delete_stock` 事件，通知前端的StockTable.vue。
+///
+/// # 参数
+/// - `code`: 股票代码，类型为 `String`。
+/// - `app_handle`: Tauri 应用的 `AppHandle` 实例，用于发送事件。
+///
+/// # 返回值
+/// - 成功时返回 `Ok(())`。
+/// - 失败时返回 `Err(String)`，其中包含错误信息。
+/// # 错误处理
+/// - 如果删除操作失败，会调用 `handle_error` 函数记录错误信息，并返回包含错误描述的 `Err(String)`。
+///
+/// # 事件通知
+/// - 删除成功后，会通过 `app_handle.emit` 发送一个 `delete_stock` 事件，事件数据为被删除的股票代码。
+///
+/// # 注意
+/// - 该函数会永久删除股票记录，请谨慎调用。
+//todo :彻底删除股票并没有提醒用户确认（可以通过分组管理不勾选/从全部分组页面选择移除可以彻底删除股票）。
+pub async fn delete_stock(code: String,app_handle: AppHandle)-> Result<(), String>{
+    match handle_delete_stock(&code).await {
+        Ok(_) => {
+            info!("删除{}成功",code);
+            app_handle.emit("delete_stock", code).unwrap();
+            Ok(())
+        }
+        Err(e) => {
+            handle_error(&format!("删除{}失败", code), e.to_string())
         }
     }
 }
@@ -393,6 +450,7 @@ pub async fn query_box() -> Result<HashMap<String, Vec<f64>>, String> {
 pub async fn query_live_stock_data_by_code<'r>(
     code: String,
     state: State<'r, MyState>,
+    app_handle: AppHandle,
 ) -> Result<StockLiveData, String> {
     // info!("查询实时数据:{}",group_name);
     let data: &Arc<Vec<f64>>;
@@ -403,11 +461,18 @@ pub async fn query_live_stock_data_by_code<'r>(
         history_close_price.insert(code.clone(), data.clone());
     }
     let codes = vec![code.clone()];
-    match REQUEST.get().unwrap().get_live_stock_data(&codes).await {
+    match REQUEST.get().unwrap().get_live_data(codes.clone(),&app_handle).await {
+    // match REQUEST.get().unwrap().get_live_stock_data(&codes).await {
         Ok(mut stock_data_list) => {
             match handle_stock_livedata(&codes, &mut stock_data_list, &history_close_price).await {
                 Ok(_) => {
-                    Ok(stock_data_list.get(&code).unwrap().clone())
+                    let option = stock_data_list.get(&code);
+                    if option.is_none() {
+                        let err_msg = format!("未找到{}数据", codes.join(","));
+                        error!("{}数据", err_msg);
+                        return Err(err_msg);
+                    }
+                    Ok(option.unwrap().clone())
                     // info!("查询成功:{:?}",stock_data_list);
                 }
                 Err(e) => {
@@ -432,10 +497,11 @@ pub async fn query_live_stock_data_by_code<'r>(
 #[tauri::command]
 pub async fn query_live_stocks_data_by_group_name<'r>(
     state: State<'r, MyState>,
+    config: State<'r,Mutex<Config>>,
     group_name: String,
-    app_handle: tauri::AppHandle,
+    app_handle: AppHandle,
 ) -> Result<(), String> {
-    info!("查询实时数据:{}", group_name);
+    info!("查询{}分组内的实时数据", group_name);
     // if !IS_MARKET_OPEN.load(Ordering::Relaxed) {
     //     info!("市场未开市,不进行查询操作！");
     //     return Ok(());
@@ -446,6 +512,8 @@ pub async fn query_live_stocks_data_by_group_name<'r>(
     } else {
         GroupStockRelationCurd::query_only_code_by_group_name(group_name).await
     };
+    let update_freq = config.lock().unwrap().data_config.update_freq;
+    info!("更新频率为{}秒", update_freq);
     match result {
         Ok(codes) => {
             if codes.is_empty() {
@@ -462,7 +530,9 @@ pub async fn query_live_stocks_data_by_group_name<'r>(
                 loop {
                     let need_update = UPDATEING.load(Ordering::Relaxed);
                     if need_update {
-                        match REQUEST.get().unwrap().get_live_stock_data(&codes).await {
+                        let codess = codes.clone();
+                        match REQUEST.get().unwrap().get_live_data(codess,&app_handle).await {
+                        // match REQUEST.get().unwrap().get_live_stock_data(&codes).await {
                             Ok(mut stock_data_list) => {
                                 match handle_stock_livedata(
                                     &codes,
@@ -479,15 +549,17 @@ pub async fn query_live_stocks_data_by_group_name<'r>(
                                     }
                                     Err(e) => {
                                         error!("处理股票实时信息失败:{}", e);
+                                        app_handle.emit("get_live_data_error", e.to_string()).unwrap();
                                     }
                                 }
                             }
                             Err(e) => {
-                                error!("查询股票实时信息失败失败:{}", e);
+                                error!("查询股票实时信息失败:{}", e);
+                                app_handle.emit("get_live_data_error", e.to_string()).unwrap();
                             }
                         }
                     }
-                    sleep(Duration::from_secs(10)).await;
+                    sleep(Duration::from_secs(update_freq as u64)).await;
                 }
             });
             state.set_task(handle);
@@ -500,16 +572,6 @@ pub async fn query_live_stocks_data_by_group_name<'r>(
         }
     }
 }
-// #[tauri::command]
-// pub async fn save_config<'r>(
-//     config_state: State<'r, ConfigState>,
-//     config: Config,
-// ) -> Result<(), String> {
-//     match config_state.update_config(config).await {
-//         Ok(_) => Ok(()),
-//         Err(e) => handle_error("更新配置文件失败", e.to_string()),
-//     }
-// }
 #[tauri::command]
 pub async fn query_intraday_chart_img<'r>(
     state: State<'r, IntradayChartCache>,
@@ -598,6 +660,7 @@ pub async fn update_data_config(data_config:DataConfig,state: State<'_, Mutex<Co
 }
 #[tauri::command]
 pub async fn save_config(config: Config) -> Result<(), String> {
+    info!("保存配置：{:?}",config);
     match config.save_to_file().await{
         Ok(_) => Ok(()),
         Err(e) => handle_error("保存配置文件失败", e.to_string()),
@@ -649,20 +712,6 @@ pub async fn update_position(app_handle: tauri::AppHandle,date: String, position
         Err(e) => handle_error("更新持仓失败", e.to_string()),
     }
 }
-///插入持仓数据
-/// date:日期（“YYYY-MM-DD”）
-/// position_num:持仓百分比
-/// 如果插入成功，返回Ok(())，同时emit一个position_change事件，payload为(bool,Position)，布尔表示插入(true)/更新(false)，Position表示持仓数据
-// #[tauri::command]
-// pub async fn insert_position(app_handle: tauri::AppHandle, date: String, position_num: f64) -> Result<(), String> {
-//     match handle_insert_position(date, position_num).await{
-//         Ok(data) => {
-//             app_handle.emit("position_change", data).unwrap();
-//             Ok(())
-//         },
-//         Err(e) => handle_error("插入持仓失败", e.to_string()),
-//     }
-// }
 ///获取当前是否是交易时间
 #[tauri::command]
 pub async fn get_is_market_open() -> bool {
@@ -670,29 +719,20 @@ pub async fn get_is_market_open() -> bool {
 }
 
 #[tauri::command]
-pub async fn exit_app() {
+pub async fn exit_app(send:State<'_, Sender<()>>,config: State<'_, Mutex<Config>>)->Result<(),()> {
     info!("退出程序");
+    if config.lock().unwrap().data_config.use_ak_share{
+        if let Err(e) =send.send(()).await{
+            error!("发送退出信号失败:{}",e);
+        }
+    }
+    // sleep(Duration::from_secs(1)).await;
     exit(0)
 }
+///todo 这样不行啊，所有的记录错误都在这一行
 ///处理错误，先记录到日志中，再返回错误
 /// 使用泛型 T，这样它可以返回任何类型的 Result
 fn handle_error<T>(tip: &str, e: String) -> Result<T, String> {
     error!("{}:{}", tip, e); //查询股票分时图失败:Network Error: net::ERR_CONNECTION_RESET
     Err(format!("{}:{}", tip, e))
 }
-// #[tokio::test]
-// async fn test_market_is_open() {
-//     init_http().await;
-//     let response1 = REQUEST.get().unwrap().get("https://qt.gtimg.cn/q=sz159992").await.unwrap();
-//     let string1 = response1.text().await.unwrap();
-//     println!("{:?}", string1);
-//     sleep(Duration::from_secs(1)).await;
-//     let response2 = REQUEST.get().unwrap().get("https://qt.gtimg.cn/q=sz159992").await.unwrap();
-//     let string2 = response2.text().await.unwrap();
-//     println!("{:?}", string2);
-//     if string1==string2 {
-//         println!("market is closed");
-//     }else {
-//         println!("market is open");
-//     }
-// }

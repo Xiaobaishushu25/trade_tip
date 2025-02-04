@@ -28,9 +28,9 @@ use crate::service::command::tauri_command::{
 };
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
-use crate::service::http::{init_http};
+use crate::service::http::{init_http, start_data_server};
 use log::{error, info, LevelFilter};
-use log4rs::config::{Appender, Logger, Root};
+use log4rs::config::{Appender, Root};
 use std::collections::HashMap;
 use std::env;
 use std::sync::atomic::{AtomicBool};
@@ -39,7 +39,8 @@ use log4rs::append::console::ConsoleAppender;
 use log4rs::append::file::FileAppender;
 use log4rs::encode::pattern::PatternEncoder;
 use log4rs::filter::threshold::ThresholdFilter;
-use tauri::Manager;
+use tauri::{AppHandle, Manager};
+use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
 ///是否需要实时更新
@@ -145,12 +146,24 @@ async fn main() {
         // .manage(MyState{task:Mutex::new(None)})
         .manage(state)
         .manage(IntradayChartCache::new())
-        // .manage(ConfigState::new().await)
+        // .manage(Mutex::new(Config::load().await))
         .manage(Mutex::new(Config::load().await))
-        // .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
+        .setup(|app| {
+            let app_handle: &AppHandle = app.app_handle();
+            let config = app_handle.state::<Mutex<Config>>();
+            let data_config = config.lock().unwrap().data_config.clone();
+            let (send,recv) = mpsc::channel::<()>(1);
+            app.manage(send);
+            tokio::spawn(async move{
+                if let Err(e) = start_data_server(&data_config,recv).await{
+                    error!("start data server error:{}",e);
+                }
+            });
+            Ok(())
+        })
         // .setup(|app|{
         //     info!("{:?}",app.app_handle().path().app_config_dir().unwrap()); //"C:\\Users\\Xbss\\AppData\\Roaming\\com.xbss.trade-tip"
         //     let main_window = app.get_webview_window("main").unwrap();

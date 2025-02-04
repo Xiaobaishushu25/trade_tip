@@ -39,7 +39,7 @@ watch(() => props.showDialog, (_) => {
       <div class="my-header">
         <div>
           <label style="font-size: 14px;margin-left: 15px;font-family:sans-serif">管理{{name}}</label>
-          <label style="font-size: 11px;font-family:sans-serif">(不勾选全部即删除/不保存)</label>
+          <label style="font-size: 12px;color:red;font-family:sans-serif">(不勾选全部即彻底删除)</label>
         </div>
 <!--        <inline-svg src="./src/assets/svg/close.svg" class="small-close"  @click.left="dialogFormVisible=false"></inline-svg>-->
         <inline-svg src="../assets/svg/close.svg" class="small-close"  @click.left="dialogFormVisible=false"></inline-svg>

@@ -24,8 +24,11 @@ onMounted(async ()=>{
     localStorage.setItem('config', jsonComponent);
   }).catch(err => {
     console.error(err);
-    errorNotification( "读取配置失败");
+    errorNotification( `读取配置失败${err}`);
   })
+  await listen("get_live_data_error", (msg)=>{
+    errorNotification( `获取实时数据失败:${msg.payload}`);
+  });
   await listen("disPlay_update", (data)=>{
     // console.log(data.payload);
     store.config.display_config = data.payload;

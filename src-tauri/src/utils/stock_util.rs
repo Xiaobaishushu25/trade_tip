@@ -6,7 +6,7 @@ use std::str::FromStr;
 ///根据给定的num，和收盘价列表计算Ma num日均线，数据不足的地方填None；保留三位小数。
 /// 保证返回的均线数据的长度和close_price一样长。
 ///  close_price要是按照日期从旧到新排列
-pub async fn compute_single_ma(day_count: usize, close_price: Vec<f64>) -> Vec<Option<f64>> {
+pub async fn compute_single_ma(day_count: usize, close_price: &Vec<f64>) -> Vec<Option<f64>> {
     let mut sum: f64;
     let mut result = vec![];
     let mut window_start = 0; // 滑动窗口的起始位置
@@ -46,7 +46,7 @@ pub async fn compute_mul_ma(mas: Vec<usize>, now_price: f64, close_prices: &Vec<
     }
     result
 }
-///根据输入的股票代码判断是沪市（sh）还是深市（sz）的
+///根据输入的股票代码判断是沪市（sh）还是深市（sz）的,还是哪个交易所的
 /// code:股票代码，如000001
 /// return:市场代码，如sh
 pub fn get_market_by_code(code: &str) -> AppResult<String> {
@@ -65,7 +65,18 @@ pub fn get_market_by_code(code: &str) -> AppResult<String> {
     {
         Ok("sh".into()) //上海
     } else {
-        Err(AnyHow(anyhow::anyhow!("无法判断代码:{code}的市场")))
+        let prefix: String = code.chars()
+            .filter(|c| !c.is_digit(10)) // Filter out digits
+            .collect::<String>()
+            .to_lowercase();
+        let prefix = prefix.as_str();
+        return match prefix {
+            "rb" | "au" | "ag" | "cu" | "al" | "zn" | "pb" | "ni" | "sn" | "ss" | "fu" | "bu" | "ru" | "wr" | "hc" | "sp"| "ao"| "br" => return Ok("shfe".into()), // 上海期货交易所
+            "m" | "y" | "a" | "b" | "p" | "c" | "cs" | "jd" | "bb" | "fb" | "l" | "v" | "pp" | "j" | "jm" | "i" | "eg" | "rr" | "lh"| "pg"| "eb" => return Ok("dce".into()), // 大连商品交易所
+            "rs"|"pf"|"pk"|"cj"|"ap"|"rm"|"oi"|"cy"|"cf"|"sr"|"sm"|"sf"|"sh"|"sa"|"ur"|"ma"|"px"|"pr"|"fg" | "wh" | "pm" | "ri" | "lr" | "jr" | "zc" | "ta" | "sc" => return Ok("czce".into()), // 郑州商品交易所
+            "if" | "ih" | "ic" | "t" | "tf" | "ts" => return Ok("cffex".into()), // 中国金融期货交易所
+            _ => { Err(AnyHow(anyhow::anyhow!("无法判断代码:{code}的市场")))}
+        };
     }
 }
 ///判断当前是否是交易时间
@@ -107,11 +118,13 @@ pub fn calculate_ago_minutes(target_time:&str) -> i64 {
 #[tokio::test]
 async fn test_compute_ma() {
     let data = (0..).take(70).map(|x| x as f64).collect::<Vec<f64>>();
-    compute_single_ma(60, data).await;
+    compute_single_ma(60, &data).await;
 }
 #[tokio::test]
 async fn test_get_market_by_code() {
-    get_market_by_code("000001").unwrap();
+    // get_market_by_code("000001").unwrap();
+    let string = get_market_by_code("pk505").unwrap();
+    println!("{}", string);
 }
 #[tokio::test]
 async fn test_calculate_day_num() {

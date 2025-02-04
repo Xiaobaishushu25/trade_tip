@@ -132,8 +132,10 @@ function back(){
 
 <template>
   <div  data-tauri-drag-region class="titlebar"  >
-<!--    <Search></Search>-->
-    <img src="../assets/icon.png" width="25" height="25" alt="Logo Image" style="margin-left: 5px;margin-right: 10px;user-select: none">
+    <el-tooltip content="v0.5.0" placement="bottom" effect="light" :show-arrow="false">
+      <img src="../assets/icon.png" width="25" height="25" alt="Logo Image" style="margin-left: 5px;margin-right: 10px;user-select: none">
+    </el-tooltip>
+<!--    <img src="../assets/icon.png" width="25" height="25" alt="Logo Image" style="margin-left: 5px;margin-right: 10px;user-select: none">-->
     <Search></Search>
     <div id="stage-button">
       <el-tooltip content="仓位变化" placement="bottom" effect="light" :show-arrow="false">

@@ -6,6 +6,7 @@ use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::PathBuf;
+use serde::de::IntoDeserializer;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Config {
@@ -132,12 +133,12 @@ impl Default for DisplayConfig {
             bs_size: 13,
             k_show_begin: 85,
             default_remark:vec!["跌破箱体下轨，卖出".into(), 
-                                "逼近箱体上轨，卖出".into(), 
+                                "逼近箱体上轨，卖出".into(),
+                                "突破箱体上轨，买入".into(),
+                                "逼近箱体下轨，买入".into(),
                                 "跌破五日线，卖出".into(),
                                 "跌破十日线，卖出".into(),
                                 "跌破二十日线，卖出".into(),
-                                "突破箱体上轨，买入".into(),
-                                "逼近箱体下轨，买入".into(),
                                 "当日大跌博反弹，买入".into(),
                                 "当日做T，买入".into(),
                                 "当日做T，卖出".into(),
@@ -153,6 +154,9 @@ pub struct DataConfig {
     pub box_num: i32,
     pub up_t_trigger:f64, //日内做多阈值，九点半至十点涨幅超过该值则做多
     pub down_t_trigger:f64, //日内做空阈值，九点半至十点跌幅超过该值则做空
+    //启动提供期货数据Http的命令 eg：E:\ANACONDA\Main\Scripts\activate.bat && python -m aktools
+    pub data_server:String,
+    pub use_ak_share:bool,
 }
 impl Default for DataConfig {
     fn default() -> Self {
@@ -161,6 +165,8 @@ impl Default for DataConfig {
             box_num: 7,
             up_t_trigger: 1.0,
             down_t_trigger: -1.0,
+            data_server: "E:\\ANACONDA\\Main\\Scripts\\activate.bat && conda activate akenv &&python -m aktools".into(),
+            use_ak_share: false,
         }
     }
 }

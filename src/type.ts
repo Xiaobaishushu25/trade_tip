@@ -123,6 +123,8 @@ interface DataConfig{
     box_num:number,
     up_t_trigger:number,
     down_t_trigger:number,
+    data_server:string,
+    use_ak_share:boolean,
 }
 
 interface Config {

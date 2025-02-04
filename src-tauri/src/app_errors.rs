@@ -5,6 +5,8 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum AppError {
     #[error("error:`{0}`")]
+    Tip(String),
+    #[error("error:`{0}`")]
     AnyHow(#[from] anyhow::Error),
     #[error("io::Error:`{0}`")]
     IoError(#[from] io::Error),
@@ -13,6 +15,7 @@ pub enum AppError {
     #[error("reqwest::Error:`{0}`")]
     // HttpError(#[from] #[backtrace] reqwest::Error),
     HttpError(#[from] reqwest::Error),
+    // HttpError{#[from] source:reqwest::Error,backtrace: Backtrace},
     //数据库错误
     #[error("sea_orm::DbErr:`{0}`")]
     SqlxError(#[from] sea_orm::DbErr),

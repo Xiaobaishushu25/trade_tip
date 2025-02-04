@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import {invoke} from "@tauri-apps/api/core";
-import {nextTick, onMounted, ref, watch} from "vue";
+import {nextTick, onMounted, ref, watch,computed} from "vue";
 import * as echarts from "echarts/core";
 import {Graphic, PaintState, StockData, StockLiveData, TransactionRecord,Config} from "../type.ts";
 import {WebviewWindow} from "@tauri-apps/api/webviewWindow";
@@ -216,41 +216,6 @@ onMounted(async ()=>{
   document.addEventListener('wheel',wheelChangeCode);
   document.addEventListener('keydown', unlockZoom);
   document.addEventListener('keyup', lockZoom);
-
-  // document.addEventListener('keydown', (event: KeyboardEvent) => {
-  //   if (event.ctrlKey) {
-  //     if (!isCtrlPressed){
-  //       isCtrlPressed = true;
-  //       console.log("解锁图表缩放")
-  //       myChart.setOption({
-  //         dataZoom: [
-  //           {
-  //             type: 'inside',
-  //             xAxisIndex: [0, 1],
-  //             zoomLock: false
-  //           },
-  //         ],
-  //       })
-  //     }
-  //   }
-  // });
-  // document.addEventListener('keyup', (event: KeyboardEvent) => {
-  //   if (event.key === 'Control') {
-  //     console.log("锁定图表缩放")
-  //     if (isCtrlPressed){
-  //       isCtrlPressed = false;
-  //       myChart.setOption({
-  //         dataZoom: [
-  //           {
-  //             type: 'inside',
-  //             xAxisIndex: [0, 1],
-  //             zoomLock: true
-  //           },
-  //         ],
-  //       })
-  //     }
-  //   }
-  // });
 })
 onBeforeRouteLeave(async function (){
   // console.log("离开蜡烛图路由");
@@ -717,74 +682,98 @@ async function query_graphic(){
 // let marketisClose = false;
 const tolerance = 1e-6; // 或者更大的容差值
 async function query_stocks_day_k_limit(){
-  try {
-    const data = await invoke<StockData[]>('query_stocks_day_k_limit', { code: code }); // 使用 await 等待 invoke 完成
-    if (data[0].date!=nowDate){
-      const liveData = await invoke<StockLiveData>('query_live_stock_data_by_code', { code: code }); // 使用 await 等待 invoke 完成
-      store.stockinfoG.live_data=liveData;
-      //todo 有可能有bug，如果某天的开盘价、收盘价、最高价、最低价和昨天完全一致的情况，会忽略当天的数据。
-      //判断最新数据和第一个数据的开盘，收盘，最高，最低是否一致，如果不一致，则插入最新数据
-      //这只是初次判断，后续持续收到新数据要一直判断。
-      console.log(data[0].open,liveData.open,data[0].close,liveData.price,data[0].high,liveData.high,data[0].low,liveData.low)
+  const data = await invoke<StockData[]>('query_stocks_day_k_limit', { code: code });
+  console.log(data);
+  if (data[0].date !== nowDate) {
+    try{
+      const liveData = await invoke<StockLiveData>('query_live_stock_data_by_code', { code: code });
+      store.stockinfoG.live_data = liveData;
       if (
           Math.abs(data[0].open - liveData.open) > tolerance ||
           Math.abs(data[0].close - liveData.price) > tolerance ||
           Math.abs(data[0].high - liveData.high) > tolerance ||
           Math.abs(data[0].low - liveData.low) > tolerance
       ) {
-      // if (data[0].open!=liveData.open && data[0].close!=liveData.price && data[0].high!=liveData.high && data[0].low!=liveData.low){
         console.log("最新数据和第一个数据的开盘，收盘，最高，最低不一致，插入最新数据");
         const leastData = {
-          date:nowDate,
-          open:liveData.open,
-          close:liveData.price,
-          high:liveData.high,
-          low:liveData.low,
-          vol:liveData.volume,
-          ma5:liveData.ma5,
-          ma10:liveData.ma10,
-          ma20:liveData.ma20,
-          ma60:liveData.ma60,
-        }
-        data.unshift(leastData)
-      }else {
+          date: nowDate,
+          open: liveData.open,
+          close: liveData.price,
+          high: liveData.high,
+          low: liveData.low,
+          vol: liveData.volume,
+          ma5: liveData.ma5,
+          ma10: liveData.ma10,
+          ma20: liveData.ma20,
+          ma60: liveData.ma60,
+        };
+        data.unshift(leastData);
+      } else {
         console.log("最新数据和第一个数据的开盘，收盘，最高，最低一致，不插入最新数据");
-        // marketisClose = true;
       }
-      // const leastData = {
-      //   date:nowDate,
-      //   open:liveData.open,
-      //   close:liveData.price,
-      //   high:liveData.high,
-      //   low:liveData.low,
-      //   vol:liveData.volume,
-      //   ma5:liveData.ma5,
-      //   ma10:liveData.ma10,
-      //   ma20:liveData.ma20,
-      //   ma60:liveData.ma60,
-      // }
-      // //todo 有可能有bug，如果某天的开盘价、收盘价、最高价、最低价和昨天完全一致的情况，会忽略当天的数据。
-      // //判断最新数据和第一个数据的开盘，收盘，最高，最低是否一致，如果不一致，则插入最新数据
-      // if (data[0].open!=liveData.open && data[0].close!=liveData.price && data[0].high!=liveData.high && data[0].low!=liveData.low){
-      //   console.log("最新数据和第一个数据的开盘，收盘，最高，最低不一致，插入最新数据");
-      //   data.unshift(leastData)
-      // }
-      // data.unshift(leastData)
+    }catch (e) {
+      console.log(e)
+      errorNotification(e)
     }
-    const records = await invoke<TransactionRecord[]>('query_transaction_records_by_code', { code: code }); // 使用 await 等待 invoke 完成
-    rawRecords.value = records;
-    rawData.value = data.reverse(); // 处理查询到的数据，倒转顺序，最新的数据在最前面
-    myChart.clear();
-    myChart.setOption(init_option(),true);
-    // console.log(myChart.getOption());
-    myChart.resize();
-    enableRegionSelection();
-    chartIsInit = true;
-    return;
-    // myChart.hideLoading();
-  } catch (err) {
-    console.log(err);
   }
+  const records = await invoke<TransactionRecord[]>('query_transaction_records_by_code', { code: code });
+  rawRecords.value = records;
+  rawData.value = data.reverse(); // 处理查询到的数据，倒转顺序，最新的数据在最前面
+  myChart.clear();
+  myChart.setOption(init_option(), true);
+  myChart.resize();
+  enableRegionSelection();
+  chartIsInit = true;
+  // try {
+  //   const data = await invoke<StockData[]>('query_stocks_day_k_limit', { code: code }); // 使用 await 等待 invoke 完成
+  //   console.log(data)
+  //   if (data[0].date!=nowDate){
+  //     const liveData = await invoke<StockLiveData>('query_live_stock_data_by_code', { code: code }); // 使用 await 等待 invoke 完成
+  //     store.stockinfoG.live_data=liveData;
+  //     //todo 有可能有bug，如果某天的开盘价、收盘价、最高价、最低价和昨天完全一致的情况，会忽略当天的数据。
+  //     //判断最新数据和第一个数据的开盘，收盘，最高，最低是否一致，如果不一致，则插入最新数据
+  //     //这只是初次判断，后续持续收到新数据要一直判断。
+  //     console.log(data[0].open,liveData.open,data[0].close,liveData.price,data[0].high,liveData.high,data[0].low,liveData.low)
+  //     if (
+  //         Math.abs(data[0].open - liveData.open) > tolerance ||
+  //         Math.abs(data[0].close - liveData.price) > tolerance ||
+  //         Math.abs(data[0].high - liveData.high) > tolerance ||
+  //         Math.abs(data[0].low - liveData.low) > tolerance
+  //     ) {
+  //     // if (data[0].open!=liveData.open && data[0].close!=liveData.price && data[0].high!=liveData.high && data[0].low!=liveData.low){
+  //       console.log("最新数据和第一个数据的开盘，收盘，最高，最低不一致，插入最新数据");
+  //       const leastData = {
+  //         date:nowDate,
+  //         open:liveData.open,
+  //         close:liveData.price,
+  //         high:liveData.high,
+  //         low:liveData.low,
+  //         vol:liveData.volume,
+  //         ma5:liveData.ma5,
+  //         ma10:liveData.ma10,
+  //         ma20:liveData.ma20,
+  //         ma60:liveData.ma60,
+  //       }
+  //       data.unshift(leastData)
+  //     }else {
+  //       console.log("最新数据和第一个数据的开盘，收盘，最高，最低一致，不插入最新数据");
+  //       // marketisClose = true;
+  //     }
+  //   }
+  //   const records = await invoke<TransactionRecord[]>('query_transaction_records_by_code', { code: code }); // 使用 await 等待 invoke 完成
+  //   rawRecords.value = records;
+  //   rawData.value = data.reverse(); // 处理查询到的数据，倒转顺序，最新的数据在最前面
+  //   myChart.clear();
+  //   myChart.setOption(init_option(),true);
+  //   // console.log(myChart.getOption());
+  //   myChart.resize();
+  //   enableRegionSelection();
+  //   chartIsInit = true;
+  //   return;
+  //   // myChart.hideLoading();
+  // } catch (err) {
+  //   console.log(err);
+  // }
 }
 
 function save_graphic(){
@@ -1167,7 +1156,9 @@ function init_option(){
       {
         type: 'inside',
         xAxisIndex: [0, 1],
-        start: store.config.display_config.k_show_begin,// 开始展示的位置，85%处开始
+        // start: store.config.display_config.k_show_begin,// 开始展示的位置，85%处开始
+        // start: startValue,// 开始展示的位置
+        start: rawData.value.length < 800 ? 0 : store.config.display_config.k_show_begin,// 开始展示的位置
         end: 100,
         zoomOnMouseWheel: "ctrl",// 启用鼠标滚轮触发缩放
         zoomLock: true

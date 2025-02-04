@@ -71,7 +71,14 @@ onMounted(() => {
     if (props.activeName == props.groupName){
       updateLiveData(payload);
     }
-  })
+  });
+  listen("delete_stock", ({payload }) => {
+    console.log("删除了股票", payload)
+    const index = StockInfoGs.value.findIndex(item => item.code == payload);
+    if (index !== -1) {
+      StockInfoGs.value.splice(index, 1);
+    }
+  });
 })
 listen("select-stock-detail", ({payload}) => {
   console.log(payload);

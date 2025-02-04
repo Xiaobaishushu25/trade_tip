@@ -1,24 +1,28 @@
-use std::collections::HashMap;
-use anyhow::anyhow;
 use crate::app_errors::AppResult;
 use crate::entities::init_db_coon;
-use crate::service::curd::stock_data_curd::StockDataCurd;
-use crate::service::curd::stock_info_curd::StockInfoCurd;
-use crate::service::http::{init_http, REQUEST};
-use crate::utils::stock_util::{calculate_ago_days_with_str, compute_single_ma};
-use log::info;
 use crate::entities::position::Model;
 use crate::entities::prelude::Position;
 use crate::service::command::handle::handle_and_save_stock_data;
 use crate::service::curd::position_curd::PositionCurd;
+use crate::service::curd::stock_data_curd::StockDataCurd;
+use crate::service::curd::stock_info_curd::StockInfoCurd;
+use crate::service::http::{init_http, REQUEST};
+use crate::utils::stock_util::{
+    calculate_ago_days_with_str, compute_single_ma, get_market_by_code,
+};
+use anyhow::anyhow;
+use chrono::{Duration, Utc};
+use itertools::izip;
+use log::info;
+use std::collections::HashMap;
 
 pub mod graphic_curd;
 pub mod group_stock_relation_curd;
+pub mod position_curd;
 pub mod stock_data_curd;
 pub mod stock_group_curd;
 pub mod stock_info_curd;
 pub mod transaction_record_curd;
-pub mod position_curd;
 
 /// 更新所有股票的日k数据
 pub async fn update_all_day_k() -> AppResult<()> {
@@ -36,11 +40,29 @@ pub async fn update_all_day_k() -> AppResult<()> {
                     //这边的data很有可能多了,因为有很多非交易日，所以需要过滤
                     //这里要多请求一天。以数据库中最新数据是15号为例，若在17号晚上更新，计算出的num是两天，然后请求出来的是16、17号的数据，
                     //导致在find(|&(_, x)| x.date == latest_data.date)时找不到匹配的元素，后面都无法更新。
-                    let data = REQUEST
-                        .get()
-                        .unwrap()
-                        .get_stock_day_data(&code, num + 1)
-                        .await?;
+                    // let data = REQUEST
+                    //     .get()
+                    //     .unwrap()
+                    //     .get_stock_day_data(&code, num + 1)
+                    //     .await?;
+                    let market = get_market_by_code(&code)?;
+                    let data = if market == "sh" || market == "sz" {
+                        REQUEST
+                            .get()
+                            .unwrap()
+                            .get_stock_day_data(&code, num + 1)
+                            .await?
+                    } else {
+                        let now = Utc::now().date_naive();
+                        let formatted_now = now.format("%Y-%m-%d").to_string();
+                        // let two_years_ago = now - Duration::days(2 * 365);
+                        // let formatted_two_years_ago = two_years_ago.format("%Y-%m-%d").to_string();
+                        REQUEST
+                            .get()
+                            .unwrap()
+                            .get_futures_daily_history(&code, &latest_data.date, &formatted_now)
+                            .await?
+                    };
                     // info!("{:?}更新数据{:?}，最新日期是{:?}",code,data,latest_data.date);
                     let index = data
                         .iter()
@@ -59,23 +81,46 @@ pub async fn update_all_day_k() -> AppResult<()> {
                         StockDataCurd::query_only_close_price_by_nums(&code, 59).await?;
                     history.reverse(); //查出的数据是从新到旧，所以要reverse
                     history.extend(data_after_index.iter().map(|item| item.close));
-                    let ma_60 = compute_single_ma(60, history).await;
-                    let ma_60 = ma_60
-                        .into_iter()
-                        .filter(|x| x.is_some())
-                        .collect::<Vec<_>>();
-                    // 确保两个Vec的长度相同
-                    assert_eq!(data_after_index.len(), ma_60.len());
-                    // 使用zip迭代两个Vec并更新ma60字段
-                    for (model, ma60_value) in data_after_index.iter_mut().zip(ma_60.iter()) {
-                        model.ma60 = *ma60_value;
+                    if market == "sh" || market == "sz" {
+                        let ma_60 = compute_single_ma(60, &history).await;
+                        let ma_60 = ma_60
+                            .into_iter()
+                            .filter(|x| x.is_some())
+                            .collect::<Vec<_>>();
+                        // 确保两个Vec的长度相同
+                        assert_eq!(data_after_index.len(), ma_60.len());
+                        // 使用zip迭代两个Vec并更新ma60字段
+                        for (model, ma60_value) in data_after_index.iter_mut().zip(ma_60.iter()) {
+                            model.ma60 = *ma60_value;
+                        }
+                    } else {
+                        let ma_5 = compute_single_ma(5, &history).await;
+                        let ma_10 = compute_single_ma(10, &history).await;
+                        let ma_20 = compute_single_ma(20, &history).await;
+                        let ma_30 = compute_single_ma(30, &history).await;
+                        let ma_60 = compute_single_ma(60, &history).await;
+                        for (model, ma5_value, ma10_value, ma20_value, ma30_value, ma60_value) in izip!(
+                            data_after_index.iter_mut(),
+                            ma_5.iter(),
+                            ma_10.iter(),
+                            ma_20.iter(),
+                            ma_30.iter(),
+                            ma_60.iter()
+                        ) {
+                            model.ma5 = *ma5_value;
+                            model.ma10 = *ma10_value;
+                            model.ma20 = *ma20_value;
+                            model.ma30 = *ma30_value;
+                            model.ma60 = *ma60_value;
+                        }
                     }
                     // println!("待插入数据{:?}",data_after_index);
                     StockDataCurd::insert_many(&code, data_after_index.to_vec()).await?;
                 }
             }
             None => {
-                crate::service::command::handle::handle_and_save_stock_data(false, &code).await?;
+                crate::service::command::handle::handle_and_save_stock_data(false, &code, false)
+                    .await?;
             }
         };
     }
@@ -90,19 +135,23 @@ pub async fn update_all_position() -> AppResult<()> {
     if let Some(position) = option_position {
         let default_position = position.position;
         let latest_date = position.date;
-        let days = calculate_ago_days_with_str(latest_date.as_str())+1;
+        let days = calculate_ago_days_with_str(latest_date.as_str()) + 1;
         // let mut position = Position::new(date.clone(), position);
         let mut index_map: HashMap<&str, &str> = HashMap::new();
-        index_map.insert("sh", "sh000001");        // 上证指数
-        index_map.insert("sz", "sz399001");        // 深证成指
-        index_map.insert("cyb", "sz399006");       // 创业板指
-        index_map.insert("sz50", "sh000016");      // 上证50
-        index_map.insert("hs300", "sh000300");     // 沪深300
-        index_map.insert("zz500", "sh000905");     // 中证500
+        index_map.insert("sh", "sh000001"); // 上证指数
+        index_map.insert("sz", "sz399001"); // 深证成指
+        index_map.insert("cyb", "sz399006"); // 创业板指
+        index_map.insert("sz50", "sh000016"); // 上证50
+        index_map.insert("hs300", "sh000300"); // 沪深300
+        index_map.insert("zz500", "sh000905"); // 中证500
         let mut need_insert_data: HashMap<String, Model> = HashMap::with_capacity(days as usize);
         //主要思路挨个请求指数数据，然后根据日期过滤出日期在 latest_date 之后的数据，然后插入到need_insert_data中
         for (key, value) in &index_map {
-            let price_data = REQUEST.get().unwrap().get_stock_day_data_with_market(value, days).await?;
+            let price_data = REQUEST
+                .get()
+                .unwrap()
+                .get_stock_day_data_with_market(value, days)
+                .await?;
             let data_after_latest_date = price_data
                 .iter()
                 .filter(|item| item.date > latest_date) // 过滤出日期在 latest_date 之后的数据
@@ -113,16 +162,16 @@ pub async fn update_all_position() -> AppResult<()> {
             }
             //将数据插入到need_insert_data中，如果目前还不存在，就新建，否则就直接设置字段值
             for item in data_after_latest_date {
-                if let Some(data) = need_insert_data.get_mut(&item.date){
-                    data.set_field(key,item.close);
-                }else {
+                if let Some(data) = need_insert_data.get_mut(&item.date) {
+                    data.set_field(key, item.close);
+                } else {
                     let mut new_position = Position::new(item.date.clone(), default_position);
                     new_position.set_field(key, item.close);
                     need_insert_data.insert(item.date.clone(), new_position);
                 }
             }
         }
-        println!("待插入数据{:?}",need_insert_data);
+        println!("待插入数据{:?}", need_insert_data);
         //注意是.cloned()而不是.clone()，这里.cloned()可以获得所有权
         PositionCurd::insert_many_positions(need_insert_data.values().cloned().collect()).await?;
     }

@@ -85,7 +85,18 @@ const handleUpdateFreq = (value: number) => {
           <el-input-number v-model="boxNum" :min="3" :max="8" class="custom-input" @change="handleBoxNum" />
         </div>
       </el-card>
-
+      <label class="title">数据源</label>
+      <el-card shadow="always" style="margin: 10px;background-color:#2f2f2f40;border-radius: 10px;padding: 5px">
+        <div class="setting-row-container">
+          <label class="label-text">使用AKShare：</label>
+          <el-checkbox v-model="dataConfig.use_ak_share" @change="handleUpdateDataConfig"></el-checkbox>
+        </div>
+        <div class="setting-row-container">
+          <label class="label-text">启动命令：</label>
+          <el-input v-model="dataConfig.data_server" class="custom-input" :disabled="!dataConfig.use_ak_share" style="width: 700px" @change="handleUpdateDataConfig"/>
+        </div>
+        <el-divider style="margin: 5px" />
+      </el-card>
     </el-scrollbar>
   </div>
 </template>

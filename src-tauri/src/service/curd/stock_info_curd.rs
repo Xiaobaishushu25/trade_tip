@@ -57,15 +57,6 @@ impl StockInfoCurd {
         let new_model = active_model.update(db).await?;
         Ok(new_model)
     }
-    ///根据code更新索引
-    // pub async fn update_index(code:String,index:i32) -> AppResult<StockInfo> {
-    //     let db = crate::entities::DB.get().ok_or(anyhow::anyhow!("数据库未初始化"))?;
-    //     let model = StockInfos::find_by_id(code.clone()).one(db).await?.ok_or(anyhow::anyhow!("更新失败:未找到code为{}的记录",code))?;
-    //     let mut active_model: ActiveStockInfo = model.into();
-    //     active_model.index = Set(index);
-    //     let new_model = active_model.update(db).await?;
-    //     Ok(new_model)
-    // }
     ///查询所有
     pub async fn query_all() -> AppResult<Vec<StockInfo>> {
         let db = crate::entities::DB
@@ -73,6 +64,15 @@ impl StockInfoCurd {
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
         // let result = StockInfos::find().order_by_asc(stock_info::Column::Index).all(db).await?;
         let result = StockInfos::find().all(db).await?;
+        Ok(result)
+    }
+    ///根据代码查询对应的股票信息（有可能为空）
+    pub async fn query_info_by_code(code: String) -> AppResult<Option<StockInfo>> {
+        let db = crate::entities::DB
+            .get()
+            .ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        // let result = StockInfos::find().order_by_asc(stock_info::Column::Index).all(db).await?;
+        let result = StockInfos::find_by_id(code).one(db).await?;
         Ok(result)
     }
     ///查询所有code
