@@ -2,6 +2,7 @@ use crate::app_errors::AppError::AnyHow;
 use crate::app_errors::AppResult;
 use chrono::{Local, NaiveDate, NaiveTime};
 use std::str::FromStr;
+use log::info;
 
 ///根据给定的num，和收盘价列表计算Ma num日均线，数据不足的地方填None；保留三位小数。
 /// 保证返回的均线数据的长度和close_price一样长。
@@ -48,35 +49,47 @@ pub async fn compute_mul_ma(mas: Vec<usize>, now_price: f64, close_prices: &Vec<
 }
 ///根据输入的股票代码判断是沪市（sh）还是深市（sz）的,还是哪个交易所的
 /// code:股票代码，如000001
-/// return:市场代码，如sh
-pub fn get_market_by_code(code: &str) -> AppResult<String> {
+/// return:(市场代码，如sh,是否为主连（仅适用于期货）)
+pub fn get_market_by_code(code: &str) -> AppResult<(String,bool)> {
+    info!("get_market_by_code:{}",code);
     if code.starts_with("15")
         || code.starts_with("000")
         || code.starts_with("002")
         || code.starts_with("300")
         || code.starts_with("200")
     {
-        Ok("sz".into()) //深圳
+        Ok(("sz".into(),false)) //深圳
     } else if code.starts_with("51")
         || code.starts_with("60")
         || code.starts_with("588")
         || code.starts_with("688")
         || code.starts_with("900")
     {
-        Ok("sh".into()) //上海
+        Ok(("sh".into(),false)) //上海
     } else {
         let prefix: String = code.chars()
             .filter(|c| !c.is_digit(10)) // Filter out digits
             .collect::<String>()
             .to_lowercase();
         let prefix = prefix.as_str();
-        return match prefix {
-            "rb" | "au" | "ag" | "cu" | "al" | "zn" | "pb" | "ni" | "sn" | "ss" | "fu" | "bu" | "ru" | "wr" | "hc" | "sp"| "ao"| "br" => return Ok("shfe".into()), // 上海期货交易所
-            "m" | "y" | "a" | "b" | "p" | "c" | "cs" | "jd" | "bb" | "fb" | "l" | "v" | "pp" | "j" | "jm" | "i" | "eg" | "rr" | "lh"| "pg"| "eb" => return Ok("dce".into()), // 大连商品交易所
-            "rs"|"pf"|"pk"|"cj"|"ap"|"rm"|"oi"|"cy"|"cf"|"sr"|"sm"|"sf"|"sh"|"sa"|"ur"|"ma"|"px"|"pr"|"fg" | "wh" | "pm" | "ri" | "lr" | "jr" | "zc" | "ta" | "sc" => return Ok("czce".into()), // 郑州商品交易所
-            "if" | "ih" | "ic" | "t" | "tf" | "ts" => return Ok("cffex".into()), // 中国金融期货交易所
+        let first_match = match prefix {
+            "rb" | "au" | "ag" | "cu" | "al" | "zn" | "pb" | "ni" | "sn" | "ss" | "fu" | "bu" | "ru" | "wr" | "hc" | "sp"| "ao"| "br" => Ok(("shfe".into(),false)), // 上海期货交易所
+            "m" | "y" | "a" | "b" | "p" | "c" | "cs" | "jd" | "bb" | "fb" | "l" | "v" | "pp" | "j" | "jm" | "i" | "eg" | "rr" | "lh"| "pg"| "eb" => Ok(("dce".into(),false)), // 大连商品交易所
+            "rs"|"pf"|"pk"|"cj"|"ap"|"rm"|"oi"|"cy"|"cf"|"sr"|"sm"|"sf"|"sh"|"sa"|"ur"|"ma"|"px"|"pr"|"fg" | "wh" | "pm" | "ri" | "lr" | "jr" | "zc" | "ta" | "sc" => Ok(("czce".into(),false)), // 郑州商品交易所
+            "if" | "ih" | "ic" | "t" | "tf" | "ts" => Ok(("cffex".to_string(),false)), // 中国金融期货交易所
             _ => { Err(AnyHow(anyhow::anyhow!("无法判断代码:{code}的市场")))}
         };
+        //进行二次判断是为了支持处理主连代码（都是以m结尾的期货代码）
+        if let Err(_) = first_match{
+            if code.len()==0 { return Err(AnyHow(anyhow::anyhow!("无法判断代码:{code}的市场"))) }
+            //直接去掉最后一个字符再次进行判断（实际应该加一步判断最后一个字符是不是m的，这里偷懒了），如果可以匹配则成功并将主连标志设为true
+            let new_code = &code[..code.len() - 1];
+            return if let Ok(result) = get_market_by_code(new_code) {
+                Ok((result.0, true))
+            } else { Err(AnyHow(anyhow::anyhow!("无法判断代码:{code}的市场"))) }
+        }else {
+            first_match
+        }
     }
 }
 ///判断当前是否是交易时间
@@ -122,9 +135,10 @@ async fn test_compute_ma() {
 }
 #[tokio::test]
 async fn test_get_market_by_code() {
-    // get_market_by_code("000001").unwrap();
-    let string = get_market_by_code("pk505").unwrap();
-    println!("{}", string);
+    // let string = get_market_by_code("000001").unwrap();
+    let string = get_market_by_code("hcm").unwrap();
+    // let string = get_market_by_code("pk505").unwrap();
+    println!("{:?}", string);
 }
 #[tokio::test]
 async fn test_calculate_day_num() {

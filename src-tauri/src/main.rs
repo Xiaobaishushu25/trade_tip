@@ -32,7 +32,7 @@ use crate::service::http::{init_http, start_data_server};
 use log::{error, info, LevelFilter};
 use log4rs::config::{Appender, Root};
 use std::collections::HashMap;
-use std::env;
+use std::{env, panic};
 use std::sync::atomic::{AtomicBool};
 use std::sync::{Arc, LazyLock, Mutex};
 use log4rs::append::console::ConsoleAppender;
@@ -257,6 +257,33 @@ async fn init_logger() {
         .unwrap();
     // 初始化日志
     log4rs::init_config(config).unwrap();
+    // 设置panic hook
+    // panic::set_hook(Box::new(|info| {
+    //     error!("Panic occurred: {:?}", info);
+    // }));
+    // 设置panic hook
+    panic::set_hook(Box::new(|info| {
+        if let Some(location) = info.location() {
+            // 打印 panic 信息和发生 panic 的位置
+            error!(
+                "Panic occurred at {}:{}:{}",
+                location.file(),
+                location.line(),
+                location.column()
+            );
+        }
+        // 处理panic payload，检查是否为某个具体的错误类型
+        if let Some(payload) = info.payload().downcast_ref::<String>() {
+            // 如果payload是字符串类型，直接打印
+            error!("Panic message: {}", payload);
+        } else if let Some(payload) = info.payload().downcast_ref::<&str>() {
+            // 如果是&str，直接打印
+            error!("Panic message: {}", payload);
+        } else {
+            // 其他情况，打印更通用的信息
+            error!("Panic occurred with unknown payload: {:?}", info.payload());
+        }
+    }));
 }
 // async fn update() {
 //     match service::curd::update_all_day_k().await {

@@ -11,6 +11,7 @@ use crate::entities::prelude::StockData;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
 use crate::service::http::http_client::HttpRequest;
 use crate::service::http::{init_http, start_data_server, REQUEST};
+use crate::utils::stock_util::get_market_by_code;
 
 // 定义常量，用于存储API的URL。
 const SERVER_URL: &str = "http://127.0.0.1:8080/api/public";
@@ -60,6 +61,66 @@ impl HttpRequest{
         }
         Ok(stock_data_list)
     }
+    ///新浪财经-期货-主力连续合约历史数据 https://akshare.akfamily.xyz/data/futures/futures.html#id66
+    /// 这个函数大体和[HttpRequest::get_futures_daily_history()]一样，但是好几处小差别（接口不同，也没有period，提取关键词也不同），还是单独写一个函数吧。
+    ///eg. http://127.0.0.1:8080/api/public/futures_main_sina?start_date=2023-02-04&symbol=M0&end_date=2025-02-03
+    pub async fn get_futures_main(&self,code:&str,start_date: &str,
+                              end_date: &str,)->AppResult<Vec<StockData>>{
+        //东方财富传来的主连代码都是以m结尾，而新浪财经-期货-主力连续合约api的接口要求是以0表示主连，所以需要去掉最后的m加上0
+        // code.trim_end_matches('m')
+        let mut code = code[..code.len() - 1].to_uppercase();
+        code.push('0');
+        let params = HashMap::from([
+            ("symbol", code.as_str()),
+            ("start_date", start_date),
+            ("end_date", end_date),
+        ]);
+        let endpoint = "futures_main_sina";
+        let full_url = format!("{}/{}", SERVER_URL, endpoint);
+        info!("{}", full_url);
+        let response = self.client.get(&full_url).query(&params).send().await?;
+        let text = response.status();
+        let item_list:Vec<Value> = response.json().await.with_context(|| {
+            format!("解析{}的response.json()失败,错误码{}",code,text)
+        })?;
+        let mut stock_data_list = Vec::new();
+        for item in item_list {
+            //2025-01-20T00:00:00.000
+            let date = item["日期"].as_str().unwrap().chars().take(10).collect::<String>();
+            let open = item["开盘价"].as_f64().unwrap();
+            let close = item["收盘价"].as_f64().unwrap();
+            let high = item["最高价"].as_f64().unwrap();
+            let low = item["最低价"].as_f64().unwrap();
+            let volume = item["持仓量"].as_f64().unwrap();//这里应该是成交量的，但是接口返回的是持仓量，没有成交量
+            let stock_data = StockData {
+                date,
+                open,
+                close,
+                high,
+                low,
+                vol: volume,
+                ma5: None,
+                ma10: None,
+                ma20: None,
+                ma30: None,
+                ma60: None,
+            };
+            stock_data_list.push(stock_data);
+        }
+        Ok(stock_data_list)
+        // let name = name.replace("主连", "连续");
+        // let symbol = match name{
+        //     "PVC连续" => "V0",
+        //     "棕榈油连续" => "P0",
+        //     "豆二连续" => "B0",
+        //     "豆粕连续" => "M0",
+        //     "铁矿石连续" => "I0",
+        //     "鸡蛋连续" => "JD0",
+        //     "PVC连续" => "V0",
+        //     "PVC连续" => "V0",
+        //     "PVC连续" => "V0",
+        // }
+    }
     /// 获取期货实时数据
     ///
     /// 该函数根据传入的期货代码列表 (`codes`)，查询每个代码对应的实时市场数据，并返回一个包含实时数据的 `HashMap`。
@@ -97,11 +158,18 @@ impl HttpRequest{
                 info!("{}已处理,", code);
                 continue;
             }
+            let is_main = get_market_by_code(&code)?.1;
             let info = StockInfoCurd::query_info_by_code(code.clone()).await?.ok_or(Tip(format!("{}信息未找到", code)))?;
-            let full_name = info.name;
+            let mut full_name = info.name;
+            //代码中有主连（如豆粕主连），需要去掉"主连"，非主连（如MA505）需要去掉数字。
+            //并且 主连的代码和接口返回的代码不一样，所以需要特殊处理一下。
+            if is_main {
+                full_name = full_name.replace("主连","");
+            }
             let name: String = full_name.chars()
                 .filter(|c| !c.is_digit(10)) // Filter out digits
                 .collect::<String>();
+
             let item_list = self.get_futures_live_data_by_symbol(&name).await?;
             for item in item_list {
                 let mut symbol = item["symbol"].as_str().unwrap().to_lowercase();//ma505
@@ -110,6 +178,25 @@ impl HttpRequest{
                 if symbol.contains("ma2"){
                     symbol = symbol.replace("ma2", "MA");
                 };
+                //特殊处理：如果是主连，则需要将接口返回的symbol去掉末尾的0，加上m，与传入的code判断是否一致（需要忽略大小写）
+                //如果一致，就匹配成功，把code赋值给symbol
+                if is_main{
+                    // 去掉 symbol 末尾的一个 '0'
+                    let trimmed_symbol = if symbol.ends_with('0') {
+                        &symbol[..symbol.len() - 1]
+                    } else {
+                        &symbol
+                    };
+                    // 加上'm'
+                    let new_symbol = format!("{}m", trimmed_symbol);
+                    // 忽略大小写比较
+                    symbol = if new_symbol.eq_ignore_ascii_case(code) {
+                        // 匹配成功，返回新的 symbol
+                        code.clone()
+                    } else {
+                        symbol
+                    }
+                }
                 if codes.contains(&symbol){
                     let percent = item["changepercent"].as_f64().unwrap() * 100.0;
                     let percent_rounded: f64 = format!("{:.2}", percent).parse().unwrap();
@@ -140,6 +227,7 @@ impl HttpRequest{
     ///https://akshare.akfamily.xyz/data/futures/futures.html#id55
     /// http://127.0.0.1:8080/api/public/futures_symbol_mark 获取所有的期货品种
     /// name：eg 花生
+    /// eg http://127.0.0.1:8080/api/public/futures_zh_realtime?symbol=%E9%83%91%E9%86%87
     async fn get_futures_live_data_by_symbol(&self, name: &str) ->AppResult<Vec<Value>>{
         let name = match name{
             "热卷" => "热轧卷板",

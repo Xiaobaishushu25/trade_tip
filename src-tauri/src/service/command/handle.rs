@@ -33,12 +33,12 @@ pub(crate) async fn handle_and_save_stock_data(create_need: bool, code: &str,can
     if create_need {
         create_table_with_dyn_name(code).await?;
     }
-    //不需要那么多的数据，再减三百，因为有大量不是交易日的日期。
-    let market = get_market_by_code(code)?;
+    let (market,flag) = get_market_by_code(code)?;
     let mut stock_data = if market == "sh" || market == "sz" {
         REQUEST
             .get()
             .unwrap()
+            //不需要那么多的数据，再减三百，因为有大量不是交易日的日期。
             .get_stock_day_data(&code, calculate_ago_days_with_num(2020, 1, 1) - 300)
             .await?
     } else {
@@ -49,13 +49,17 @@ pub(crate) async fn handle_and_save_stock_data(create_need: bool, code: &str,can
         let now = Utc::now().date_naive();
         let formatted_now = now.format("%Y-%m-%d").to_string();
         // 获取两年前的日期
-        let two_years_ago = now - Duration::days(2 * 365);
+        let two_years_ago = now - Duration::days(4 * 365);//默认取四年的数据吧
         let formatted_two_years_ago = two_years_ago.format("%Y-%m-%d").to_string();
-        REQUEST.get().unwrap().get_futures_daily_history(
-            &code,
-            &formatted_two_years_ago,
-            &formatted_now,
-        ).await?
+        if flag{
+            REQUEST.get().unwrap().get_futures_main(&code, &formatted_two_years_ago, &formatted_now).await?
+        }else {
+            REQUEST.get().unwrap().get_futures_daily_history(
+                &code,
+                &formatted_two_years_ago,
+                &formatted_now,
+            ).await?
+        }
     };
     // let mut stock_data = REQUEST.get().unwrap().get_stock_day_data(&code, num).await?;
     //stock_data中的ma60是None，手动计算一下。

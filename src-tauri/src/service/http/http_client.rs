@@ -48,7 +48,7 @@ impl HttpRequest {
     /// num是一共需要获取的数据条数
     /// 返回值是一个Vec<StockData>，里面包含了股票的日K线数据。
     pub async fn get_stock_day_data(&self, code: &str, num: i32) -> AppResult<Vec<StockData>> {
-        let url = format!("https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol={}{code}&scale=240&ma=5,10,20,30&datalen={num}",get_market_by_code(code)?);
+        let url = format!("https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol={}{code}&scale=240&ma=5,10,20,30&datalen={num}",get_market_by_code(code)?.0);
         println!("{:?}", url);
         // let url = format!("https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol={}&scale=240&ma=5,10,20,30&datalen={num}",get_market_by_code(code)?);
         // let result = self.client.get(url).headers(self.header_map.clone()).send().await?;
@@ -86,14 +86,14 @@ impl HttpRequest {
     ) -> AppResult<HashMap<String, StockLiveData>> {
         //如果单个股票的话需要另外判断，因为不另外判断的话，即使出错也是返回Ok(空map)，明显不符合逻辑。
         if codes.len() == 1{
-            let market = get_market_by_code(&codes[0])?;
+            let market = get_market_by_code(&codes[0])?.0;
             return if market == "sh" || market == "sz" {
                 self.get_live_stock_data(&codes).await
             } else { self.get_futures_live_datas(codes).await }
         }
         let (stock_codes, futures_codes): (Vec<String>, Vec<String>) =
             codes.into_iter().partition(|code| {
-                if let Ok(market) = get_market_by_code(code) {
+                if let Ok((market,_)) = get_market_by_code(code) {
                     market == "sh" || market == "sz"
                 } else {
                     false
@@ -160,7 +160,7 @@ impl HttpRequest {
         }
         let codes = codes
             .iter()
-            .map(|item| format!("{}{item}", get_market_by_code(item).unwrap()))
+            .map(|item| format!("{}{item}", get_market_by_code(item).unwrap().0))
             .collect::<Vec<String>>();
         let codes = codes.join(",");
         let url = format!("https://qt.gtimg.cn/q={}", codes);
@@ -216,7 +216,7 @@ impl HttpRequest {
         frequency: u32,
     ) -> AppResult<Vec<StockDataTime>> {
         // let ts: u32 = frequency.trim_end_matches('d').parse().unwrap_or(1);
-        let code_with_market = format!("{}{}", get_market_by_code(code)?, code);
+        let code_with_market = format!("{}{}", get_market_by_code(code)?.0, code);
         //https://ifzq.gtimg.cn/appstock/app/kline/mkline?param=sh000001,m1,,60
         let url = format!("http://ifzq.gtimg.cn/appstock/app/kline/mkline?param={code_with_market},m{frequency},,{count}");
         info!("Fetching min stock data from {}", url);
@@ -266,7 +266,7 @@ impl HttpRequest {
     }
     ///获取股票的日内走势图,其实是一个图片，读取为Bytes
     pub async fn get_intraday_chart_img(&self, code: &str) -> AppResult<Bytes> {
-        let url = match get_market_by_code(code)?.as_str() {
+        let url = match get_market_by_code(code)?.0.as_str() {
             "sh" => {
                 format!("https://webquotepic.eastmoney.com/GetPic.aspx?nid=1.{}&imageType=GNR&token=4f1862fc3b5e77c150a2b985b12db0fd",code)
             }

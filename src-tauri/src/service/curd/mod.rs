@@ -45,7 +45,7 @@ pub async fn update_all_day_k() -> AppResult<()> {
                     //     .unwrap()
                     //     .get_stock_day_data(&code, num + 1)
                     //     .await?;
-                    let market = get_market_by_code(&code)?;
+                    let market = get_market_by_code(&code)?.0;
                     let data = if market == "sh" || market == "sz" {
                         REQUEST
                             .get()
