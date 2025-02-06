@@ -13,8 +13,10 @@ use crate::utils::stock_util::{
 use anyhow::anyhow;
 use chrono::{Duration, Utc};
 use itertools::izip;
-use log::info;
+use log::{error, info};
 use std::collections::HashMap;
+use async_recursion::async_recursion;
+use tokio::time::sleep;
 
 pub mod graphic_curd;
 pub mod group_stock_relation_curd;
@@ -25,7 +27,15 @@ pub mod stock_info_curd;
 pub mod transaction_record_curd;
 
 /// 更新所有股票的日k数据
-pub async fn update_all_day_k() -> AppResult<()> {
+/// v0.5.2更新：由于0.5.0版本支持了期货，但是期货数据很容易异常，如果发生error就抛回会连带后面大概率正常的股票日线也不更新，
+/// 所以对期货进行了特殊处理：如果期货数据异常，仅记录日志但是不返回，继续尝试更新下一个。
+#[async_recursion]
+pub async fn update_all_day_k(can_handle_futures:bool,second:bool) -> AppResult<()> {
+    let mut failure_flag = false;//是否有错误发生，这里用于指示期货数据是否有异常
+    //是否需要更新股票的日线数据，因为股票的日线数据一般是统一的，如果一个不需要更新的话其他的也就不更新了。
+    //如果不加这个指标，那么要么每个股票都请求一遍（怕频率过高被封ip），要么股票和期货都不请求
+    //一般第二次调用是为了再次更新期货数据，股票数据就不需要更新了。
+    let mut stock_need_update = if second {false} else { true };
     let codes = StockInfoCurd::query_all_only_code().await?;
     for code in codes {
         //只有大于1天的才要更新，正常情况下今天的ma数据是么有的，所以最新的就是前一天的，ago应该是1，大于1的说明需要更新
@@ -45,23 +55,43 @@ pub async fn update_all_day_k() -> AppResult<()> {
                     //     .unwrap()
                     //     .get_stock_day_data(&code, num + 1)
                     //     .await?;
-                    let market = get_market_by_code(&code)?.0;
-                    let data = if market == "sh" || market == "sz" {
+                    let (market,is_main_future) = get_market_by_code(&code)?;
+                    let is_stock = market == "sh" || market == "sz";
+                    let data = if is_stock {
+                        if !stock_need_update{
+                            continue;
+                        }
                         REQUEST
                             .get()
                             .unwrap()
                             .get_stock_day_data(&code, num + 1)
                             .await?
                     } else {
+                        if (!can_handle_futures)||failure_flag{//如果不能处理期货，或者已经有异常就跳过
+                            continue;
+                        }
                         let now = Utc::now().date_naive();
                         let formatted_now = now.format("%Y-%m-%d").to_string();
-                        // let two_years_ago = now - Duration::days(2 * 365);
-                        // let formatted_two_years_ago = two_years_ago.format("%Y-%m-%d").to_string();
-                        REQUEST
-                            .get()
-                            .unwrap()
-                            .get_futures_daily_history(&code, &latest_data.date, &formatted_now)
-                            .await?
+                        let futures_result = if is_main_future{
+                            REQUEST.get().unwrap().get_futures_main(&code, &latest_data.date, &formatted_now).await
+                        }else {
+                            REQUEST.get().unwrap().get_futures_daily_history(
+                                &code,
+                                &latest_data.date,
+                                &formatted_now,
+                            ).await
+                        };
+                        // let futures_result = REQUEST
+                        //     .get()
+                        //     .unwrap()
+                        //     .get_futures_daily_history(&code, &latest_data.date, &formatted_now)
+                        //     .await;
+                        if futures_result.is_err() {
+                            error!("更新期货{}的历史日线失败：{:?}",code,futures_result.err().unwrap());
+                            failure_flag = true;
+                            continue;
+                        };
+                        futures_result.unwrap()//这里的futures_result是Ok(vec)
                     };
                     // info!("{:?}更新数据{:?}，最新日期是{:?}",code,data,latest_data.date);
                     let index = data
@@ -74,14 +104,18 @@ pub async fn update_all_day_k() -> AppResult<()> {
                     // let option = data.iter().find(|x| x.date == latest_data.date).unwrap();
                     let data_after_index = &mut data[index + 1..].to_vec(); //这个是由旧日期到新日期的顺序
                     if data_after_index.len() == 0 {
-                        return Ok(());
+                        if is_stock{
+                            stock_need_update = false;
+                        }//其实这里也可以判断下给期货_need_update = false，但是期货数据问题很多，还是一个个处理，所以这里就不统一设置不更新了。
+                        // return Ok(());//return Ok(())的话如果在有某个股票最新日期不一致时会出错，所以这里要continue
+                        continue;//这里的data_after_index是空，说明不需要更新，直接continue到下一个继续
                     }
                     //过去的历史收盘价
                     let mut history =
                         StockDataCurd::query_only_close_price_by_nums(&code, 59).await?;
                     history.reverse(); //查出的数据是从新到旧，所以要reverse
                     history.extend(data_after_index.iter().map(|item| item.close));
-                    if market == "sh" || market == "sz" {
+                    if is_stock {
                         let ma_60 = compute_single_ma(60, &history).await;
                         let ma_60 = ma_60
                             .into_iter()
@@ -119,10 +153,16 @@ pub async fn update_all_day_k() -> AppResult<()> {
                 }
             }
             None => {
-                crate::service::command::handle::handle_and_save_stock_data(false, &code, false)
+                crate::service::command::handle::handle_and_save_stock_data(false, &code, can_handle_futures)
                     .await?;
             }
         };
+    }
+    if can_handle_futures && failure_flag && !second{//如果有可以处理期货，并且之前失败了，并且是第一次更新，就再更新一次
+        error!("first update daily info failed, 20s later will retry again.");
+        sleep(std::time::Duration::from_secs(20)).await;
+        let _ = update_all_day_k(true,true).await;
+        info!("second update daily info ended");
     }
     Ok(())
 }
@@ -171,7 +211,6 @@ pub async fn update_all_position() -> AppResult<()> {
                 }
             }
         }
-        println!("待插入数据{:?}", need_insert_data);
         //注意是.cloned()而不是.clone()，这里.cloned()可以获得所有权
         PositionCurd::insert_many_positions(need_insert_data.values().cloned().collect()).await?;
     }
@@ -181,5 +220,5 @@ pub async fn update_all_position() -> AppResult<()> {
 async fn test_update_all_day_k() {
     init_db_coon().await;
     init_http().await;
-    update_all_day_k().await.unwrap();
+    update_all_day_k(false).await.unwrap();
 }

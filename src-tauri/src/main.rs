@@ -13,7 +13,7 @@ mod utils;
 
 use crate::app_errors::AppResult;
 use crate::cache::intraday_chart_cache::IntradayChartCache;
-use crate::config::config::Config;
+use crate::config::config::{Config, DataConfig};
 use crate::entities::init_db_coon;
 use crate::service::command::tauri_command::{
     add_stock_info, create_group, delete_all_transaction_records, delete_graphic_by_group_id,
@@ -35,12 +35,14 @@ use std::collections::HashMap;
 use std::{env, panic};
 use std::sync::atomic::{AtomicBool};
 use std::sync::{Arc, LazyLock, Mutex};
+use std::time::Duration;
 use log4rs::append::console::ConsoleAppender;
 use log4rs::append::file::FileAppender;
 use log4rs::encode::pattern::PatternEncoder;
 use log4rs::filter::threshold::ThresholdFilter;
-use tauri::{AppHandle, Manager};
+use tauri::{Manager};
 use tokio::sync::mpsc;
+use tokio::sync::mpsc::Receiver;
 use tokio::task::JoinHandle;
 
 ///是否需要实时更新
@@ -118,23 +120,14 @@ pub async fn get_close_prices(
 #[tokio::main]
 async fn main() {
     init_app().await;
-    //todo 下面这俩更新如果出错了在前端页面是没有提醒的，如果想要emit一个错误事件到前端的话，有可能存在前端页面还没渲染完就emit了，就收不到了；
-    // 如果弄一个本地变量保存错误信息，前端页面渲染完成后主动来invoke读取这个变量判断是否出错应该可以，但是目前懒得搞。
-    tokio::spawn(async {
-        info!("update stock info start");
-        if let Err(e) = service::curd::update_all_day_k().await{
-            error!("update stock info failed:{}",e)
-        }
-        // update().await;
-    });
-    tokio::spawn(async {
-        info!("update position start");
-        if let Err(e) = service::curd::update_all_position().await{
-            error!("update position failed:{}",e)
-        }
-    });
+
+    let config = Config::load().await;
+    let data_config = config.data_config.clone();
+    let (send,recv) = mpsc::channel::<()>(1);
+    init_data_server_daily_position(recv,data_config).await;
+
     let state = MyState::new().await;
-    info!("ui start");
+    info!("tauri start...");
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, args, cwd| {
             error!("the app is already running, args: {:?}, cwd: {}", args, cwd);
@@ -147,40 +140,29 @@ async fn main() {
         .manage(state)
         .manage(IntradayChartCache::new())
         // .manage(Mutex::new(Config::load().await))
-        .manage(Mutex::new(Config::load().await))
+        .manage(Mutex::new(config))
+        .manage(send)
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
-        .setup(|app| {
-            let app_handle: &AppHandle = app.app_handle();
-            let config = app_handle.state::<Mutex<Config>>();
-            let data_config = config.lock().unwrap().data_config.clone();
-            let (send,recv) = mpsc::channel::<()>(1);
-            app.manage(send);
-            tokio::spawn(async move{
-                if let Err(e) = start_data_server(&data_config,recv).await{
-                    error!("start data server error:{}",e);
-                }
-            });
-            Ok(())
-        })
-        // .setup(|app|{
-        //     info!("{:?}",app.app_handle().path().app_config_dir().unwrap()); //"C:\\Users\\Xbss\\AppData\\Roaming\\com.xbss.trade-tip"
-        //     let main_window = app.get_webview_window("main").unwrap();
-        //     // main_window.as_ref().window().restore_state(StateFlags::all())
-        //     let tool_window = app.get_webview_window("tool").unwrap();
+        // .setup(|app| {
+        //     let app_handle: &AppHandle = app.app_handle();
+        //     let config = app_handle.state::<Mutex<Config>>();
+        //     let data_config = config.lock().unwrap().data_config.clone();
+        //     let (send,recv) = mpsc::channel::<()>(1);
+        //     app.manage(send);
         //     tokio::spawn(async move{
-        //         // let mut result = main_window.restore_state(StateFlags::all());
-        //         // info!("restore main window state result:{:?}",result);
-        //         // if result.is_err(){
-        //         //     error!("restore main window state error:{}",result.err().unwrap().to_string());
-        //         // };
-        //         main_window.show().unwrap();
-        //         //  result = tool_window.restore_state(StateFlags::all());
-        //         // if result.is_err(){
-        //         //     error!("restore tool window state error:{}",result.err().unwrap().to_string());
-        //         // };
+        //         tokio::spawn(async move{
+        //             info!("update daily info start...");
+        //             if let Err(e) = service::curd::update_all_day_k(data_config.use_ak_share).await{
+        //                 error!("update daily info failed:{}",e)
+        //             };
+        //         });
+        //         if let Err(e) = start_data_server(&data_config,recv).await{
+        //             error!("start data server error:{}",e);
+        //         };
         //     });
+        //     info!("setup ok.");
         //     Ok(())
         // })
         .invoke_handler(tauri::generate_handler![
@@ -285,24 +267,44 @@ async fn init_logger() {
         }
     }));
 }
-// async fn update() {
-//     match service::curd::update_all_day_k().await {
-//         Ok(_) => {
-//             info!("更新日线数据成功");
-//             NOTICE
-//                 .lock()
-//                 .unwrap()
-//                 .replace("更新日线数据成功".to_string());
-//         }
-//         Err(e) => {
-//             error!("更新日线数据失败:{}", e);
-//             NOTICE
-//                 .lock()
-//                 .unwrap()
-//                 .replace(format!("更新日线数据失败:{}", e.to_string()));
-//         }
-//     };
-// }
+async fn init_data_server_daily_position(recv:Receiver<()>,data_config:DataConfig){
+    let can_handle_futures = data_config.use_ak_share;
+    tokio::spawn(async move{
+        if let Err(e) = start_data_server(&data_config,recv).await{
+            error!("start data server error:{}",e);
+        };
+    });
+    //todo 下面这俩更新如果出错了在前端页面是没有提醒的，如果想要emit一个错误事件到前端的话，有可能存在前端页面还没渲染完就emit了，就收不到了；
+    // 如果弄一个本地变量保存错误信息，前端页面渲染完成后主动来invoke读取这个变量判断是否出错应该可以，但是目前懒得搞。
+    tokio::spawn(async move{
+        info!("update daily info start...");
+        if let Err(e) = service::curd::update_all_day_k(can_handle_futures,false).await{
+            error!("update daily info failed:{:?}.",e)
+        }
+        info!("update daily info end.");
+        // match service::curd::update_all_day_k(can_handle_futures).await {
+        //     Ok(failure) => {
+        //         if failure {
+        //             error!("first update daily info failed, 20s later will retry again.");
+        //             sleep(Duration::from_secs(20)).await;
+        //             match service::curd::update_all_day_k(can_handle_futures).await{
+        //                 Ok(failure) =>{
+        //
+        //                 }
+        //                 Err(e) => {error!("second update stock info failed:{:?}",e)}
+        //             }
+        //         }
+        //     }
+        //     Err(e) => {error!("update stock info failed:{:?}",e)}
+        // }
+    });
+    tokio::spawn(async {
+        info!("update position start");
+        if let Err(e) = service::curd::update_all_position().await{
+            error!("update position failed:{}",e)
+        }
+    });
+}
 // ///判断是否开市,先发起一个请求，然后sleep 1秒，再发起一个请求，如果两个请求的返回值不一样，则证明开市了，否则证明闭市了。
 // async fn judge_market_open() {
 //     let response1 = REQUEST.get().unwrap().get("https://qt.gtimg.cn/q=sz159992").await.unwrap();

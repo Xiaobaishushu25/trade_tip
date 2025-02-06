@@ -59,18 +59,26 @@ function query_box(){
     console.log(err)
   })
 }
-watch(activeName, () => {
+watch(activeName, async () => {
   let groupName = activeName.value;
   store.activeGroup = groupName;
-  invoke("query_live_stocks_data_by_group_name",{groupName: groupName}).catch(err => {
-    console.log(err);
-  });
   invoke<StockInfoG[]>("query_stocks_by_group_name", {name: groupName}).then(res => {
     store.stockinfoGs = res;
     // console.log("给全局状态赋值",store.stockinfoGs)
   }).catch(err => {
     console.log(err);
   })
+  // 1 秒的暂停，因为打包release版本后请求太快，页面还没渲染好实时数据就发过来了，所以暂停一秒再请求
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  invoke("query_live_stocks_data_by_group_name",{groupName: groupName}).catch(err => {
+    console.log(err);
+  });
+  // invoke<StockInfoG[]>("query_stocks_by_group_name", {name: groupName}).then(res => {
+  //   store.stockinfoGs = res;
+  //   // console.log("给全局状态赋值",store.stockinfoGs)
+  // }).catch(err => {
+  //   console.log(err);
+  // })
 },{immediate:true})
 
 function updateGroup(){

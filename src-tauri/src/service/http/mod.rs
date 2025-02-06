@@ -49,7 +49,7 @@ pub async fn start_data_server(data_config: &DataConfig, mut receiver: Receiver<
             .stderr(Stdio::piped())
             .spawn()?;  // Start the process
 
-        info!("start data server...");
+        info!("data server has been created...");
         let child_stdout = child.stdout.take().unwrap();
         tokio::spawn(async move {
             let mut stdout_reader = BufReader::new(child_stdout);
@@ -60,6 +60,7 @@ pub async fn start_data_server(data_config: &DataConfig, mut receiver: Receiver<
                 buffer.clear(); // 清空缓冲区，准备读取下一行
             }
         });
+        info!("redirected the child_stdout...");
         let child_stderr = child.stderr.take().unwrap();
         tokio::spawn(async move {
             let mut stderr_reader = BufReader::new(child_stderr);
@@ -70,6 +71,7 @@ pub async fn start_data_server(data_config: &DataConfig, mut receiver: Receiver<
                 buffer.clear(); // 清空缓冲区，准备读取下一行
             }
         });
+        info!("redirected the child_stderr...");
         tokio::select! {
             _ = receiver.recv() => {
                 error!("Received shutdown signal, stopping data server...");

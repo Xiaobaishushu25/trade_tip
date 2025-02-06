@@ -51,7 +51,6 @@ pub async fn compute_mul_ma(mas: Vec<usize>, now_price: f64, close_prices: &Vec<
 /// code:股票代码，如000001
 /// return:(市场代码，如sh,是否为主连（仅适用于期货）)
 pub fn get_market_by_code(code: &str) -> AppResult<(String,bool)> {
-    info!("get_market_by_code:{}",code);
     if code.starts_with("15")
         || code.starts_with("000")
         || code.starts_with("002")

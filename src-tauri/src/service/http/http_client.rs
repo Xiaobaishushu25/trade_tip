@@ -84,6 +84,7 @@ impl HttpRequest {
         codes: Vec<String>,
         app_handle: &AppHandle,
     ) -> AppResult<HashMap<String, StockLiveData>> {
+        error!("查询{:?}的实时数据",codes);
         //如果单个股票的话需要另外判断，因为不另外判断的话，即使出错也是返回Ok(空map)，明显不符合逻辑。
         if codes.len() == 1{
             let market = get_market_by_code(&codes[0])?.0;
@@ -164,13 +165,13 @@ impl HttpRequest {
             .collect::<Vec<String>>();
         let codes = codes.join(",");
         let url = format!("https://qt.gtimg.cn/q={}", codes);
-        info!("发起get请求:{}", url);
+        info!("请求股票的实时数据:{}", url);
         let result = self
             .client
             .get(url.clone())
             .send()
             .await
-            .with_context(|| format!("请求url:{}", url))?;
+            .with_context(|| format!("请求股票的实时数据出错，请求url:{}", url))?;
         let content = result.text().await?;
         let split = content
             .split("v_")

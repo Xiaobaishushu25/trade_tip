@@ -17,6 +17,8 @@ use crate::utils::stock_util::get_market_by_code;
 const SERVER_URL: &str = "http://127.0.0.1:8080/api/public";
 impl HttpRequest{
     ///https://akshare.akfamily.xyz/data/futures/futures.html#id57
+    ///eg. http://127.0.0.1:8080/api/public/futures_hist_em?start_date=2023-02-04&symbol=cs2503&period=daily&end_date=2025-02-03
+    /// 主连合约不要用这函数！！
     pub async fn get_futures_daily_history(&self,symbol: &str,
                                            start_date: &str,
                                            end_date: &str,) -> AppResult<Vec<StockData>> {
@@ -32,7 +34,7 @@ impl HttpRequest{
         let response = self.client.get(&full_url).query(&params).send().await?;
         let text = response.status();
         let item_list:Vec<Value> = response.json().await.with_context(|| {
-            format!("解析response.json()失败,错误码{}",text)
+            format!("解析{}日线数据的response.json()失败,错误码{}",symbol,text)
         })?;
         // let item_list:Vec<Value> = response.json().await.context("解析futures_daily_history失败")?;
         let mut stock_data_list = Vec::new();
@@ -81,7 +83,7 @@ impl HttpRequest{
         let response = self.client.get(&full_url).query(&params).send().await?;
         let text = response.status();
         let item_list:Vec<Value> = response.json().await.with_context(|| {
-            format!("解析{}的response.json()失败,错误码{}",code,text)
+            format!("解析{}主连合约的response.json()失败,错误码{}",code,text)
         })?;
         let mut stock_data_list = Vec::new();
         for item in item_list {

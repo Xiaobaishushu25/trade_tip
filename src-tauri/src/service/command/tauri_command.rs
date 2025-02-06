@@ -10,7 +10,6 @@ use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_group_curd::StockGroupCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
 use crate::service::curd::transaction_record_curd::TransactionRecordCurd;
-use crate::service::curd::update_all_day_k;
 use crate::service::http::{init_http, REQUEST};
 use crate::{get_close_prices, MyState, IS_MARKET_OPEN, UPDATEING};
 use log::{error, info};
@@ -27,7 +26,7 @@ use crate::service::curd::position_curd::PositionCurd;
 #[tauri::command]
 pub async fn update_live_state<'r>(
     state: State<'r, MyState>,
-    app_handle: tauri::AppHandle,
+    app_handle: AppHandle,
     config: State<'r, Mutex<Config>>,
     group_name: String,
     live_state: bool,
@@ -39,17 +38,17 @@ pub async fn update_live_state<'r>(
     }
     Ok(())
 }
-#[tauri::command]
-pub async fn update_all_stock_day_k() -> Result<String, String> {
-    // state.update_live_state(live_state);
-    match update_all_day_k().await {
-        Ok(_) => Ok("更新成功".to_string()),
-        Err(e) => {
-            handle_error("更新日线数据失败", e.to_string())
-            // Err(format!("更新日线数据失败:{}",e.to_string()))
-        }
-    }
-}
+// #[tauri::command]
+// pub async fn update_all_stock_day_k() -> Result<String, String> {
+//     // state.update_live_state(live_state);
+//     match update_all_day_k().await {
+//         Ok(_) => Ok("更新成功".to_string()),
+//         Err(e) => {
+//             handle_error("更新日线数据失败", e.to_string())
+//             // Err(format!("更新日线数据失败:{}",e.to_string()))
+//         }
+//     }
+// }
 #[tauri::command]
 pub async fn get_response(url: String) -> Result<String, String> {
     match REQUEST.get().unwrap().get_response(&url).await {
@@ -112,9 +111,11 @@ pub async fn query_all_groups() -> Result<Vec<StockGroup>, String> {
 
 #[tauri::command]
 pub async fn query_stocks_by_group_name(name: String) -> Result<Vec<StockInfoG>, String> {
+    // error!("根据分组名查询分组中的股票:{}",name);
     if name == "持有" {
         return match StockInfoCurd::query_all_hold_info().await {
             Ok(more_infos) => {
+                // error!("查询持有分组成功:{:?}",more_infos);
                 Ok(more_infos)
             }
             Err(e) => {
@@ -501,7 +502,10 @@ pub async fn query_live_stocks_data_by_group_name<'r>(
     group_name: String,
     app_handle: AppHandle,
 ) -> Result<(), String> {
-    info!("查询{}分组内的实时数据", group_name);
+    if group_name.is_empty(){//应用刚启动会有一个空的分组名进来，不知道哪里传来
+        return Ok(());
+    }
+    error!("查询{}分组内的实时数据", group_name);
     // if !IS_MARKET_OPEN.load(Ordering::Relaxed) {
     //     info!("市场未开市,不进行查询操作！");
     //     return Ok(());
@@ -510,10 +514,9 @@ pub async fn query_live_stocks_data_by_group_name<'r>(
     let result = if group_name == "持有" {
         StockInfoCurd::query_all_hold_only_code().await
     } else {
-        GroupStockRelationCurd::query_only_code_by_group_name(group_name).await
+        GroupStockRelationCurd::query_only_code_by_group_name(group_name.clone()).await
     };
     let update_freq = config.lock().unwrap().data_config.update_freq;
-    info!("更新频率为{}秒", update_freq);
     match result {
         Ok(codes) => {
             if codes.is_empty() {
@@ -542,7 +545,6 @@ pub async fn query_live_stocks_data_by_group_name<'r>(
                                 .await
                                 {
                                     Ok(_) => {
-                                        // info!("查询成功:{:?}",stock_data_list);
                                         app_handle
                                             .emit("live_stock_data", stock_data_list)
                                             .unwrap();

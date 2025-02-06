@@ -1,6 +1,6 @@
 [package]
 name = "trade_tip"
-version = "0.5.1"
+version = "0.5.2"
 description = "金融助手"
 authors = ["xbss"]
 edition = "2021"
@@ -39,6 +39,8 @@ encoding_rs = "0.8.34"
 tauri-plugin-dialog = "2"
 ashares = "0.1.0"
 itertools = "0.14.0"#支持多个迭代器的扁平化组合,计算均线时要用
+
+async-recursion = "1.1.1"
 [features]
 # This feature is used for production builds or when a dev server is not specified, DO NOT REMOVE!!
 custom-protocol = ["tauri/custom-protocol"]
