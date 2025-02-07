@@ -46,7 +46,7 @@ pub async fn update_all_day_k(can_handle_futures:bool,second:bool) -> AppResult<
                     "{}最新的日期是{:?},距今天的天数是{:?}",
                     code, latest_data.date, num
                 );
-                if num > 1 {
+                if num >= 1 {
                     //这边的data很有可能多了,因为有很多非交易日，所以需要过滤
                     //这里要多请求一天。以数据库中最新数据是15号为例，若在17号晚上更新，计算出的num是两天，然后请求出来的是16、17号的数据，
                     //导致在find(|&(_, x)| x.date == latest_data.date)时找不到匹配的元素，后面都无法更新。

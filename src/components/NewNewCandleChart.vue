@@ -684,7 +684,9 @@ const tolerance = 1e-6; // 或者更大的容差值
 async function query_stocks_day_k_limit(){
   const data = await invoke<StockData[]>('query_stocks_day_k_limit', { code: code });
   console.log(data);
-  if (data[0].date !== nowDate) {
+  // if (data[0].date !== nowDate) {
+  //todo 这样写太那啥了，后面再改改
+  if (true) {//v0.5.3由于期货有夜盘，所以不能判断日期是否一致，否则不会绘制最新数据的K线图
     try{
       const liveData = await invoke<StockLiveData>('query_live_stock_data_by_code', { code: code });
       store.stockinfoG.live_data = liveData;
