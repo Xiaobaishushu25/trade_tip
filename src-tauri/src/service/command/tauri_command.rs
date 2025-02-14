@@ -505,7 +505,7 @@ pub async fn query_live_stocks_data_by_group_name<'r>(
     if group_name.is_empty(){//应用刚启动会有一个空的分组名进来，不知道哪里传来
         return Ok(());
     }
-    error!("查询{}分组内的实时数据", group_name);
+    // error!("查询{}分组内的实时数据", group_name);
     // if !IS_MARKET_OPEN.load(Ordering::Relaxed) {
     //     info!("市场未开市,不进行查询操作！");
     //     return Ok(());

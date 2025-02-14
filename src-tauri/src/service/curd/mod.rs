@@ -103,7 +103,7 @@ pub async fn update_all_day_k(can_handle_futures:bool,second:bool) -> AppResult<
                     // println!("最新的日期是{:?},索引是{:?}",latest_data.date,index);
                     // let option = data.iter().find(|x| x.date == latest_data.date).unwrap();
                     let data_after_index = &mut data[index + 1..].to_vec(); //这个是由旧日期到新日期的顺序
-                    if data_after_index.len() == 0 {
+                    if data_after_index.is_empty() {
                         if is_stock{
                             stock_need_update = false;
                         }//其实这里也可以判断下给期货_need_update = false，但是期货数据问题很多，还是一个个处理，所以这里就不统一设置不更新了。
@@ -129,6 +129,7 @@ pub async fn update_all_day_k(can_handle_futures:bool,second:bool) -> AppResult<
                         }
                     } else {
                         let ma_5 = compute_single_ma(5, &history).await;
+                        error!("计算的期货{}的ma5为{:?}",code,ma_5);
                         let ma_10 = compute_single_ma(10, &history).await;
                         let ma_20 = compute_single_ma(20, &history).await;
                         let ma_30 = compute_single_ma(30, &history).await;
@@ -148,7 +149,7 @@ pub async fn update_all_day_k(can_handle_futures:bool,second:bool) -> AppResult<
                             model.ma60 = *ma60_value;
                         }
                     }
-                    // println!("待插入数据{:?}",data_after_index);
+                    error!("待插入数据{:?}",data_after_index);
                     StockDataCurd::insert_many(&code, data_after_index.to_vec()).await?;
                 }
             }
@@ -220,5 +221,5 @@ pub async fn update_all_position() -> AppResult<()> {
 async fn test_update_all_day_k() {
     init_db_coon().await;
     init_http().await;
-    update_all_day_k(false).await.unwrap();
+    update_all_day_k(true,false).await.unwrap();
 }
