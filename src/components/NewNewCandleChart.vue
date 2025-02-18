@@ -1192,12 +1192,15 @@ function init_option(){
             {
               type: 'max',
               name: '最大值',
-              valueDim: 'highest'
+              valueDim: 'highest',
+              //https://echarts.apache.org/zh/option.html#series-line.markPoint.data.symbolOffset
+              symbolOffset:['0','-100%'],//确保蜡烛图的最大值标签不会与蜡烛图重叠
             },
             {
               type: 'min',
               name: '最小值',
-              valueDim: 'lowest'
+              valueDim: 'lowest',
+              symbolOffset:['0','50%'],
             }
           ],
           symbol: "arrow",
