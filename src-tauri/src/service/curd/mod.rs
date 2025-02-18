@@ -134,22 +134,52 @@ pub async fn update_all_day_k(can_handle_futures:bool,second:bool) -> AppResult<
                         let ma_20 = compute_single_ma(20, &history).await;
                         let ma_30 = compute_single_ma(30, &history).await;
                         let ma_60 = compute_single_ma(60, &history).await;
-                        for (model, ma5_value, ma10_value, ma20_value, ma30_value, ma60_value) in izip!(
-                            data_after_index.iter_mut(),
-                            ma_5.iter(),
-                            ma_10.iter(),
-                            ma_20.iter(),
-                            ma_30.iter(),
-                            ma_60.iter()
-                        ) {
-                            model.ma5 = *ma5_value;
-                            model.ma10 = *ma10_value;
-                            model.ma20 = *ma20_value;
-                            model.ma30 = *ma30_value;
-                            model.ma60 = *ma60_value;
+                        // 假设 data_after_index 的长度为 N，ma_5, ma_10 等的长度为 M
+                        // 我们需要确保 M >= N，否则会越界
+
+                        // 获取 data_after_index 的长度
+                        let data_len = data_after_index.len();
+
+                        // 确保移动平均线的长度足够
+                        assert!(ma_5.len() >= data_len, "ma_5 的长度不足");
+                        assert!(ma_10.len() >= data_len, "ma_10 的长度不足");
+                        assert!(ma_20.len() >= data_len, "ma_20 的长度不足");
+                        assert!(ma_30.len() >= data_len, "ma_30 的长度不足");
+                        assert!(ma_60.len() >= data_len, "ma_60 的长度不足");
+
+                        // 倒序遍历 data_after_index
+                        for i in (0..data_len).rev() {
+                            // 获取当前索引对应的移动平均线值
+                            let ma5_value = ma_5[ma_5.len() - data_len + i];
+                            let ma10_value = ma_10[ma_10.len() - data_len + i];
+                            let ma20_value = ma_20[ma_20.len() - data_len + i];
+                            let ma30_value = ma_30[ma_30.len() - data_len + i];
+                            let ma60_value = ma_60[ma_60.len() - data_len + i];
+
+                            // 赋值给 data_after_index 中的模型
+                            let model = &mut data_after_index[i];
+                            model.ma5 = ma5_value;
+                            model.ma10 = ma10_value;
+                            model.ma20 = ma20_value;
+                            model.ma30 = ma30_value;
+                            model.ma60 = ma60_value;
                         }
+                        // for (model, ma5_value, ma10_value, ma20_value, ma30_value, ma60_value) in izip!(
+                        //     data_after_index.iter_mut(),
+                        //     ma_5.iter(),
+                        //     ma_10.iter(),
+                        //     ma_20.iter(),
+                        //     ma_30.iter(),
+                        //     ma_60.iter()
+                        // ) {
+                        //     model.ma5 = *ma5_value;
+                        //     model.ma10 = *ma10_value;
+                        //     model.ma20 = *ma20_value;
+                        //     model.ma30 = *ma30_value;
+                        //     model.ma60 = *ma60_value;
+                        // }
                     }
-                    error!("待插入数据{:?}",data_after_index);
+                    // error!("待插入数据{:?}",data_after_index);
                     StockDataCurd::insert_many(&code, data_after_index.to_vec()).await?;
                 }
             }
