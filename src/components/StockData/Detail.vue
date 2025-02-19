@@ -8,6 +8,14 @@ import RTable from "../transactionRecordComponents/RTable.vue";
 const ImageSrc = ref('');
 const rTableRef = ref();
 const IntradayChartShow = ref(false);
+const utilShow = ref(false); //工具窗口是否展示
+
+const utilPrice1 = ref(store.stockinfoG?.live_data?.price); //价格1
+const utilPrice2 = ref(); //价格2
+const utilLoss = ref(0); //止损额度
+const utilChange = ref(); //价格涨跌百分比
+const utilTotalAmount = ref(); //建议买入总金额
+const utilTotalShare = ref(); //建议买入总手数
 
 watch(() => store.stockinfoG!.code, async (newVal) => {
   // console.log('分组内的的股票changed:', newVal);
@@ -42,10 +50,89 @@ async function getIntradayChartImg(code:string){
   })
 }
 
+function updateUtil(){
+  console.log("计算工具");
+  calculateChange();
+  calculateTotalAmount();
+  calculateTotalShare();
+}
+// 计算价格涨跌百分比
+function calculateChange() {
+  if (utilPrice1.value === undefined || utilPrice1.value === null) {
+    return;
+  }
+  if (utilPrice1.value !== 0 && utilPrice2.value !== 0) {
+    utilChange.value = (((utilPrice2.value - utilPrice1.value) / utilPrice1.value) * 100).toPrecision(2);
+  }
+}
+
+// 计算买入总金额
+function calculateTotalAmount() {
+  console.log("计算总额度")
+  //打印utilChange
+  console.log((Math.abs(utilChange.value) / 100));
+  console.log(utilLoss.value);
+  console.log(utilLoss.value / (Math.abs(utilChange.value) / 100));
+  if (utilChange.value !== 0 && utilLoss.value!=0) {
+    utilTotalAmount.value = (utilLoss.value / (Math.abs(utilChange.value) / 100)).toFixed(2);
+    console.log(utilTotalAmount.value)
+  }
+}
+
+// 计算买入手数
+function calculateTotalShare() {
+  let nowPrice = store.stockinfoG?.live_data?.price;
+  if (nowPrice === undefined || nowPrice === null) {
+    console.error("当前价格未定义或为空，无法计算买入手数");
+    return;
+  }
+  if (utilTotalAmount.value !== 0) {
+    utilTotalShare.value = ((utilTotalAmount.value / (nowPrice * 100))*100).toFixed(0);
+  }
+}
+
 </script>
 
 <template>
   <div class="detail column">
+    <el-dialog v-model="utilShow" title="计算工具" width="600" draggable
+               :modal="false"
+               :append-to-body="true"
+               :lock-scroll="false"
+               :close-on-click-modal="false"
+               modal-class="util-modal-wrap"
+               class="util-dialog">
+      <div class="column">
+        <div class="row" style="padding: 5px">
+          <div class="row">
+            现价:
+            <el-input-number v-model="utilPrice1" :controls="false" @change="updateUtil" style="width: 80px"></el-input-number>
+          </div>
+          <div class="row">
+            目标价:
+            <el-input-number v-model="utilPrice2" :controls="false" @change="updateUtil" style="width: 80px"></el-input-number>
+          </div>
+          <div class="row">
+            止损额度:
+            <el-input-number v-model="utilLoss" :controls="false" @change="updateUtil" style="width: 80px"></el-input-number>
+          </div>
+        </div>
+        <div class="row" style="padding: 20px">
+          <div class="row">
+            涨跌幅：
+            <el-text :style="utilChange > 0 ? { color: 'red' } : utilChange < 0 ? { color: 'green' } : {}">{{ utilChange }}%</el-text>
+          </div>
+          <div class="row">
+            买入总金额：
+            <el-text>{{utilTotalAmount}}</el-text>
+          </div>
+          <div class="row">
+            买入份数：
+            <el-text>{{utilTotalShare}}</el-text>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
     <el-drawer v-model="IntradayChartShow" direction="ltr" size="100%" :modal="false" modal-class="mask-layer" custom-class="custom-drawer">
       <template #default>
 <!--        <div @wheel.stop.prevent>-->
@@ -96,6 +183,7 @@ async function getIntradayChartImg(code:string){
     <el-divider />
     <el-tag :class="store.stockinfoG?.rowData?.advise[1]" style="align-items: center;font-size: 18px">{{store.stockinfoG?.rowData?.advise[0]}} </el-tag>
     <el-divider style="margin: 5px"/>
+    <el-button plain @click="utilShow = true">打开工具</el-button>
     <el-button plain @click="IntradayChartShow = true">打开分时图</el-button>
     <el-button plain @click="IntradayChartShow = true">打开历史交易表</el-button>
 <!--    <label>{{store.stockinfoG}}</label>-->
@@ -105,6 +193,14 @@ async function getIntradayChartImg(code:string){
 <style>
 .detail .el-drawer__body{
   padding:0;
+}
+/* https://blog.csdn.net/Curry_On/article/details/139442443 */
+/* 设置dialog弹出时，其他元素仍能接受焦点*/
+.util-dialog{/*dialog仍可以接收焦点*/
+  pointer-events: auto;
+}
+.util-modal-wrap{/*遮罩不要独揽焦点*/
+  pointer-events: none;
 }
 </style>
 <style scoped>
