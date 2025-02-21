@@ -120,8 +120,8 @@ impl HttpRequest {
             // 第一个成功，第二个失败，处理第二个错误并返回第一个的结果
             (Ok(data1), Err(e)) => {
                 let err_msg = format!(
-                    "Failed to get futures live data:{}, but stock data is available.",
-                    e.to_string()
+                    "Failed to get futures live data:{:?}, but stock data is available.",
+                    e
                 );
                 error!("{}", err_msg);
                 app_handle.emit("get_live_data_error", err_msg).unwrap();
