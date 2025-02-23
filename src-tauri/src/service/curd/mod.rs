@@ -129,7 +129,7 @@ pub async fn update_all_day_k(can_handle_futures:bool,second:bool) -> AppResult<
                         }
                     } else {
                         let ma_5 = compute_single_ma(5, &history).await;
-                        error!("计算的期货{}的ma5为{:?}",code,ma_5);
+                        // error!("计算的期货{}的ma5为{:?}",code,ma_5);
                         let ma_10 = compute_single_ma(10, &history).await;
                         let ma_20 = compute_single_ma(20, &history).await;
                         let ma_30 = compute_single_ma(30, &history).await;
