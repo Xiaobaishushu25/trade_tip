@@ -1044,7 +1044,7 @@ function init_option(){
       label: {
         backgroundColor: '#e1bf2c',
         color:"black",
-        precision:3
+        // precision:3
       }
     },
     toolbox: {
