@@ -20,18 +20,6 @@ onMounted(async () => {
     query_box();
   })
 })
-// computed(() => {
-//   if (store.stockGroups.length > 0) {
-//     return store.stockGroups.map(group => group.name);
-//   } else {
-//     return [];
-//   }
-// })
-// const stockGroupNames = computed(() => {
-//   // return store.stockGroups.map(group => ({name:group.name,index:group.index}))
-//   return store.stockGroups.map(group => ({...group}))
-//   // ... 类似的逻辑，但是你可能需要直接从 store 中解构出 stockGroups
-// })
 const stockGroupNames = ref<StockGroup[]>()
 // watch(()=>store.stockGroups, () => {
 watch(()=>store.stockGroups.length, () => { //监听长度变化比深度监听性能更好吧？
@@ -135,8 +123,6 @@ function judgeTab(activeName:string){
           :name="`${group.name}`"
           class="tab-pane"
       >
-<!--        <StockTable :stocks_change="group.stocks_change" :group-name="group.name" :active-name="activeName"></StockTable>-->
-<!--        <StockTable2 :stocks_change="group.stocks_change" :group-name="group.name" :active-name="activeName"></StockTable2>-->
         <StockTable :stocks_change="group.stocks_change" :group-name="group.name" :active-name="activeName"></StockTable>
       </el-tab-pane>
       <el-tab-pane name="设置">
@@ -145,12 +131,6 @@ function judgeTab(activeName:string){
             <inline-svg src="../assets/svg/menu.svg" class="min-icon" @click="dialogVisible = true"></inline-svg>
           </el-tooltip>
         </template>
-<!--        <el-tooltip content="分组管理" placement="bottom" effect="light" :show-arrow="false">-->
-<!--          <template #label>-->
-<!--            &lt;!&ndash;          <inline-svg src="./src/assets/svg/menu.svg" class="min-icon" @click="dialogVisible = true"></inline-svg>&ndash;&gt;-->
-<!--            <inline-svg src="../assets/svg/menu.svg" class="min-icon" @click="dialogVisible = true"></inline-svg>-->
-<!--          </template>-->
-<!--        </el-tooltip>-->
       </el-tab-pane>
     </el-tabs>
   </div>

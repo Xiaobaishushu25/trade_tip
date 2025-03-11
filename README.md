@@ -11,7 +11,7 @@
 [简体中文](README.zh.md)
 
 
-The specific version update instructions can be viewed at [update record](UpdateRecord.md).
+The specific version update instructions can be viewed at [update record](ChangeLog.md).
 
 <h3>Introduction</h3>
 

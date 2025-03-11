@@ -12,7 +12,7 @@
 [English](README.md)
 
 
-具体的版本更新记录请查看[update record](UpdateRecord.md)。
+具体的版本更新记录请查看[update record](ChangeLog.md)。
 
 <h3>介绍</h3> 
 

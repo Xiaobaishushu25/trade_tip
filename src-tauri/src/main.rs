@@ -125,7 +125,6 @@ async fn main() {
     let data_config = config.data_config.clone();
     let (send,recv) = mpsc::channel::<()>(1);
     init_data_server_daily_position(recv,data_config).await;
-//todo  蜡烛图右边的当价格大于三位数就不要显示小数了
     let state = MyState::new().await;
     info!("tauri start...");
     tauri::Builder::default()

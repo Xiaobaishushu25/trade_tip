@@ -3,12 +3,15 @@ import {store} from "../../store.ts";
 import { ref, watch} from "vue";
 import {invoke} from "@tauri-apps/api/core";
 import RTable from "../transactionRecordComponents/RTable.vue";
+import StockGroupMange from "../group/StockGroupMange.vue";
 
 
 const ImageSrc = ref('');
 const rTableRef = ref();
 const IntradayChartShow = ref(false);
 const utilShow = ref(false); //工具窗口是否展示
+
+const showGroupManage = ref(false);
 
 const utilPrice1 = ref(store.stockinfoG?.live_data?.price); //价格1
 const utilPrice2 = ref(); //价格2
@@ -23,6 +26,7 @@ watch(() => store.stockinfoG!.code, async (newVal) => {
     await getIntradayChartImg(newVal);
     rTableRef.value?.codeFilter(newVal);
   }
+  utilPrice1.value = store.stockinfoG?.live_data?.price;
 });
 watch(IntradayChartShow, async (newVal) => {
   if (newVal){
@@ -31,6 +35,9 @@ watch(IntradayChartShow, async (newVal) => {
     rTableRef.value?.codeFilter(store.stockinfoG!.code);
   }
 })
+function manageGroup(){
+  showGroupManage.value = !showGroupManage.value;
+}
 function getColor(percent:number){
   if (percent > 0) {
     return 'red'; // 红色
@@ -185,10 +192,9 @@ function calculateTotalShare() {
     <el-button plain @click="IntradayChartShow = true">打开分时图</el-button>
     <el-button plain @click="IntradayChartShow = true">打开历史交易表</el-button>
     <el-button plain @click="utilShow = true">打开工具</el-button>
-    <el-button plain @click="utilShow = true">修改分组</el-button>
-    <!--    <label>{{store.stockinfoG}}</label>-->
+    <el-button plain @click="manageGroup">修改分组</el-button>
+    <StockGroupMange :name="store.stockinfoG!.name" :code="store.stockinfoG!.code" :show-dialog="showGroupManage"></StockGroupMange>
   </div>
-
 </template>
 <style>
 .detail .el-drawer__body{

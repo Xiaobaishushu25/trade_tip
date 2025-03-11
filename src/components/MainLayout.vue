@@ -1,5 +1,5 @@
 <script setup lang="ts">
-
+import {onMounted} from 'vue';
 import Header from "./Header.vue";
 import {listen} from "@tauri-apps/api/event";
 import {errorNotification} from "../utils.ts";

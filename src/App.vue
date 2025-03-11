@@ -35,7 +35,6 @@ onMounted(async ()=>{
     // console.log(data.payload);
     store.config.data_config = data.payload;
   });
-
 })
 </script>
 
