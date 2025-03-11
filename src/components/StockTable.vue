@@ -130,7 +130,6 @@ function showContextMenu(row: StockInfoG, _: any, e: MouseEvent) {
   options.code = row.code;
   options.name = row.name;
   contextMenuShow.value=true
-
 }
 async function updateLiveData(live_data:Record<string, StockLiveData>){
   //遍历StockInfoGs

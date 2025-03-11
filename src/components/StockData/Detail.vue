@@ -51,7 +51,6 @@ async function getIntradayChartImg(code:string){
 }
 
 function updateUtil(){
-  console.log("计算工具");
   calculateChange();
   calculateTotalAmount();
   calculateTotalShare();
@@ -183,10 +182,11 @@ function calculateTotalShare() {
     <el-divider />
     <el-tag :class="store.stockinfoG?.rowData?.advise[1]" style="align-items: center;font-size: 18px">{{store.stockinfoG?.rowData?.advise[0]}} </el-tag>
     <el-divider style="margin: 5px"/>
-    <el-button plain @click="utilShow = true">打开工具</el-button>
     <el-button plain @click="IntradayChartShow = true">打开分时图</el-button>
     <el-button plain @click="IntradayChartShow = true">打开历史交易表</el-button>
-<!--    <label>{{store.stockinfoG}}</label>-->
+    <el-button plain @click="utilShow = true">打开工具</el-button>
+    <el-button plain @click="utilShow = true">修改分组</el-button>
+    <!--    <label>{{store.stockinfoG}}</label>-->
   </div>
 
 </template>
