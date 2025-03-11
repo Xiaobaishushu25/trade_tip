@@ -55,7 +55,6 @@ pub async fn drop_table_with_dyn_name(table_name: &str) -> AppResult<()> {
     let _ = drop_table(db, entity).await;
     Ok(())
 }
-// use sea_orm::{Schema, ConnectionTrait, EntityTrait};
 
 async fn create_table<E>(db_connection: &sea_orm::DatabaseConnection, entity: E)
 where
@@ -75,14 +74,6 @@ async fn drop_table<E>(db_connection: &sea_orm::DatabaseConnection, entity: E) -
 where
     E: EntityTrait,
 {
-    // println!(
-    //     "{:?}",
-    //     Statement::from_sql_and_values(
-    //         db_connection.get_database_backend(),
-    //         &format!(r#"DROP TABLE "{}""#, entity.table_name()),
-    //         vec![],
-    //     )
-    // );
     info!(
         "{:?}",
         Statement::from_sql_and_values(
@@ -94,7 +85,8 @@ where
     let _ = db_connection
         .execute(Statement::from_sql_and_values(
             db_connection.get_database_backend(),
-            &format!(r#"DROP TABLE {}"#, entity.table_name()),
+            // &format!(r#"DROP TABLE {}"#, entity.table_name()),
+            &format!(r#"DROP TABLE "{}""#, entity.table_name()),
             vec![],
         ))
         .await?;
@@ -112,13 +104,14 @@ pub async fn create_all_need_table(db: &DatabaseConnection) {
 #[tokio::test]
 async fn test_create_table_with_dyn_name() {
     init_db_coon().await;
-    let result = create_table_with_dyn_name("sz_123456").await;
+    let result = create_table_with_dyn_name("562500").await;
     println!("{result:?}")
 }
 #[tokio::test]
 async fn test_drop_table_with_dyn_name() {
     init_db_coon().await;
-    let result = drop_table_with_dyn_name("sz_123456").await;
+    // let result = drop_table_with_dyn_name("562500").await;
+    let result = drop_table_with_dyn_name("sz563456").await;
     println!("{result:?}")
 }
 

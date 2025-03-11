@@ -1159,7 +1159,7 @@ function init_option(){
         xAxisIndex: [0, 1],
         // start: store.config.display_config.k_show_begin,// 开始展示的位置，85%处开始
         // start: startValue,// 开始展示的位置
-        start: rawData.value.length < 800 ? 0 : store.config.display_config.k_show_begin,// 开始展示的位置
+        start: rawData.value.length < 600 ? 0 : store.config.display_config.k_show_begin,// 开始展示的位置
         end: 100,
         zoomOnMouseWheel: "ctrl",// 启用鼠标滚轮触发缩放
         zoomLock: true
@@ -1473,7 +1473,8 @@ function enableRegionSelection() {
       startIndex = endIndex;
       endIndex = temp;
     }
-    const beforeEndPrice = rawData.value[startIndex-1].close;
+    // const beforeEndPrice = rawData.value[startIndex-1].close;
+    const beforeEndPrice = rawData.value[startIndex-1]?.close ?? rawData.value[startIndex]?.open;
     const selectData = rawData.value.slice(startIndex, endIndex+1);
     const selectRecords = rawRecords.value.filter(item => item.date >= (rawData.value)[startIndex].date && item.date <= (rawData.value)[endIndex].date);
     openSelectDialog(selectData,selectRecords,beforeEndPrice);

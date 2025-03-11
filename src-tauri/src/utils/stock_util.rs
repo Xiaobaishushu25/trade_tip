@@ -59,6 +59,7 @@ pub fn get_market_by_code(code: &str) -> AppResult<(String,bool)> {
     {
         Ok(("sz".into(),false)) //深圳
     } else if code.starts_with("51")
+        || code.starts_with("56")
         || code.starts_with("60")
         || code.starts_with("588")
         || code.starts_with("688")
@@ -79,8 +80,8 @@ pub fn get_market_by_code(code: &str) -> AppResult<(String,bool)> {
             _ => { Err(AnyHow(anyhow::anyhow!("无法判断代码:{code}的市场")))}
         };
         //进行二次判断是为了支持处理主连代码（都是以m结尾的期货代码）
-        if let Err(_) = first_match{
-            if code.len()==0 { return Err(AnyHow(anyhow::anyhow!("无法判断代码:{code}的市场"))) }
+        if first_match.is_err(){
+            if code.is_empty() { return Err(AnyHow(anyhow::anyhow!("无法判断代码:{code}的市场"))) }
             //直接去掉最后一个字符再次进行判断（实际应该加一步判断最后一个字符是不是m的，这里偷懒了），如果可以匹配则成功并将主连标志设为true
             let new_code = &code[..code.len() - 1];
             return if let Ok(result) = get_market_by_code(new_code) {
