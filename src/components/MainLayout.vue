@@ -3,8 +3,10 @@
 import Header from "./Header.vue";
 import {listen} from "@tauri-apps/api/event";
 import {errorNotification} from "../utils.ts";
-await listen("get_live_data_error", (msg)=>{
-  errorNotification( `获取实时数据失败:${msg.payload}`);
+onMounted(async ()=>{
+  await listen("get_live_data_error", (msg)=>{
+    errorNotification( `获取实时数据失败:${msg.payload}`);
+  });
 });
 </script>
 
