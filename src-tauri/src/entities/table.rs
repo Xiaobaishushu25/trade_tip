@@ -82,6 +82,8 @@ where
             vec![],
         )
     );
+    //DROP TABLE 123的话，这在大多数数据库中是不合法的，因为 123 被解释为一个数字，而不是表名。
+    //为了确保表名被正确解析，你需要对表名进行适当的转义，sqlite是使用双引号。
     let _ = db_connection
         .execute(Statement::from_sql_and_values(
             db_connection.get_database_backend(),
