@@ -174,12 +174,20 @@ impl HttpRequest{
 
             let item_list = self.get_futures_live_data_by_symbol(&name).await?;
             for item in item_list {
+                //新浪接口返回的symbol是一般形如MA2505，但是东方财富大部分期货代码是小写的，如ma505，所以需要特殊转小写。
                 let mut symbol = item["symbol"].as_str().unwrap().to_lowercase();//ma505
-                //特殊处理，因为甲醇在东方财富是MA505，但是通过那个接口获取的是MA2505
-                //又因为目前只有甲醇的代码是大写的，其他都是小写的，所以需要特殊处理一下
+                //但是东方财富又有一些大写的代码，如SA505，所以需要特殊处理一下。
+                //特殊处理，因为甲醇在东方财富是MA505，但是通过新浪接口获取的是MA2505，经过to_lowercase()后是ma2505
+                //凡是东方财富内代码为XX50X之类的（如MA505），都需要将上面获得的symbol去掉2，然后转为大写
                 if symbol.contains("ma2"){
                     symbol = symbol.replace("ma2", "MA");
-                };
+                }else if symbol.contains("sa2") { 
+                    symbol = symbol.replace("sa2", "SA");
+                }else if symbol.contains("pf2") {
+                    symbol = symbol.replace("pf2", "PF");
+                }else if symbol.contains("fg2") {
+                    symbol = symbol.replace("fg2", "FG");
+                }
                 //特殊处理：如果是主连，则需要将接口返回的symbol去掉末尾的0，加上m，与传入的code判断是否一致（需要忽略大小写）
                 //如果一致，就匹配成功，把code赋值给symbol
                 if is_main{
