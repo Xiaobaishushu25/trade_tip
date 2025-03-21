@@ -44,6 +44,24 @@ impl StockDataCurd {
         let _ = insert.exec(db).await?;
         Ok(())
     }
+    ///按照日期排序删除指定数量的数据
+    /// 删除指定表中按Date列降序排列的前num条记录，也就是最新的num条记录。
+    pub async fn delete_with_num(table_name: &str, num: i32)-> AppResult<()>{
+        let db = crate::entities::DB
+            .get()
+            .ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        let entity = Entity {
+            table_name: TableName::from_str_truncate(table_name),
+        };
+        let mut delete = Entity::delete_many();
+        *QueryTrait::query(&mut delete) = Query::delete()
+            .order_by(Column::Date, Order::Desc)
+            .limit(num as u64)
+            .from_table(entity.table_ref())
+            .to_owned();
+        delete.exec(db).await?;
+        Ok(())
+    }
     ///查询指定数量的数据(仅收盘价)，按照日期降序排列
     pub async fn query_only_close_price_by_nums(
         table_name: &str,

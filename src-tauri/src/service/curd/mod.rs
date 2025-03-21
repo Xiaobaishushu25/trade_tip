@@ -91,6 +91,8 @@ pub async fn update_all_day_k(can_handle_futures:bool,second:bool) -> AppResult<
                             failure_flag = true;
                             continue;
                         };
+                        // 删除历史数据，当天白天插入的话就会没有夜盘数据，所以直接删掉后加
+                        StockDataCurd::delete_with_num(&code, 1).await?;
                         futures_result.unwrap()//这里的futures_result是Ok(vec)
                     };
                     // info!("{:?}更新数据{:?}，最新日期是{:?}",code,data,latest_data.date);
