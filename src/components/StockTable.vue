@@ -73,10 +73,12 @@ onMounted(() => {
     }
   });
   listen("delete_stock", ({payload }) => {
-    console.log("删除了股票", payload)
     const index = StockInfoGs.value.findIndex(item => item.code == payload);
     if (index !== -1) {
       StockInfoGs.value.splice(index, 1);
+    }
+    if (payload==store.stockinfoG!.code){
+      store.stockinfoG = undefined;
     }
   });
 })
@@ -207,6 +209,13 @@ function removeStock(code: string){
 
 function manageGroup(){
   showGroupManage.value = !showGroupManage.value;
+}
+function deleteStock(code: string){
+  invoke("delete_stock", {code: code}).then(_ => {
+    successNotification("删除成功");
+  }).catch(err => {
+    errorNotification(`删除失败${err}`)
+  })
 }
 function clickRow(row: StockInfoG, _: any){
   nowSelectStock.value = row;
@@ -506,7 +515,14 @@ async function judgeCanT(){
       <context-menu-item label="从当前分组移除" @click="removeStock(options.code)" />
       <context-menu-sperator />
       <context-menu-item label="管理分组" @click="manageGroup()" />
-<!--        <context-menu-item label="删除" @click="onMenuClick(2)" />-->
+      <context-menu-item  label="删除" class="cursor-pointer" @click.stop="deleteStock(options.code)">
+        <template #icon>
+          <inline-svg
+              src="../assets/svg/Delete24Regular.svg"
+              class="svg-button"
+          ></inline-svg>
+        </template>
+      </context-menu-item>
 <!--        <context-menu-item label="Item2" @click="onMenuClick(3)" />-->
 <!--      </context-menu-group>-->
     </context-menu>
@@ -575,5 +591,20 @@ async function judgeCanT(){
   z-index: 3000;
   bottom: 130px;
   right: 50px;
+}
+.svg-button {
+  cursor: pointer;
+  width: 1rem;
+  height: 1rem;
+  fill: currentcolor;
+  color: #dc2626; /* text-red-600 */
+}
+
+.svg-button:hover {
+  color: #dc2626; /* hover:text-red-600 */
+}
+
+.svg-button:focus {
+  outline: none; /* focus:outline-none */
 }
 </style>

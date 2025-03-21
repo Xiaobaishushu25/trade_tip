@@ -24,7 +24,7 @@ use crate::service::command::tauri_command::{
     query_transaction_records, query_transaction_records_by_code, read_save_transaction_records,
     remove_stock_from_group, save_graphic, save_transaction_records, update_groups,
     update_live_state, update_stock_groups, update_stock_hold, update_transaction_record, judge_can_t,
-    save_config,update_data_config,query_all_positions,update_position,
+    save_config,update_data_config,query_all_positions,update_position,delete_stock
 };
 use crate::service::curd::stock_data_curd::StockDataCurd;
 use crate::service::curd::stock_info_curd::StockInfoCurd;
@@ -169,6 +169,7 @@ async fn main() {
             add_stock_info,
             query_stock_info,
             query_all_groups,
+            delete_stock,
             query_stocks_by_group_name,
             query_groups_by_code,
             create_group,

@@ -1,3 +1,4 @@
+use log::info;
 use crate::app_errors::AppResult;
 use crate::dtos::stock_dto::StockInfoG;
 use crate::entities::init_db_coon;
@@ -40,6 +41,7 @@ impl StockInfoCurd {
             .await?
             .ok_or(anyhow::anyhow!("删除失败:未找到code为{}的记录", code))?;
         let result = model.delete(db).await?;
+        info!("删除证券信息{:?}", result);
         // result.rows_affected
         Ok(result.rows_affected as i32)
     }

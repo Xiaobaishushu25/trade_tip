@@ -319,8 +319,9 @@ pub async fn remove_stock_from_group(app_handle: AppHandle,code: String, group_n
 ///
 /// # 注意
 /// - 该函数会永久删除股票记录，请谨慎调用。
-//todo :彻底删除股票并没有提醒用户确认（可以通过分组管理不勾选/从全部分组页面选择移除可以彻底删除股票）。
-pub async fn delete_stock(code: String,app_handle: AppHandle)-> Result<(), String>{
+//todo :彻底删除股票并没有提醒用户确认（可以通过分组管理不勾选任何分组/从全部分组页面选择移除/右键菜单删除可以彻底删除股票）。
+#[tauri::command]
+pub async fn delete_stock(code: String, app_handle: AppHandle)-> Result<(), String>{
     match handle_delete_stock(&code).await {
         Ok(_) => {
             info!("删除{}成功",code);
@@ -364,6 +365,7 @@ pub async fn query_stocks_day_k_limit(code: String) -> Result<Vec<StockData>, St
 pub async fn query_graphic_by_code(code: String) -> Result<Vec<GraphicDTO>, String> {
     match GraphicCurd::query_by_code(code.clone()).await {
         Ok(data_list) => {
+            info!("查询成功:{:?}", data_list);
             let data = data_list
                 .into_iter()
                 .map(|item| From::<Graphic>::from(item))

@@ -1,3 +1,4 @@
+use log::info;
 use crate::app_errors::AppResult;
 use crate::entities::init_db_coon;
 use crate::entities::prelude::StockData;
@@ -144,6 +145,7 @@ impl StockDataCurd {
         // let entity = Entity {
         //     table_name: TableName::from_str_truncate(code),
         // };
+        info!("delete table by stock code:{}", code);
         drop_table_with_dyn_name(code).await?;
         Ok(())
     }

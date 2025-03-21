@@ -33,6 +33,7 @@ interface CandleStockData {
 
 let isCtrlPressed = false;
 
+let has_delete = false;
 const router = useRouter()
 
 router.afterEach(async (to) => {
@@ -55,6 +56,7 @@ router.afterEach(async (to) => {
     document.addEventListener('keyup', lockZoom);
     document.addEventListener('wheel',wheelChangeCode);
   }
+
 });
 
 let unlistenPaint:UnlistenFn;
@@ -65,6 +67,10 @@ const debouncedFunction = debounce(scrollEvent, 700, true);
 
 let code = store.stockinfoG!.code;
 watch(() => store.stockinfoG,async (newValue: any) => {
+  if (newValue === undefined || newValue === null){
+    //当发生删除股票事件，清理所有数据，不然会有类似缓存一样的情况，会导致数据错误
+    clear_all();
+  }
   if(code!=newValue.code){
     save_graphic();
     code = newValue.code;
@@ -75,7 +81,6 @@ watch(() => store.stockinfoG,async (newValue: any) => {
 },{deep:true})
 
 watch(() => store.config,async (newValue:Config) => {
-  console.log("config变化了",newValue);
   myChart.setOption({
     dataZoom: [
       {
@@ -213,6 +218,9 @@ onMounted(async ()=>{
       updateRecordsPaint()
     }
   })
+  await listen("delete_stock", ({}) => {
+    has_delete = true;
+  });
   document.addEventListener('wheel',wheelChangeCode);
   document.addEventListener('keydown', unlockZoom);
   document.addEventListener('keyup', lockZoom);
@@ -660,11 +668,11 @@ function clear_all(){
   myChart.clear();
   myChart.getZr().clear();//必须，否则偶发残留K线图的情况
   chartIsInit = false;
-  console.log("清除全部数据");
   rawData.value=[];
   rawRecords.value=[];
   graphicData.value.length = 0;
   currentIndex = -1;
+  console.log("清除全部数据");
 }
 async function query_graphic(){
   try {
@@ -672,6 +680,8 @@ async function query_graphic(){
     if (res.length===0){
       return;
     }
+    console.log(res)
+    console.log("查询到"+res.length+"条数据")
     graphicData.value = res;
     handleGraphicData();
   } catch (err) {

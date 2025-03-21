@@ -1,3 +1,4 @@
+use log::info;
 use crate::app_errors::AppResult;
 use crate::dtos::stock_dto::StockInfoG;
 use crate::entities::group_stock_relation::Column;
@@ -211,6 +212,7 @@ impl GroupStockRelationCurd {
         let db = crate::entities::DB
             .get()
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
+        info!("删除分组信息:{}", stock_code);
         let _ = GroupStockRs::delete_many()
             .filter(Column::StockCode.eq(stock_code))
             .exec(db)

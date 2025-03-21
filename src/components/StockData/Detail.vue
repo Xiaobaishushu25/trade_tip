@@ -20,7 +20,8 @@ const utilChange = ref(); //价格涨跌百分比
 const utilTotalAmount = ref(); //建议买入总金额
 const utilTotalShare = ref(); //建议买入总手数
 
-watch(() => store.stockinfoG!.code, async (newVal) => {
+watch(() => store.stockinfoG?.code, async (newVal) => {
+  if (newVal === undefined || newVal === null)return
   // console.log('分组内的的股票changed:', newVal);
   if (IntradayChartShow.value){
     await getIntradayChartImg(newVal);
@@ -154,8 +155,8 @@ function calculateTotalShare() {
       </template>
     </el-drawer>
     <div class="row" style="gap:10px">
-      <label style="font-family: 'Arial',serif; display: flex;  ">{{store.stockinfoG!.code}}</label>
-      <label :style="{ color: store.stockinfoG!.hold ?'orange':'black' }" style="font-family: 'Adobe 黑体 Std R';font-weight: bold;font-size: 25px">{{store.stockinfoG!.name}}</label>
+      <label style="font-family: 'Arial',serif; display: flex;  ">{{store.stockinfoG?.code}}</label>
+      <label :style="{ color: store.stockinfoG?.hold ?'orange':'black' }" style="font-family: 'Adobe 黑体 Std R';font-weight: bold;font-size: 25px">{{store.stockinfoG?.name}}</label>
     </div>
     <el-divider style="margin: 5px"/>
     <div class="row" >

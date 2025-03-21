@@ -3,6 +3,7 @@ use crate::entities::graphic::Column;
 use crate::entities::prelude::{ActiveGraphic, Graphic, Graphics};
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QuerySelect};
 use std::collections::HashMap;
+use log::info;
 
 pub struct GraphicCurd;
 impl GraphicCurd {
@@ -103,6 +104,7 @@ impl GraphicCurd {
             .ok_or(anyhow::anyhow!("数据库未初始化"))?;
         let active: ActiveGraphic = graphic.into();
         active.insert(db).await?;
+        info!("插入图形成功");
         Ok(())
     }
     pub async fn delete_by_id(id: String) -> AppResult<()> {
@@ -132,6 +134,24 @@ impl GraphicCurd {
             .filter(Column::Code.eq(code))
             .exec(db)
             .await?;
+        info!("删除图形成功");
         Ok(())
+    }
+}
+#[cfg(test)]
+mod tests {
+    use crate::entities::init_db_coon;
+    use crate::service::curd::graphic_curd::GraphicCurd;
+
+    #[tokio::test]
+    async fn test_delete() {
+        init_db_coon().await;
+        GraphicCurd::delete_by_code("rb2505".to_string()).await.unwrap()
+    }
+    #[tokio::test]
+    async fn test_query() {
+        init_db_coon().await;
+        let vec = GraphicCurd::query_by_code("rb2505".to_string()).await.unwrap();
+        println!("{:?}", vec);
     }
 }

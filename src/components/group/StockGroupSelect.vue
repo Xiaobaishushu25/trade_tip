@@ -3,6 +3,7 @@ import {onMounted, ref, nextTick, watch} from "vue";
 import {invoke} from "@tauri-apps/api/core";
 import {store} from "../../store.ts";
 import {StockGroup} from "../../type.ts";
+import {listen} from "@tauri-apps/api/event";
 
 const props = defineProps({
   code: {
@@ -70,7 +71,7 @@ watch(selectGroups,(newValue,_)=>{
 watch(initSelectGroups,(newValue,_)=>{
   isNew = newValue.length == 0;
 })
-onMounted(() => {
+onMounted(async () => {
   groupList.value = store.stockGroups.map((item) => {
     if (item.name!="持有")
       return item.name
@@ -78,6 +79,10 @@ onMounted(() => {
   }).filter((item) => {
     return item!=""
   })
+  await listen("delete_stock", ({ }) => {
+    //如果我删除了一个证券，然后再次搜索添加，code不会变化，导致这里面的分组数据没更新。所以要重新更新一下
+    updateSelectGroup()
+  });
   updateSelectGroup()
   // console.log(`allgroupList是`+store.stockGroups)
   // console.log(`allgroupList是`+store.stockGroups.length)
@@ -85,6 +90,7 @@ onMounted(() => {
 })
 function updateSelectGroup() {
   invoke<string[]>("query_groups_by_code", {code: props.code}).then((res) => {
+    console.log("selectGroups是"+res)
     selectGroups.value = res
     initSelectGroups.value = res
     // selectGroups.value?.push("全部")
