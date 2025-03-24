@@ -82,7 +82,8 @@ async function open_record(){
   });
 }
 async function open_setting(){
-  await showAndFocusWindow('setting')
+  let flag = await showAndFocusWindow('setting')
+  if (flag) return
   const webview = new WebviewWindow('setting', {
     url: '/#/setting',
     center: true,
@@ -106,7 +107,9 @@ async function showAndFocusWindow(label:string){
   if (window!=null) {
     await window.unminimize()
     await window.setFocus()
+    return true
   }
+  return false
 }
 async function window_minimize(){
   // console.log("窗口是",await WebviewWindow.getCurrent().isResizable());
@@ -131,7 +134,7 @@ function back(){
 </script>
 
 <template>
-  <div  data-tauri-drag-region class="titlebar"  >
+  <div  data-tauri-drag-region class="titlebar" >
     <el-tooltip content="v0.6.1" placement="bottom" effect="light" :show-arrow="false">
       <img src="../assets/icon.png" width="25" height="25" alt="Logo Image" style="margin-left: 5px;margin-right: 10px;user-select: none">
     </el-tooltip>

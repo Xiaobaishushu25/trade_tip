@@ -120,7 +120,6 @@ pub async fn get_close_prices(
 #[tokio::main]
 async fn main() {
     init_app().await;
-
     let config = Config::load().await;
     let data_config = config.data_config.clone();
     let (send,recv) = mpsc::channel::<()>(1);
