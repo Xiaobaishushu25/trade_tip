@@ -35,7 +35,7 @@ pub async fn update_all_day_k(can_handle_futures:bool,second:bool) -> AppResult<
     //是否需要更新股票的日线数据，因为股票的日线数据一般是统一的，如果一个不需要更新的话其他的也就不更新了。
     //如果不加这个指标，那么要么每个股票都请求一遍（怕频率过高被封ip），要么股票和期货都不请求
     //一般第二次调用是为了再次更新期货数据，股票数据就不需要更新了。
-    let mut stock_need_update = if second {false} else { true };
+    let mut stock_need_update = !second;
     let codes = StockInfoCurd::query_all_only_code().await?;
     for code in codes {
         //只有大于1天的才要更新，正常情况下今天的ma数据是么有的，所以最新的就是前一天的，ago应该是1，大于1的说明需要更新
@@ -91,9 +91,14 @@ pub async fn update_all_day_k(can_handle_futures:bool,second:bool) -> AppResult<
                             failure_flag = true;
                             continue;
                         };
-                        // 删除历史数据，当天白天插入的话就会没有夜盘数据，所以直接删掉后加
-                        StockDataCurd::delete_with_num(&code, 1).await?;
-                        futures_result.unwrap()//这里的futures_result是Ok(vec)
+                        let mut data = futures_result.unwrap();
+                        // 删除前一天历史数据，当天白天插入的话就会，之后就不会更新夜盘数据，所以直接删掉后加
+                        if let Err(e) = StockDataCurd::delete_with_num(&code, 1).await{
+                            error!("删除前一天的日线数据失败：{:?}",e);
+                        }else {
+                            data.pop();
+                        }
+                        data //这里的futures_result是Ok(vec)
                     };
                     // info!("{:?}更新数据{:?}，最新日期是{:?}",code,data,latest_data.date);
                     let index = data
