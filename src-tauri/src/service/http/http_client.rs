@@ -22,13 +22,17 @@ pub struct HttpRequest {
 }
 impl HttpRequest {
     pub(crate) fn new() -> Self {
-        let client = reqwest::Client::new();
+        // let client = reqwest::Client::new();
+        //4月15号开始期货数据都返回502错误，禁用代理后正常了。
+        let client = reqwest::ClientBuilder::new().no_proxy().build().unwrap();
         let mut header_map = HeaderMap::new();
         header_map.insert(
             "User-Agent",
             "Apifox/1.0.0 (https://apifox.com)".parse().unwrap(),
+            // "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36 Edg/135.0.0.0".parse().unwrap(),
         );
         header_map.insert("Accept", "*/*".parse().unwrap());
+        // header_map.insert("Connection", "keep-alive".parse().unwrap());
         HttpRequest { header_map, client }
     }
     pub async fn get_response(&self, url: &str) -> AppResult<reqwest::Response> {

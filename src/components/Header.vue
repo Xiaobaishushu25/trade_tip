@@ -135,7 +135,7 @@ function back(){
 
 <template>
   <div  data-tauri-drag-region class="titlebar" >
-    <el-tooltip content="v0.6.1" placement="bottom" effect="light" :show-arrow="false">
+    <el-tooltip content="v0.6.2" placement="bottom" effect="light" :show-arrow="false">
       <img src="../assets/icon.png" width="25" height="25" alt="Logo Image" style="margin-left: 5px;margin-right: 10px;user-select: none">
     </el-tooltip>
 <!--    <img src="../assets/icon.png" width="25" height="25" alt="Logo Image" style="margin-left: 5px;margin-right: 10px;user-select: none">-->

@@ -173,6 +173,7 @@ impl HttpRequest{
                 .collect::<String>();
 
             let item_list = self.get_futures_live_data_by_symbol(&name).await?;
+            info!("{}获取到{:?}数据",name,item_list);
             for item in item_list {
                 //新浪接口返回的symbol是一般形如MA2505，但是东方财富大部分期货代码是小写的，如ma505，所以需要特殊转小写。
                 let mut symbol = item["symbol"].as_str().unwrap().to_lowercase();//ma505
@@ -252,7 +253,10 @@ impl HttpRequest{
         let full_url = format!("{}/{}", SERVER_URL, endpoint);
         info!("查询{}期货实时数据:{}", name, full_url);
         let response = self.client.get(&full_url).query(&params).send().await?;
-        let item_list:Vec<Value> = response.json().await.with_context(|| {format!("解析{}期货实时数据失败.",name)})?;
+        info!("{}期货实时数据:{:?}", name, response);
+        let result = response.json().await;
+        info!("{}期货实时数据:{:?}", name, result);
+        let item_list:Vec<Value> = result.with_context(|| {format!("解析{}期货实时数据失败.", name)})?;
         // println!("{}", item_list);
         Ok(item_list)
     }
@@ -276,28 +280,136 @@ impl HttpRequest{
         Ok(())
     }
 }
-#[tokio::test]
-async fn test_get_futures_daily_history() {
-    init_http().await;
-    // tokio::spawn(async {
-    //     start_data_server("E:\\ANACONDA\\Main\\Scripts\\activate.bat && conda activate akenv &&python -m aktools").await.unwrap();
-    // });
-    REQUEST.get().unwrap().get_futures_daily_history("rb2505", "20241225", "20250127").await.unwrap();
-}
-#[tokio::test]
-async fn test_get_futures_live_data() {
-    init_http().await;
-    // REQUEST.get().unwrap().get_futures_live_data("豆粕").await.unwrap();
-    REQUEST.get().unwrap().get_futures_live_data2("HC2505").await.unwrap();
-}
-#[tokio::test]
-async fn test_get_futures_live_data_by_codes() {
-    init_http().await;
-    init_db_coon().await;
-    let codes = vec![
-        "rb2505".to_string(),
-        "hc2503".to_string(),
-        "i2505".to_string(),
-    ];
-    REQUEST.get().unwrap().get_futures_live_datas(codes).await.unwrap();
+#[cfg(test)]
+mod tests {
+    use reqwest::header::{HeaderMap, HeaderValue};
+    use serde_json::Value;
+    use crate::entities::init_db_coon;
+    use crate::service::http::{init_http, REQUEST};
+
+    #[tokio::test]
+    async fn test_get_futures_daily_history() {
+        init_http().await;
+        // tokio::spawn(async {
+        //     start_data_server("E:\\ANACONDA\\Main\\Scripts\\activate.bat && conda activate akenv &&python -m aktools").await.unwrap();
+        // });
+        REQUEST.get().unwrap().get_futures_daily_history("rb2505", "20241225", "20250127").await.unwrap();
+    }
+    #[tokio::test]
+    async fn test_get_futures_live_data() {
+        init_http().await;
+        // REQUEST.get().unwrap().get_futures_live_data("豆粕").await.unwrap();
+        REQUEST.get().unwrap().get_futures_live_data2("HC2505").await.unwrap();
+    }
+    #[tokio::test]
+    async fn test_get_futures_live_data_by_codes() {
+        init_http().await;
+        init_db_coon().await;
+        let codes = vec![
+            "rb2505".to_string(),
+            "hc2503".to_string(),
+            "i2505".to_string(),
+        ];
+        REQUEST.get().unwrap().get_futures_live_datas(codes).await.unwrap();
+    }
+    #[tokio::test]
+    async fn test_request() {
+        init_http().await;
+        // 创建一个 HeaderMap 来存储请求头
+        let mut headers = HeaderMap::new();
+
+        // 添加浏览器的请求头
+        headers.insert(
+            "User-Agent",
+            HeaderValue::from_static("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Edg/137.0.0.0"),
+        );
+        headers.insert(
+            "Accept",
+            HeaderValue::from_static("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"),
+        );
+        headers.insert(
+            "Accept-Encoding",
+            HeaderValue::from_static("gzip, deflate, br, zstd"),
+        );
+        headers.insert(
+            "Accept-Language",
+            HeaderValue::from_static("en,zh-CN;q=0.9,zh;q=0.8,en-GB;q=0.7,en-US;q=0.6"),
+        );
+        headers.insert(
+            "Cache-Control",
+            HeaderValue::from_static("no-cache"),
+        );
+        headers.insert(
+            "Connection",
+            HeaderValue::from_static("keep-alive"),
+        );
+        headers.insert(
+            "Host",
+            HeaderValue::from_static("127.0.0.1:8080"),
+        );
+        headers.insert(
+            "Pragma",
+            HeaderValue::from_static("no-cache"),
+        );
+        headers.insert(
+            "Sec-Fetch-Dest",
+            HeaderValue::from_static("document"),
+        );
+        headers.insert(
+            "Sec-Fetch-Mode",
+            HeaderValue::from_static("navigate"),
+        );
+        headers.insert(
+            "Sec-Fetch-Site",
+            HeaderValue::from_static("none"),
+        );
+        headers.insert(
+            "Sec-Fetch-User",
+            HeaderValue::from_static("?1"),
+        );
+        headers.insert(
+            "Upgrade-Insecure-Requests",
+            HeaderValue::from_static("1"),
+        );
+        headers.insert(
+            "sec-ch-ua",
+            HeaderValue::from_static("\"Microsoft Edge\";v=\"137\", \"Chromium\";v=\"137\", \"Not/A)Brand\";v=\"24\""),
+        );
+        headers.insert(
+            "sec-ch-ua-mobile",
+            HeaderValue::from_static("?0"),
+        );
+        headers.insert(
+            "sec-ch-ua-platform",
+            HeaderValue::from_static("\"Windows\""),
+        );
+        let client = reqwest::Client::new();
+        let response = client.get("http://127.0.0.1:8080/api/public/futures_zh_realtime?symbol=%E9%83%91%E9%86%87")
+            .headers(headers)
+            .send().await.unwrap();
+        // let response = client.get("http://127.0.0.1:8080/api/public/futures_zh_realtime?symbol=%E9%83%91%E9%86%87")
+        //     .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3")
+        //     .header("Accept-Encoding", "br, deflate, gzip, x-gzip")
+        //     .header("Connection", "keep-alive")
+        //     .header("Accept", "*/*")
+        //     .header("Cookie","CSRF-Token-ZEOCTHF=DEyuY3Trn5Sq5gjmXrcyMwNiJyJanxgxoZAHViUV94S4eStFabm6gaW4QgURAAaf")
+        //     .send().await.unwrap();
+        // let response = REQUEST.get().unwrap().get_response("http://127.0.0.1:8080/api/public/futures_zh_realtime?symbol=%E9%83%91%E9%86%87").await.unwrap();
+        println!("{:?}", response.headers());
+    }
+    #[tokio::test]
+    async fn test_http() {
+        let client = reqwest::Client::new();
+        let client1 = reqwest::ClientBuilder::new().no_proxy().build().unwrap();
+        let response = client1.get("http://127.0.0.1:8080/api/public/futures_zh_realtime")
+            .query(&[("symbol", "郑醇")]).send().await.unwrap();//502 Bad Gateway
+        println!("{:?}", response.json::<Value>().await.unwrap());
+        let response = client.get("http://127.0.0.1:8080/api/public/futures_zh_realtime")
+            .query(&[("symbol", "郑醇")]).send().await.unwrap();//502 Bad Gateway
+        println!("{:?}", response);
+        // let body= ureq::get("http://127.0.0.1:8080/api/public/futures_zh_realtime?symbol=%E9%83%91%E9%86%87")
+        //     .call().unwrap()
+        //     .body_mut().read_to_string();//正常
+        // println!("{:?}", body);
+    }
 }
