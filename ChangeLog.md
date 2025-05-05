@@ -1,3 +1,6 @@
+### version: 0.6.3 -- 2025年5月6日00:15:28
+1. [Fix] 升级了tauri-plugin-single-instance crate的版本。
+
 ### version: 0.6.2 -- 2025年4月16日16:19:12
 1. [Fix] 期货数据接口返回502，禁用reqwest的默认代理设置后正常。
 
