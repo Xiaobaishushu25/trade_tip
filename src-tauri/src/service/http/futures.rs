@@ -173,7 +173,7 @@ impl HttpRequest{
                 .collect::<String>();
 
             let item_list = self.get_futures_live_data_by_symbol(&name).await?;
-            info!("{}获取到{:?}数据",name,item_list);
+            // info!("{}获取到{:?}数据",name,item_list);
             for item in item_list {
                 //新浪接口返回的symbol是一般形如MA2505，但是东方财富大部分期货代码是小写的，如ma505，所以需要特殊转小写。
                 let mut symbol = item["symbol"].as_str().unwrap().to_lowercase();//ma505
@@ -251,11 +251,11 @@ impl HttpRequest{
         ]);
         let endpoint = "futures_zh_realtime";
         let full_url = format!("{}/{}", SERVER_URL, endpoint);
-        info!("查询{}期货实时数据:{}", name, full_url);
+        // info!("查询{}期货实时数据:{}", name, full_url);
         let response = self.client.get(&full_url).query(&params).send().await?;
-        info!("{}期货实时数据:{:?}", name, response);
+        // info!("{}期货实时数据:{:?}", name, response);
         let result = response.json().await;
-        info!("{}期货实时数据:{:?}", name, result);
+        // info!("{}期货实时数据:{:?}", name, result);
         let item_list:Vec<Value> = result.with_context(|| {format!("解析{}期货实时数据失败.", name)})?;
         // println!("{}", item_list);
         Ok(item_list)

@@ -53,7 +53,7 @@ impl HttpRequest {
     /// 返回值是一个Vec<StockData>，里面包含了股票的日K线数据。
     pub async fn get_stock_day_data(&self, code: &str, num: i32) -> AppResult<Vec<StockData>> {
         let url = format!("https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol={}{code}&scale=240&ma=5,10,20,30&datalen={num}",get_market_by_code(code)?.0);
-        println!("{:?}", url);
+        info!("{:?}", url);
         // let url = format!("https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol={}&scale=240&ma=5,10,20,30&datalen={num}",get_market_by_code(code)?);
         // let result = self.client.get(url).headers(self.header_map.clone()).send().await?;
         // let result = self.client.get(url.clone()).send().await.with_context(||format!("请求url:{}",url))?;
@@ -307,12 +307,17 @@ impl HttpRequest {
 #[tokio::test]
 async fn test_get_stock_day_data() {
     init_http().await;
-    REQUEST
-        .get()
-        .unwrap()
-        .get_stock_day_data("600519", 1023)
-        .await
-        .unwrap();
+    for i in 1..=20 {
+        let vec = REQUEST
+            .get()
+            .unwrap()
+            .get_stock_day_data("159967", 5)
+            .await
+            .unwrap();
+        for i in vec {
+            println!("{:?}", i);
+        }
+    }
 }
 #[tokio::test]
 async fn test_get_live_data() {

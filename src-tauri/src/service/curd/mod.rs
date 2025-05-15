@@ -35,7 +35,8 @@ pub async fn update_all_day_k(can_handle_futures:bool,second:bool) -> AppResult<
     //是否需要更新股票的日线数据，因为股票的日线数据一般是统一的，如果一个不需要更新的话其他的也就不更新了。
     //如果不加这个指标，那么要么每个股票都请求一遍（怕频率过高被封ip），要么股票和期货都不请求
     //一般第二次调用是为了再次更新期货数据，股票数据就不需要更新了。
-    let mut stock_need_update = !second;
+    //0.6.4删除，因为遇到了股票数据只有部分是最新的，导致了剩余的股票不更新日线的情况
+    // let mut stock_need_update = !second;
     let codes = StockInfoCurd::query_all_only_code().await?;
     for code in codes {
         //只有大于1天的才要更新，正常情况下今天的ma数据是么有的，所以最新的就是前一天的，ago应该是1，大于1的说明需要更新
@@ -46,7 +47,13 @@ pub async fn update_all_day_k(can_handle_futures:bool,second:bool) -> AppResult<
                     "{}最新的日期是{:?},距今天的天数是{:?}",
                     code, latest_data.date, num
                 );
-                if num >= 1 {
+                //0.6.4修改，因为要挨个请求股票日线，一直失败报错：ailed:HttpError(reqwest::Error { kind: Request, url: "https://money.finance.sina.com.cn/quotes_
+                // service/api/json_v2.php/CN_MarketData.getKLineData?symbol=sz159866&scale=240&ma=5,10,20,30&datalen=2", source: hyper_util::client::legacy::Error(SendRequest, hyper::Error(Io, Os { code: 10054, kind: ConnectionReset, message: "远程主机强迫关闭了一个现有的连接。" })
+                //貌似请求频率太高引起的？但是我在test_get_stock_day_data()中测试一次性请求20次都没问题
+                // 但是改成num > 1后过滤掉一些不需要请求的数据（在只有部分不是最新的情况下），可以正常更新了。
+                //而且改为大于1是不是可以避免在当天白天更新期货数据，期货数据是有夜盘和白天的两部分的。
+                // if num >= 1 {
+                if num > 1 {
                     //这边的data很有可能多了,因为有很多非交易日，所以需要过滤
                     //这里要多请求一天。以数据库中最新数据是15号为例，若在17号晚上更新，计算出的num是两天，然后请求出来的是16、17号的数据，
                     //导致在find(|&(_, x)| x.date == latest_data.date)时找不到匹配的元素，后面都无法更新。
@@ -58,9 +65,9 @@ pub async fn update_all_day_k(can_handle_futures:bool,second:bool) -> AppResult<
                     let (market,is_main_future) = get_market_by_code(&code)?;
                     let is_stock = market == "sh" || market == "sz";
                     let data = if is_stock {
-                        if !stock_need_update{
-                            continue;
-                        }
+                        // if !stock_need_update{
+                        //     continue;
+                        // }
                         REQUEST
                             .get()
                             .unwrap()
@@ -93,14 +100,14 @@ pub async fn update_all_day_k(can_handle_futures:bool,second:bool) -> AppResult<
                         };
                         let mut data = futures_result.unwrap();
                         // 删除前一天历史数据，当天白天插入的话就会，之后就不会更新夜盘数据，所以直接删掉后加
-                        if let Err(e) = StockDataCurd::delete_with_num(&code, 1).await{
-                            error!("删除前一天的日线数据失败：{:?}",e);
-                        }else {
-                            data.pop();
-                        }
+                        // if let Err(e) = StockDataCurd::delete_with_num(&code, 1).await{
+                        //     error!("删除前一天的日线数据失败：{:?}",e);
+                        // }else {
+                        //     data.pop();
+                        // }
                         data //这里的futures_result是Ok(vec)
                     };
-                    // info!("{:?}更新数据{:?}，最新日期是{:?}",code,data,latest_data.date);
+                    info!("{:?}更新数据{:?}，最新日期是{:?}",code,data,latest_data.date);
                     let index = data
                         .iter()
                         .enumerate() // 将迭代器和索引配对
@@ -111,9 +118,9 @@ pub async fn update_all_day_k(can_handle_futures:bool,second:bool) -> AppResult<
                     // let option = data.iter().find(|x| x.date == latest_data.date).unwrap();
                     let data_after_index = &mut data[index + 1..].to_vec(); //这个是由旧日期到新日期的顺序
                     if data_after_index.is_empty() {
-                        if is_stock{
-                            stock_need_update = false;
-                        }//其实这里也可以判断下给期货_need_update = false，但是期货数据问题很多，还是一个个处理，所以这里就不统一设置不更新了。
+                        // if is_stock{
+                        //     stock_need_update = false;
+                        // }//其实这里也可以判断下给期货_need_update = false，但是期货数据问题很多，还是一个个处理，所以这里就不统一设置不更新了。
                         // return Ok(());//return Ok(())的话如果在有某个股票最新日期不一致时会出错，所以这里要continue
                         continue;//这里的data_after_index是空，说明不需要更新，直接continue到下一个继续
                     }
@@ -171,20 +178,6 @@ pub async fn update_all_day_k(can_handle_futures:bool,second:bool) -> AppResult<
                             model.ma30 = ma30_value;
                             model.ma60 = ma60_value;
                         }
-                        // for (model, ma5_value, ma10_value, ma20_value, ma30_value, ma60_value) in izip!(
-                        //     data_after_index.iter_mut(),
-                        //     ma_5.iter(),
-                        //     ma_10.iter(),
-                        //     ma_20.iter(),
-                        //     ma_30.iter(),
-                        //     ma_60.iter()
-                        // ) {
-                        //     model.ma5 = *ma5_value;
-                        //     model.ma10 = *ma10_value;
-                        //     model.ma20 = *ma20_value;
-                        //     model.ma30 = *ma30_value;
-                        //     model.ma60 = *ma60_value;
-                        // }
                     }
                     // error!("待插入数据{:?}",data_after_index);
                     StockDataCurd::insert_many(&code, data_after_index.to_vec()).await?;

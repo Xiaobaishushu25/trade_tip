@@ -5671,7 +5671,7 @@ dependencies = [
 
 [[package]]
 name = "trade_tip"
-version = "0.6.2"
+version = "0.6.4"
 dependencies = [
  "anyhow",
  "arraystring",
