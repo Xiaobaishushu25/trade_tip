@@ -74,7 +74,9 @@ pub async fn update_all_day_k(can_handle_futures:bool,second:bool) -> AppResult<
                             .get_stock_day_data(&code, num + 1)
                             .await?
                     } else {
-                        if (!can_handle_futures)||failure_flag{//如果不能处理期货，或者已经有异常就跳过
+                        //0.6.5更新
+                        // if (!can_handle_futures)||failure_flag{//如果不能处理期货，或者已经有异常就跳过
+                        if (!can_handle_futures){//如果不能处理期货就跳过
                             continue;
                         }
                         let now = Utc::now().date_naive();

@@ -171,6 +171,7 @@ pub async fn create_group(name: String) -> Result<i32, String> {
 pub async fn update_groups(groups: Vec<StockGroup>) -> Result<(), String> {
     match StockGroupCurd::update_all_index(groups).await {
         Ok(_) => {
+            //todo 删除分组，组内的股票要判断是否要删除
             // info!("删除分组成功:{:?}",count);
             Ok(())
         }
